@@ -1,0 +1,152 @@
+{
+    "aka_name": {
+        "id": 901343,
+        "imdb_index": 6,
+        "md5sum": 810625,
+        "name": 801037,
+        "name_pcode_cf": 22018,
+        "name_pcode_nf": 21139,
+        "person_id": 588222,
+        "surname_pcode": 4313
+    },
+    "aka_title": {
+        "episode_nr": 163,
+        "episode_of_id": 755,
+        "id": 361472,
+        "imdb_index": 13,
+        "kind_id": 6,
+        "md5sum": 346289,
+        "movie_id": 205631,
+        "note": 3349,
+        "phonetic_code": 20014,
+        "production_year": 129,
+        "season_nr": 41,
+        "title": 306166
+    },
+    "cast_info": {
+        "id": 36244344,
+        "movie_id": 2331601,
+        "note": 707388,
+        "nr_order": 1094,
+        "person_id": 4051810,
+        "person_role_id": 3140340,
+        "role_id": 11
+    },
+    "char_name": {
+        "id": 3140339,
+        "imdb_id": 1,
+        "imdb_index": 7,
+        "md5sum": 3140339,
+        "name": 3078757,
+        "name_pcode_nf": 23077,
+        "surname_pcode": 17199
+    },
+    "comp_cast_type": {
+        "id": 4,
+        "kind": 4
+    },
+    "company_name": {
+        "country_code": 216,
+        "id": 234997,
+        "imdb_id": 1,
+        "md5sum": 234997,
+        "name": 222968,
+        "name_pcode_nf": 18487,
+        "name_pcode_sf": 17447
+    },
+    "company_type": {
+        "id": 4,
+        "kind": 4
+    },
+    "complete_cast": {
+        "id": 135086,
+        "movie_id": 93514,
+        "status_id": 2,
+        "subject_id": 2
+    },
+    "info_type": {
+        "id": 113,
+        "info": 113
+    },
+    "keyword": {
+        "id": 134170,
+        "keyword": 134135,
+        "phonetic_code": 15482
+    },
+    "kind_type": {
+        "id": 7,
+        "kind": 7
+    },
+    "link_type": {
+        "id": 18,
+        "link": 18
+    },
+    "movie_companies": {
+        "company_id": 234997,
+        "company_type_id": 2,
+        "id": 2609129,
+        "movie_id": 1087236,
+        "note": 65506
+    },
+    "movie_info": {
+        "id": 14835720,
+        "info": 2719293,
+        "info_type_id": 71,
+        "movie_id": 2468825,
+        "note": 131356
+    },
+    "movie_info_idx": {
+        "id": 1380035,
+        "info": 146245,
+        "info_type_id": 5,
+        "movie_id": 459925,
+        "note": 1
+    },
+    "movie_keyword": {
+        "id": 4523930,
+        "keyword_id": 134170,
+        "movie_id": 476794
+    },
+    "movie_link": {
+        "id": 29997,
+        "link_type_id": 16,
+        "linked_movie_id": 16169,
+        "movie_id": 6411
+    },
+    "name": {
+        "gender": 3,
+        "id": 4167491,
+        "imdb_id": 1,
+        "imdb_index": 180,
+        "md5sum": 4167491,
+        "name": 3567986,
+        "name_pcode_cf": 23604,
+        "name_pcode_nf": 23262,
+        "surname_pcode": 4672
+    },
+    "person_info": {
+        "id": 2963664,
+        "info": 1921778,
+        "info_type_id": 22,
+        "note": 49327,
+        "person_id": 550721
+    },
+    "role_type": {
+        "id": 12,
+        "role": 12
+    },
+    "title": {
+        "episode_nr": 14907,
+        "episode_of_id": 51482,
+        "id": 2528312,
+        "imdb_id": 1,
+        "imdb_index": 26,
+        "kind_id": 7,
+        "md5sum": 2528311,
+        "phonetic_code": 23260,
+        "production_year": 133,
+        "season_nr": 97,
+        "series_years": 1409,
+        "title": 1476893
+    }
+}

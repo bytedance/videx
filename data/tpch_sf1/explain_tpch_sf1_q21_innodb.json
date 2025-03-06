@@ -1,0 +1,203 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost_info": {
+      "query_cost": "1291730.72"
+    },
+    "ordering_operation": {
+      "using_filesort": true,
+      "grouping_operation": {
+        "using_temporary_table": true,
+        "using_filesort": false,
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "orders",
+              "access_type": "ALL",
+              "possible_keys": [
+                "PRIMARY"
+              ],
+              "rows_examined_per_scan": 1492893,
+              "rows_produced_per_join": 149289,
+              "filtered": "10.00",
+              "cost_info": {
+                "read_cost": "146692.37",
+                "eval_cost": "14928.93",
+                "prefix_cost": "161621.30",
+                "data_read_per_join": "67M"
+              },
+              "used_columns": [
+                "O_ORDERKEY",
+                "O_ORDERSTATUS"
+              ],
+              "attached_condition": "(`tpch_sf1`.`orders`.`O_ORDERSTATUS` = 'F')"
+            }
+          },
+          {
+            "table": {
+              "table_name": "l1",
+              "access_type": "ref",
+              "possible_keys": [
+                "LINEITEM_UK1",
+                "LINEITEM_FK1"
+              ],
+              "key": "LINEITEM_FK1",
+              "used_key_parts": [
+                "L_ORDERKEY"
+              ],
+              "key_length": "4",
+              "ref": [
+                "tpch_sf1.orders.O_ORDERKEY"
+              ],
+              "rows_examined_per_scan": 3,
+              "rows_produced_per_join": 192671,
+              "filtered": "33.33",
+              "cost_info": {
+                "read_cost": "578073.02",
+                "eval_cost": "19267.17",
+                "prefix_cost": "797501.62",
+                "data_read_per_join": "70M"
+              },
+              "used_columns": [
+                "L_ORDERKEY",
+                "L_SUPPKEY",
+                "L_COMMITDATE",
+                "L_RECEIPTDATE",
+                "L_ID"
+              ],
+              "attached_condition": "(`tpch_sf1`.`l1`.`L_RECEIPTDATE` > `tpch_sf1`.`l1`.`L_COMMITDATE`)"
+            }
+          },
+          {
+            "table": {
+              "table_name": "nation",
+              "access_type": "ALL",
+              "possible_keys": [
+                "PRIMARY"
+              ],
+              "rows_examined_per_scan": 25,
+              "rows_produced_per_join": 481679,
+              "filtered": "10.00",
+              "using_join_buffer": "hash join",
+              "cost_info": {
+                "read_cost": "55.80",
+                "eval_cost": "48167.93",
+                "prefix_cost": "845725.36",
+                "data_read_per_join": "330M"
+              },
+              "used_columns": [
+                "N_NATIONKEY",
+                "N_NAME"
+              ],
+              "attached_condition": "(`tpch_sf1`.`nation`.`N_NAME` = 'IRAQ')"
+            }
+          },
+          {
+            "table": {
+              "table_name": "supplier",
+              "access_type": "eq_ref",
+              "possible_keys": [
+                "PRIMARY",
+                "SUPPLIER_FK1",
+                "idx_S_NATIONKEY_S_SUPPKEY_S_NAME"
+              ],
+              "key": "PRIMARY",
+              "used_key_parts": [
+                "S_SUPPKEY"
+              ],
+              "key_length": "4",
+              "ref": [
+                "tpch_sf1.l1.L_SUPPKEY"
+              ],
+              "rows_examined_per_scan": 1,
+              "rows_produced_per_join": 24083,
+              "filtered": "5.00",
+              "cost_info": {
+                "read_cost": "192671.73",
+                "eval_cost": "2408.40",
+                "prefix_cost": "1086565.03",
+                "data_read_per_join": "17M"
+              },
+              "used_columns": [
+                "S_SUPPKEY",
+                "S_NAME",
+                "S_NATIONKEY"
+              ],
+              "attached_condition": "(`tpch_sf1`.`supplier`.`S_NATIONKEY` = `tpch_sf1`.`nation`.`N_NATIONKEY`)"
+            }
+          },
+          {
+            "table": {
+              "table_name": "l2",
+              "access_type": "ref",
+              "possible_keys": [
+                "LINEITEM_UK1",
+                "LINEITEM_FK1"
+              ],
+              "key": "LINEITEM_FK1",
+              "used_key_parts": [
+                "L_ORDERKEY"
+              ],
+              "key_length": "4",
+              "ref": [
+                "tpch_sf1.orders.O_ORDERKEY"
+              ],
+              "rows_examined_per_scan": 3,
+              "rows_produced_per_join": 24083,
+              "filtered": "90.00",
+              "first_match": "supplier",
+              "cost_info": {
+                "read_cost": "93257.14",
+                "eval_cost": "2408.40",
+                "prefix_cost": "1189147.88",
+                "data_read_per_join": "8M"
+              },
+              "used_columns": [
+                "L_ORDERKEY",
+                "L_SUPPKEY",
+                "L_ID"
+              ],
+              "attached_condition": "(`tpch_sf1`.`l2`.`L_SUPPKEY` <> `tpch_sf1`.`l1`.`L_SUPPKEY`)"
+            }
+          },
+          {
+            "table": {
+              "table_name": "l3",
+              "access_type": "ref",
+              "possible_keys": [
+                "LINEITEM_UK1",
+                "LINEITEM_FK1"
+              ],
+              "key": "LINEITEM_FK1",
+              "used_key_parts": [
+                "L_ORDERKEY"
+              ],
+              "key_length": "4",
+              "ref": [
+                "tpch_sf1.orders.O_ORDERKEY"
+              ],
+              "rows_examined_per_scan": 3,
+              "rows_produced_per_join": 24083,
+              "filtered": "100.00",
+              "not_exists": true,
+              "cost_info": {
+                "read_cost": "93257.14",
+                "eval_cost": "2408.40",
+                "prefix_cost": "1291730.73",
+                "data_read_per_join": "8M"
+              },
+              "used_columns": [
+                "L_ORDERKEY",
+                "L_SUPPKEY",
+                "L_COMMITDATE",
+                "L_RECEIPTDATE",
+                "L_ID"
+              ],
+              "attached_condition": "(<if>(is_not_null_compl(l3), ((`tpch_sf1`.`l3`.`L_SUPPKEY` <> `tpch_sf1`.`l1`.`L_SUPPKEY`) and (`tpch_sf1`.`l3`.`L_RECEIPTDATE` > `tpch_sf1`.`l3`.`L_COMMITDATE`)), true) and <if>(is_not_null_compl(l3), <if>(found_match(l3), false, true), true))"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

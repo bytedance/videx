@@ -1,0 +1,73 @@
+{
+    "trace_wo_idx_videx_with_gt": {
+        "steps": [
+            {
+                "lex_json_preparse_tables": "{\"item_type\":\"table_list\",\"properties\":{},\"data\":[{\"item_type\":\"table\",\"properties\":{\"address\":\"0x7f9ef493f040\",\"alias\":\"orders\",\"db\":\"videx_tpch\",\"prompt\":\"select_precheck\",\"table\":\"orders\",\"tableno\":\"0\"},\"data\":[]},{\"item_type\":\"table\",\"properties\":{\"address\":\"0x7f9ef4947630\",\"alias\":\"lineitem\",\"db\":\"videx_tpch\",\"prompt\":\"select_precheck\",\"table\":\"lineitem\",\"tableno\":\"0\"},\"data\":[]}]}"
+            },
+            {
+                "dict_name": "videx_http",
+                "url": "http://127.0.0.1:5001/ask_videx",
+                "request": "{\"item_type\":\"videx_request\",\"properties\":{\"dbname\":\"videx_tpch\",\"function\":\"virtual int ha_videx::info_low(uint, bool)\",\"table_name\":\"orders\",\"target_storage_engine\":\"INNODB\",\"videx_options\":\"{\\\"task_id\\\": \\\"127_0_0_1_13308@@@demo_tpch\\\", \\\"use_gt\\\": true}\"},\"data\":[{\"item_type\":\"key\",\"properties\":{\"key_length\":\"4\",\"name\":\"PRIMARY\"},\"data\":[{\"item_type\":\"field\",\"properties\":{\"name\":\"O_ORDERKEY\",\"store_length\":\"4\"},\"data\":[]}]},{\"item_type\":\"key\",\"properties\":{\"key_length\":\"4\",\"name\":\"ORDERS_FK1\"},\"data\":[{\"item_type\":\"field\",\"properties\":{\"name\":\"O_CUSTKEY\",\"store_length\":\"4\"},\"data\":[]},{\"item_type\":\"field\",\"properties\":{\"name\":\"O_ORDERKEY\",\"store_length\":\"4\"},\"data\":[]}]}]}",
+                "success": true,
+                "detail": "{\n  \"code\": 200, \n  \"data\": {\n    \"ORDERS_FK1 #@# O_CUSTKEY\": \"15.14957685096032\", \n    \"ORDERS_FK1 #@# O_ORDERKEY\": \"1.0147397762828907\", \n    \"PRIMARY #@# O_ORDERKEY\": \"1.0\", \n    \"data_file_length\": \"202047488\", \n    \"data_free_length\": \"4194304\", \n    \"index_file_length\": \"39403520\", \n    \"stat_clustered_index_size\": \"12332\", \n    \"stat_n_rows\": \"1494733\", \n    \"stat_sum_of_other_index_sizes\": \"2405\"\n  }, \n  \"message\": \"OK\"\n}\n"
+            },
+            {
+                "dict_name": "videx_http",
+                "url": "http://127.0.0.1:5001/ask_videx",
+                "request": "{\"item_type\":\"videx_request\",\"properties\":{\"dbname\":\"videx_tpch\",\"function\":\"virtual double ha_videx::scan_time()\",\"table_name\":\"region\",\"target_storage_engine\":\"INNODB\",\"videx_options\":\"{\\\"task_id\\\": \\\"127_0_0_1_13308@@@demo_tpch\\\", \\\"use_gt\\\": true}\"},\"data\":[]}",
+                "success": false,
+                "reason": "res_code != CURLE_OK",
+                "detail": "A libcurl function was given a bad argument"
+            }
+        ]
+    },
+    "trace_wo_idx_videx_wo_gt": {
+        "steps": [
+            {
+                "join_optimization": {
+                    "select#": 1,
+                    "steps": [
+                        {
+                            "rows_estimation": [
+                                {
+                                    "table": "`lineitem`",
+                                    "unknown_key_2": {
+                                        "dict_name": "videx_http",
+                                        "url": "http://127.0.0.1:5001/ask_videx",
+                                        "request": "{\"item_type\":\"videx_request\",\"properties\":{\"dbname\":\"videx_tpch\",\"function\":\"virtual double ha_videx::scan_time()\",\"table_name\":\"lineitem\",\"target_storage_engine\":\"INNODB\",\"videx_options\":\"{\\\"task_id\\\": \\\"127_0_0_1_13308@@@demo_tpch\\\", \\\"use_gt\\\": false}\"},\"data\":[]}",
+                                        "success": true,
+                                        "detail": "{\n  \"code\": 200, \n  \"data\": {\n    \"value\": \"56640\"\n  }, \n  \"message\": \"OK\"\n}\n"
+                                    },
+                                    "unknown_key_7": {
+                                        "dict_name": "videx_http",
+                                        "url": "http://127.0.0.1:5001/ask_videx",
+                                        "request": "{\"item_type\":\"videx_request\",\"properties\":{\"dbname\":\"videx_tpch\",\"function\":\"virtual double ha_videx::scan_time()\",\"table_name\":\"region\",\"target_storage_engine\":\"INNODB\",\"videx_options\":\"{\\\"task_id\\\": \\\"127_0_0_1_13308@@@demo_tpch\\\", \\\"use_gt\\\": true}\"},\"data\":[]}",
+                                        "success": false,
+                                        "reason": "res_code != CURLE_OK",
+                                        "detail": "A libcurl function was given a bad argument"
+                                    },
+                                    "table_scan": {
+                                        "rows": 5750485,
+                                        "cost": 56640
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "considering_tmp_tables": [
+                                {
+                                    "adding_tmp_table_in_plan_at_position": 2,
+                                    "write_method": "continuously_update_group_row"
+                                },
+                                {
+                                    "adding_sort_to_table": ""
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+            
+        ]
+    }
+}

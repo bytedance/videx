@@ -1,0 +1,438 @@
+{
+    "customer": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "customer",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 148651,
+        "AVG_ROW_LENGTH": 201,
+        "DATA_LENGTH": 29933568,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 3686400,
+        "DATA_FREE": 3145728,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1704898540,
+        "UPDATE_TIME": 1703027416,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 148651,
+        "CLUSTERED_INDEX_SIZE": 1827,
+        "SUM_OF_OTHER_INDEX_SIZES": 225,
+        "pct_cached": {
+            "CUSTOMER_FK1": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            },
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 151778.0
+            },
+            "idx_C_ADDRESS_C_PHONE_C_NAME_C_COMMENT_C_ACCTBAL": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            }
+        },
+        "DDL": "CREATE TABLE `customer` (\n  `C_CUSTKEY` int NOT NULL,\n  `C_NAME` varchar(25) NOT NULL,\n  `C_ADDRESS` varchar(40) NOT NULL,\n  `C_NATIONKEY` int NOT NULL,\n  `C_PHONE` char(15) NOT NULL,\n  `C_ACCTBAL` decimal(15,2) NOT NULL,\n  `C_MKTSEGMENT` char(10) NOT NULL,\n  `C_COMMENT` varchar(117) NOT NULL,\n  PRIMARY KEY (`C_CUSTKEY`),\n  KEY `CUSTOMER_FK1` (`C_NATIONKEY`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    "lineitem": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "lineitem",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 5799239,
+        "AVG_ROW_LENGTH": 161,
+        "DATA_LENGTH": 936378368,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 1146257408,
+        "DATA_FREE": 2097152,
+        "AUTO_INCREMENT": 6002015.0,
+        "CREATE_TIME": 1704898499,
+        "UPDATE_TIME": 1704482908,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 5799239,
+        "CLUSTERED_INDEX_SIZE": 57152,
+        "SUM_OF_OTHER_INDEX_SIZES": 69962,
+        "pct_cached": {
+            "LINEITEM_FK1": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            },
+            "LINEITEM_FK2": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 6008977.0
+            },
+            "LINEITEM_UK1": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 5961293.0
+            },
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 0.8475,
+                "pool_rows": 4914574.0
+            },
+            "idx_L_ORDERKEY_L_SUPPKEY_L_PARTKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 0.0091,
+                "pool_rows": 52507.0
+            },
+            "idx_L_PARTKEY_L_QUANTITY": {
+                "page_type": "INDEX",
+                "pct_cached": 0.9805,
+                "pool_rows": 5686056.0
+            },
+            "idx_L_RETURNFLAG_L_ORDERKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 0.004,
+                "pool_rows": 22993.0
+            },
+            "idx_L_SHIPDATE": {
+                "page_type": "INDEX",
+                "pct_cached": 0.8675,
+                "pool_rows": 5030837.0
+            },
+            "idx_L_SHIPMODE_L_RECEIPTDATE": {
+                "page_type": "INDEX",
+                "pct_cached": 0.9828,
+                "pool_rows": 5699656.0
+            },
+            "idx_L_SUPPKEY_L_ORDERKEY_L_PARTKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 6009177.0
+            }
+        },
+        "DDL": "CREATE TABLE `lineitem` (\n  `L_ORDERKEY` int NOT NULL,\n  `L_PARTKEY` int NOT NULL,\n  `L_SUPPKEY` int NOT NULL,\n  `L_LINENUMBER` int NOT NULL,\n  `L_QUANTITY` decimal(15,2) NOT NULL,\n  `L_EXTENDEDPRICE` decimal(15,2) NOT NULL,\n  `L_DISCOUNT` decimal(15,2) NOT NULL,\n  `L_TAX` decimal(15,2) NOT NULL,\n  `L_RETURNFLAG` char(1) NOT NULL,\n  `L_LINESTATUS` char(1) NOT NULL,\n  `L_SHIPDATE` date NOT NULL,\n  `L_COMMITDATE` date NOT NULL,\n  `L_RECEIPTDATE` date NOT NULL,\n  `L_SHIPINSTRUCT` char(25) NOT NULL,\n  `L_SHIPMODE` char(10) NOT NULL,\n  `L_COMMENT` varchar(44) NOT NULL,\n  `L_ID` int NOT NULL AUTO_INCREMENT,\n  PRIMARY KEY (`L_ID`),\n  UNIQUE KEY `LINEITEM_UK1` (`L_ORDERKEY`,`L_LINENUMBER`),\n  KEY `LINEITEM_FK1` (`L_ORDERKEY`),\n  KEY `LINEITEM_FK2` (`L_PARTKEY`,`L_SUPPKEY`)\n) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    "nation": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "nation",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 25,
+        "AVG_ROW_LENGTH": 655,
+        "DATA_LENGTH": 16384,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 16384,
+        "DATA_FREE": 0,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1704898543,
+        "UPDATE_TIME": 1703027598,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 25,
+        "CLUSTERED_INDEX_SIZE": 1,
+        "SUM_OF_OTHER_INDEX_SIZES": 1,
+        "pct_cached": {
+            "NATION_FK1": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 25.0
+            },
+            "PRIMARY": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            },
+            "idx_N_NAME_N_NATIONKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 25.0
+            }
+        },
+        "DDL": "CREATE TABLE `nation` (\n  `N_NATIONKEY` int NOT NULL,\n  `N_NAME` char(25) NOT NULL,\n  `N_REGIONKEY` int NOT NULL,\n  `N_COMMENT` varchar(152) DEFAULT NULL,\n  PRIMARY KEY (`N_NATIONKEY`),\n  KEY `NATION_FK1` (`N_REGIONKEY`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    "orders": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "orders",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 1494733,
+        "AVG_ROW_LENGTH": 135,
+        "DATA_LENGTH": 202047488,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 39403520,
+        "DATA_FREE": 3145728,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1704898524,
+        "UPDATE_TIME": 1703027626,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 1494733,
+        "CLUSTERED_INDEX_SIZE": 12332,
+        "SUM_OF_OTHER_INDEX_SIZES": 2405,
+        "pct_cached": {
+            "ORDERS_FK1": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 1502051.0
+            },
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 1512278.0
+            },
+            "idx_O_CUSTKEY_O_ORDERKEY_O_ORDERDATE": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            },
+            "idx_O_ORDERDATE": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 1501156.0
+            }
+        },
+        "DDL": "CREATE TABLE `orders` (\n  `O_ORDERKEY` int NOT NULL,\n  `O_CUSTKEY` int NOT NULL,\n  `O_ORDERSTATUS` char(1) NOT NULL,\n  `O_TOTALPRICE` decimal(15,2) NOT NULL,\n  `O_ORDERDATE` date NOT NULL,\n  `O_ORDERPRIORITY` char(15) NOT NULL,\n  `O_CLERK` char(15) NOT NULL,\n  `O_SHIPPRIORITY` int NOT NULL,\n  `O_COMMENT` varchar(79) NOT NULL,\n  PRIMARY KEY (`O_ORDERKEY`),\n  KEY `ORDERS_FK1` (`O_CUSTKEY`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    "part": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "part",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 198000,
+        "AVG_ROW_LENGTH": 167,
+        "DATA_LENGTH": 33095680,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 0,
+        "DATA_FREE": 3145728,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1704898538,
+        "UPDATE_TIME": 1703027629,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 198000,
+        "CLUSTERED_INDEX_SIZE": 2020,
+        "SUM_OF_OTHER_INDEX_SIZES": 0,
+        "pct_cached": {
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 200604.0
+            },
+            "idx_P_CONTAINER_P_BRAND_P_PARTKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 0.0416,
+                "pool_rows": 8240.0
+            },
+            "idx_P_NAME": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            },
+            "idx_P_SIZE_P_BRAND": {
+                "page_type": "INDEX",
+                "pct_cached": 0.2143,
+                "pool_rows": 42432.0
+            },
+            "idx_P_TYPE_P_PARTKEY": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            }
+        },
+        "DDL": "CREATE TABLE `part` (\n  `P_PARTKEY` int NOT NULL,\n  `P_NAME` varchar(55) NOT NULL,\n  `P_MFGR` char(25) NOT NULL,\n  `P_BRAND` char(10) NOT NULL,\n  `P_TYPE` varchar(25) NOT NULL,\n  `P_SIZE` int NOT NULL,\n  `P_CONTAINER` char(10) NOT NULL,\n  `P_RETAILPRICE` decimal(15,2) NOT NULL,\n  `P_COMMENT` varchar(23) NOT NULL,\n  PRIMARY KEY (`P_PARTKEY`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    "partsupp": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "partsupp",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 793680,
+        "AVG_ROW_LENGTH": 183,
+        "DATA_LENGTH": 145375232,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 45727744,
+        "DATA_FREE": 2097152,
+        "AUTO_INCREMENT": 800124.0,
+        "CREATE_TIME": 1704898531,
+        "UPDATE_TIME": 1703027643,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 793680,
+        "CLUSTERED_INDEX_SIZE": 8873,
+        "SUM_OF_OTHER_INDEX_SIZES": 2791,
+        "pct_cached": {
+            "PARTSUPP_FK1": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            },
+            "PARTSUPP_FK2": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            },
+            "PARTSUPP_UK1": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            },
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 799914.0
+            },
+            "idx_PS_SUPPKEY_PS_PARTKEY_PS_AVAILQTY": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            },
+            "idx_PS_SUPPLYCOST_PS_PARTKEY_PS_SUPPKEY": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            }
+        },
+        "DDL": "CREATE TABLE `partsupp` (\n  `PS_PARTKEY` int NOT NULL,\n  `PS_SUPPKEY` int NOT NULL,\n  `PS_AVAILQTY` int NOT NULL,\n  `PS_SUPPLYCOST` decimal(15,2) NOT NULL,\n  `PS_COMMENT` varchar(199) NOT NULL,\n  `PS_ID` int NOT NULL AUTO_INCREMENT,\n  PRIMARY KEY (`PS_ID`),\n  UNIQUE KEY `PARTSUPP_UK1` (`PS_PARTKEY`,`PS_SUPPKEY`),\n  KEY `PARTSUPP_FK1` (`PS_SUPPKEY`),\n  KEY `PARTSUPP_FK2` (`PS_PARTKEY`)\n) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    "region": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "region",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 5,
+        "AVG_ROW_LENGTH": 3276,
+        "DATA_LENGTH": 16384,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 0,
+        "DATA_FREE": 0,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1704898543,
+        "UPDATE_TIME": 1703027643,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 5,
+        "CLUSTERED_INDEX_SIZE": 1,
+        "SUM_OF_OTHER_INDEX_SIZES": 0,
+        "pct_cached": {
+            "PRIMARY": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            },
+            "idx_R_NAME_R_REGIONKEY": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            }
+        },
+        "DDL": "CREATE TABLE `region` (\n  `R_REGIONKEY` int NOT NULL,\n  `R_NAME` char(25) NOT NULL,\n  `R_COMMENT` varchar(152) DEFAULT NULL,\n  PRIMARY KEY (`R_REGIONKEY`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    },
+    "supplier": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "supplier",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 9735,
+        "AVG_ROW_LENGTH": 270,
+        "DATA_LENGTH": 2637824,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 1867776,
+        "DATA_FREE": 5242880,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1704898540,
+        "UPDATE_TIME": 1703027644,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 9735,
+        "CLUSTERED_INDEX_SIZE": 161,
+        "SUM_OF_OTHER_INDEX_SIZES": 114,
+        "pct_cached": {
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 10110.0
+            },
+            "SUPPLIER_FK1": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 10016.0
+            },
+            "idx_S_NATIONKEY_S_SUPPKEY_S_NAME": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 10025.0
+            }
+        },
+        "DDL": "CREATE TABLE `supplier` (\n  `S_SUPPKEY` int NOT NULL,\n  `S_NAME` char(25) NOT NULL,\n  `S_ADDRESS` varchar(40) NOT NULL,\n  `S_NATIONKEY` int NOT NULL,\n  `S_PHONE` char(15) NOT NULL,\n  `S_ACCTBAL` decimal(15,2) NOT NULL,\n  `S_COMMENT` varchar(101) NOT NULL,\n  PRIMARY KEY (`S_SUPPKEY`),\n  KEY `SUPPLIER_FK1` (`S_NATIONKEY`),\n  KEY `idx_S_NATIONKEY_S_SUPPKEY_S_NAME` (`S_NATIONKEY`,`S_SUPPKEY`,`S_NAME`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+    }
+}

@@ -1,0 +1,50 @@
+[
+    {
+        "index": "idx_L_SHIPDATE",
+        "ranges": [
+            "'1995-01-01' <= L_SHIPDATE <= '1996-12-31'"
+        ],
+        "index_dives_for_eq_ranges": true,
+        "rowid_ordered": false,
+        "using_mrr": true,
+        "index_only": false,
+        "in_memory": 0.0023825,
+        "rows": 2896768,
+        "cost": 2799680.0,
+        "chosen": false,
+        "cause": "cost",
+        "table": "`lineitem`"
+    },
+    {
+        "index": "idx_N_NAME_N_NATIONKEY",
+        "ranges": [
+            "N_NAME = 'CANADA'",
+            "N_NAME = 'IRAN'"
+        ],
+        "index_dives_for_eq_ranges": true,
+        "rowid_ordered": false,
+        "using_mrr": false,
+        "index_only": true,
+        "in_memory": 1,
+        "rows": 2,
+        "cost": 0.463289,
+        "chosen": true,
+        "table": "`nation` `n1`"
+    },
+    {
+        "index": "idx_N_NAME_N_NATIONKEY",
+        "ranges": [
+            "N_NAME = 'CANADA'",
+            "N_NAME = 'IRAN'"
+        ],
+        "index_dives_for_eq_ranges": true,
+        "rowid_ordered": false,
+        "using_mrr": false,
+        "index_only": true,
+        "in_memory": 1,
+        "rows": 2,
+        "cost": 0.463289,
+        "chosen": true,
+        "table": "`nation` `n2`"
+    }
+]

@@ -1,0 +1,642 @@
+{
+  "steps": [
+    {
+      "join_preparation": {
+        "select#": 1,
+        "steps": [
+          {
+            "expanded_query": "/* select#1 */ select `OORDER`.`O_W_ID` AS `O_W_ID` from `OORDER` where ((`OORDER`.`O_W_ID` = 1) and (`OORDER`.`O_D_ID` = 1))"
+          }
+        ]
+      }
+    },
+    {
+      "join_preparation": {
+        "select#": 2,
+        "steps": [
+          {
+            "expanded_query": "/* select#2 */ select `CUSTOMER`.`ID` AS `ID` from `CUSTOMER` where ((`CUSTOMER`.`C_W_ID` = 1) and (`CUSTOMER`.`C_ID` = 2))"
+          }
+        ]
+      }
+    },
+    {
+      "creating_tmp_table": {
+        "tmp_table_info": {
+          "table": "intermediate_tmp_table",
+          "row_length": 9,
+          "key_length": 8,
+          "unique_constraint": false,
+          "location": "memory (heap)",
+          "row_limit_estimate": 29826161
+        }
+      }
+    },
+    {
+      "join_preparation": {
+        "select#": "fake",
+        "steps": [
+          {
+            "expanded_query": "/* select#fake */ select `O_W_ID` AS `O_W_ID` from dual"
+          }
+        ]
+      }
+    },
+    {
+      "join_optimization": {
+        "select#": 1,
+        "steps": [
+          {
+            "condition_processing": {
+              "condition": "WHERE",
+              "original_condition": "((`OORDER`.`O_W_ID` = 1) and (`OORDER`.`O_D_ID` = 1))",
+              "steps": [
+                {
+                  "transformation": "equality_propagation",
+                  "resulting_condition": "(multiple equal(1, `OORDER`.`O_W_ID`) and multiple equal(1, `OORDER`.`O_D_ID`))"
+                },
+                {
+                  "transformation": "constant_propagation",
+                  "resulting_condition": "(multiple equal(1, `OORDER`.`O_W_ID`) and multiple equal(1, `OORDER`.`O_D_ID`))"
+                },
+                {
+                  "transformation": "trivial_condition_removal",
+                  "resulting_condition": "(multiple equal(1, `OORDER`.`O_W_ID`) and multiple equal(1, `OORDER`.`O_D_ID`))"
+                }
+              ]
+            }
+          },
+          {
+            "substitute_generated_columns": {
+            }
+          },
+          {
+            "table_dependencies": [
+              {
+                "table": "`OORDER`",
+                "row_may_be_null": false,
+                "map_bit": 0,
+                "depends_on_map_bits": [
+                ]
+              }
+            ]
+          },
+          {
+            "ref_optimizer_key_uses": [
+              {
+                "table": "`OORDER`",
+                "field": "O_W_ID",
+                "equals": "1",
+                "null_rejecting": false
+              },
+              {
+                "table": "`OORDER`",
+                "field": "O_D_ID",
+                "equals": "1",
+                "null_rejecting": false
+              },
+              {
+                "table": "`OORDER`",
+                "field": "O_W_ID",
+                "equals": "1",
+                "null_rejecting": false
+              },
+              {
+                "table": "`OORDER`",
+                "field": "O_D_ID",
+                "equals": "1",
+                "null_rejecting": false
+              },
+              {
+                "table": "`OORDER`",
+                "field": "O_W_ID",
+                "equals": "1",
+                "null_rejecting": false
+              },
+              {
+                "table": "`OORDER`",
+                "field": "O_D_ID",
+                "equals": "1",
+                "null_rejecting": false
+              }
+            ]
+          },
+          {
+            "rows_estimation": [
+              {
+                "table": "`OORDER`",
+                "range_analysis": {
+                  "table_scan": {
+                    "rows": 241073,
+                    "cost": 48954
+                  },
+                  "potential_range_indexes": [
+                    {
+                      "index": "PRIMARY",
+                      "usable": true,
+                      "key_parts": [
+                        "O_W_ID",
+                        "O_D_ID",
+                        "O_ID"
+                      ]
+                    },
+                    {
+                      "index": "O_W_ID",
+                      "usable": true,
+                      "key_parts": [
+                        "O_W_ID",
+                        "O_D_ID",
+                        "O_C_ID",
+                        "O_ID"
+                      ]
+                    },
+                    {
+                      "index": "IDX_ORDER",
+                      "usable": true,
+                      "key_parts": [
+                        "O_W_ID",
+                        "O_D_ID",
+                        "O_C_ID",
+                        "O_ID"
+                      ]
+                    }
+                  ],
+                  "best_covering_index_scan": {
+                    "index": "O_W_ID",
+                    "cost": 49038,
+                    "chosen": false,
+                    "cause": "cost"
+                  },
+                  "setup_range_conditions": [
+                  ],
+                  "group_index_range": {
+                    "chosen": false,
+                    "cause": "not_group_by_or_distinct"
+                  },
+                  "analyzing_range_alternatives": {
+                    "range_scan_alternatives": [
+                      {
+                        "index": "PRIMARY",
+                        "ranges": [
+                          "1 <= O_W_ID <= 1 AND 1 <= O_D_ID <= 1"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": true,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "rows": 3000,
+                        "cost": 605.34,
+                        "chosen": true
+                      },
+                      {
+                        "index": "O_W_ID",
+                        "ranges": [
+                          "1 <= O_W_ID <= 1 AND 1 <= O_D_ID <= 1"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "rows": 3000,
+                        "cost": 611.25,
+                        "chosen": false,
+                        "cause": "cost"
+                      },
+                      {
+                        "index": "IDX_ORDER",
+                        "ranges": [
+                          "1 <= O_W_ID <= 1 AND 1 <= O_D_ID <= 1"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "rows": 3000,
+                        "cost": 611.25,
+                        "chosen": false,
+                        "cause": "cost"
+                      }
+                    ],
+                    "analyzing_roworder_intersect": {
+                      "usable": false,
+                      "cause": "too_few_roworder_scans"
+                    }
+                  },
+                  "chosen_range_access_summary": {
+                    "range_access_plan": {
+                      "type": "range_scan",
+                      "index": "PRIMARY",
+                      "rows": 3000,
+                      "ranges": [
+                        "1 <= O_W_ID <= 1 AND 1 <= O_D_ID <= 1"
+                      ]
+                    },
+                    "rows_for_plan": 3000,
+                    "cost_for_plan": 605.34,
+                    "chosen": true
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "considered_execution_plans": [
+              {
+                "plan_prefix": [
+                ],
+                "table": "`OORDER`",
+                "best_access_path": {
+                  "considered_access_paths": [
+                    {
+                      "access_type": "ref",
+                      "index": "PRIMARY",
+                      "rows": 3000,
+                      "cost": 609.77,
+                      "chosen": true
+                    },
+                    {
+                      "access_type": "ref",
+                      "index": "O_W_ID",
+                      "rows": 3000,
+                      "cost": 611.24,
+                      "chosen": false
+                    },
+                    {
+                      "access_type": "ref",
+                      "index": "IDX_ORDER",
+                      "rows": 3000,
+                      "cost": 611.24,
+                      "chosen": false
+                    },
+                    {
+                      "access_type": "range",
+                      "range_details": {
+                        "used_index": "PRIMARY"
+                      },
+                      "chosen": false,
+                      "cause": "heuristic_index_cheaper"
+                    }
+                  ]
+                },
+                "condition_filtering_pct": 100,
+                "rows_for_plan": 3000,
+                "cost_for_plan": 609.77,
+                "chosen": true
+              }
+            ]
+          },
+          {
+            "attaching_conditions_to_tables": {
+              "original_condition": "((`OORDER`.`O_D_ID` = 1) and (`OORDER`.`O_W_ID` = 1))",
+              "attached_conditions_computation": [
+              ],
+              "attached_conditions_summary": [
+                {
+                  "table": "`OORDER`",
+                  "attached": null
+                }
+              ]
+            }
+          },
+          {
+            "refine_plan": [
+              {
+                "table": "`OORDER`"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "join_optimization": {
+        "select#": 2,
+        "steps": [
+          {
+            "condition_processing": {
+              "condition": "WHERE",
+              "original_condition": "((`CUSTOMER`.`C_W_ID` = 1) and (`CUSTOMER`.`C_ID` = 2))",
+              "steps": [
+                {
+                  "transformation": "equality_propagation",
+                  "resulting_condition": "(multiple equal(1, `CUSTOMER`.`C_W_ID`) and multiple equal(2, `CUSTOMER`.`C_ID`))"
+                },
+                {
+                  "transformation": "constant_propagation",
+                  "resulting_condition": "(multiple equal(1, `CUSTOMER`.`C_W_ID`) and multiple equal(2, `CUSTOMER`.`C_ID`))"
+                },
+                {
+                  "transformation": "trivial_condition_removal",
+                  "resulting_condition": "(multiple equal(1, `CUSTOMER`.`C_W_ID`) and multiple equal(2, `CUSTOMER`.`C_ID`))"
+                }
+              ]
+            }
+          },
+          {
+            "substitute_generated_columns": {
+            }
+          },
+          {
+            "table_dependencies": [
+              {
+                "table": "`CUSTOMER`",
+                "row_may_be_null": false,
+                "map_bit": 0,
+                "depends_on_map_bits": [
+                ]
+              }
+            ]
+          },
+          {
+            "ref_optimizer_key_uses": [
+              {
+                "table": "`CUSTOMER`",
+                "field": "C_W_ID",
+                "equals": "1",
+                "null_rejecting": false
+              },
+              {
+                "table": "`CUSTOMER`",
+                "field": "C_W_ID",
+                "equals": "1",
+                "null_rejecting": false
+              }
+            ]
+          },
+          {
+            "rows_estimation": [
+              {
+                "table": "`CUSTOMER`",
+                "range_analysis": {
+                  "table_scan": {
+                    "rows": 6751,
+                    "cost": 1641.3
+                  },
+                  "potential_range_indexes": [
+                    {
+                      "index": "PRIMARY",
+                      "usable": false,
+                      "cause": "not_applicable"
+                    },
+                    {
+                      "index": "uk_wid_did_cid",
+                      "usable": true,
+                      "key_parts": [
+                        "C_W_ID",
+                        "C_D_ID",
+                        "C_ID"
+                      ]
+                    },
+                    {
+                      "index": "IDX_CUSTOMER_NAME",
+                      "usable": true,
+                      "key_parts": [
+                        "C_W_ID",
+                        "C_D_ID",
+                        "C_LAST",
+                        "C_FIRST",
+                        "ID"
+                      ]
+                    },
+                    {
+                      "index": "idx_C_STREET_1",
+                      "usable": false,
+                      "cause": "not_applicable"
+                    },
+                    {
+                      "index": "id_test",
+                      "usable": false,
+                      "cause": "not_applicable"
+                    },
+                    {
+                      "index": "id_test2",
+                      "usable": false,
+                      "cause": "not_applicable"
+                    },
+                    {
+                      "index": "id_test3",
+                      "usable": false,
+                      "cause": "not_applicable"
+                    }
+                  ],
+                  "best_covering_index_scan": {
+                    "index": "uk_wid_did_cid",
+                    "cost": 1367.7,
+                    "chosen": true
+                  },
+                  "setup_range_conditions": [
+                  ],
+                  "group_index_range": {
+                    "chosen": false,
+                    "cause": "not_group_by_or_distinct"
+                  },
+                  "analyzing_range_alternatives": {
+                    "range_scan_alternatives": [
+                      {
+                        "index": "uk_wid_did_cid",
+                        "ranges": [
+                          "1 <= C_W_ID <= 1"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "rows": 3375,
+                        "cost": 684.24,
+                        "chosen": true
+                      },
+                      {
+                        "index": "IDX_CUSTOMER_NAME",
+                        "ranges": [
+                          "1 <= C_W_ID <= 1"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": false,
+                        "rows": 3375,
+                        "cost": 4051,
+                        "chosen": false,
+                        "cause": "cost"
+                      }
+                    ],
+                    "analyzing_roworder_intersect": {
+                      "usable": false,
+                      "cause": "too_few_roworder_scans"
+                    }
+                  },
+                  "chosen_range_access_summary": {
+                    "range_access_plan": {
+                      "type": "range_scan",
+                      "index": "uk_wid_did_cid",
+                      "rows": 3375,
+                      "ranges": [
+                        "1 <= C_W_ID <= 1"
+                      ]
+                    },
+                    "rows_for_plan": 3375,
+                    "cost_for_plan": 684.24,
+                    "chosen": true
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "considered_execution_plans": [
+              {
+                "plan_prefix": [
+                ],
+                "table": "`CUSTOMER`",
+                "best_access_path": {
+                  "considered_access_paths": [
+                    {
+                      "access_type": "ref",
+                      "index": "uk_wid_did_cid",
+                      "rows": 3375,
+                      "cost": 684.23,
+                      "chosen": true
+                    },
+                    {
+                      "access_type": "ref",
+                      "index": "IDX_CUSTOMER_NAME",
+                      "rows": 3375,
+                      "cost": 1350.1,
+                      "chosen": false
+                    },
+                    {
+                      "access_type": "range",
+                      "range_details": {
+                        "used_index": "uk_wid_did_cid"
+                      },
+                      "chosen": false,
+                      "cause": "heuristic_index_cheaper"
+                    }
+                  ]
+                },
+                "condition_filtering_pct": 10,
+                "rows_for_plan": 337.5,
+                "cost_for_plan": 684.23,
+                "chosen": true
+              }
+            ]
+          },
+          {
+            "attaching_conditions_to_tables": {
+              "original_condition": "((`CUSTOMER`.`C_ID` = 2) and (`CUSTOMER`.`C_W_ID` = 1))",
+              "attached_conditions_computation": [
+              ],
+              "attached_conditions_summary": [
+                {
+                  "table": "`CUSTOMER`",
+                  "attached": "(`CUSTOMER`.`C_ID` = 2)"
+                }
+              ]
+            }
+          },
+          {
+            "refine_plan": [
+              {
+                "table": "`CUSTOMER`"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "join_optimization": {
+        "select#": "fake",
+        "steps": [
+          {
+            "table_dependencies": [
+              {
+                "table": "``.``",
+                "row_may_be_null": false,
+                "map_bit": 0,
+                "depends_on_map_bits": [
+                ]
+              }
+            ]
+          },
+          {
+            "rows_estimation": [
+              {
+                "table": "``.``",
+                "table_scan": {
+                  "rows": 0,
+                  "cost": 10
+                }
+              }
+            ]
+          },
+          {
+            "considered_execution_plans": [
+              {
+                "plan_prefix": [
+                ],
+                "table": "``.``",
+                "best_access_path": {
+                  "considered_access_paths": [
+                    {
+                      "rows_to_scan": 0,
+                      "access_type": "scan",
+                      "resulting_rows": 0,
+                      "cost": 10,
+                      "chosen": true
+                    }
+                  ]
+                },
+                "condition_filtering_pct": 100,
+                "rows_for_plan": 0,
+                "cost_for_plan": 10,
+                "chosen": true
+              }
+            ]
+          },
+          {
+            "attaching_conditions_to_tables": {
+              "original_condition": null,
+              "attached_conditions_computation": [
+              ],
+              "attached_conditions_summary": [
+                {
+                  "table": "``.``",
+                  "attached": null
+                }
+              ]
+            }
+          },
+          {
+            "refine_plan": [
+              {
+                "table": "``.``"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "join_explain": {
+        "select#": 1,
+        "steps": [
+        ]
+      }
+    },
+    {
+      "join_explain": {
+        "select#": 2,
+        "steps": [
+        ]
+      }
+    },
+    {
+      "join_explain": {
+        "select#": "fake",
+        "steps": [
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,678 @@
+{
+    "customer": {
+        "CUSTOMER_FK1": {
+            "C_NATIONKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 24,
+                "sample_size": 20,
+                "stat_description": "C_NATIONKEY",
+                "n_field": 1
+            },
+            "C_CUSTKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 150250,
+                "sample_size": 20,
+                "stat_description": "C_NATIONKEY,C_CUSTKEY",
+                "n_field": 2
+            }
+        },
+        "PRIMARY": {
+            "C_CUSTKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 148651,
+                "sample_size": 20,
+                "stat_description": "C_CUSTKEY",
+                "n_field": 1
+            }
+        },
+        "idx_C_ADDRESS_C_PHONE_C_NAME_C_COMMENT_C_ACCTBAL": {
+            "C_ADDRESS": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 149206,
+                "sample_size": 20,
+                "stat_description": "C_ADDRESS",
+                "n_field": 1
+            },
+            "C_PHONE": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 147525,
+                "sample_size": 20,
+                "stat_description": "C_ADDRESS,C_PHONE",
+                "n_field": 2
+            },
+            "C_NAME": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 148576,
+                "sample_size": 20,
+                "stat_description": "C_ADDRESS,C_PHONE,C_NAME",
+                "n_field": 3
+            },
+            "C_COMMENT": {
+                "stat_name": "n_diff_pfx04",
+                "stat_value": 148786,
+                "sample_size": 20,
+                "stat_description": "C_ADDRESS,C_PHONE,C_NAME,C_COMMENT",
+                "n_field": 4
+            },
+            "C_ACCTBAL": {
+                "stat_name": "n_diff_pfx05",
+                "stat_value": 147875,
+                "sample_size": 20,
+                "stat_description": "C_ADDRESS,C_PHONE,C_NAME,C_COMMENT,C_ACCTBAL",
+                "n_field": 5
+            },
+            "C_CUSTKEY": {
+                "stat_name": "n_diff_pfx06",
+                "stat_value": 148506,
+                "sample_size": 20,
+                "stat_description": "C_ADDRESS,C_PHONE,C_NAME,C_COMMENT,C_ACCTBAL,C_CUSTKEY",
+                "n_field": 6
+            }
+        }
+    },
+    "lineitem": {
+        "LINEITEM_FK1": {
+            "L_ORDERKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 1492259,
+                "sample_size": 20,
+                "stat_description": "L_ORDERKEY",
+                "n_field": 1
+            },
+            "L_ID": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 5997980,
+                "sample_size": 20,
+                "stat_description": "L_ORDERKEY,L_ID",
+                "n_field": 2
+            }
+        },
+        "LINEITEM_FK2": {
+            "L_PARTKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 189585,
+                "sample_size": 20,
+                "stat_description": "L_PARTKEY",
+                "n_field": 1
+            },
+            "L_SUPPKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 791716,
+                "sample_size": 20,
+                "stat_description": "L_PARTKEY,L_SUPPKEY",
+                "n_field": 2
+            },
+            "L_ID": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 5941877,
+                "sample_size": 20,
+                "stat_description": "L_PARTKEY,L_SUPPKEY,L_ID",
+                "n_field": 3
+            }
+        },
+        "LINEITEM_UK1": {
+            "L_ORDERKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 1504133,
+                "sample_size": 20,
+                "stat_description": "L_ORDERKEY",
+                "n_field": 1
+            },
+            "L_LINENUMBER": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 5995836,
+                "sample_size": 20,
+                "stat_description": "L_ORDERKEY,L_LINENUMBER",
+                "n_field": 2
+            }
+        },
+        "PRIMARY": {
+            "L_ID": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 5799239,
+                "sample_size": 20,
+                "stat_description": "L_ID",
+                "n_field": 1
+            }
+        },
+        "idx_L_ORDERKEY_L_SUPPKEY_L_PARTKEY": {
+            "L_ORDERKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 1494809,
+                "sample_size": 20,
+                "stat_description": "L_ORDERKEY",
+                "n_field": 1
+            },
+            "L_SUPPKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 5992353,
+                "sample_size": 20,
+                "stat_description": "L_ORDERKEY,L_SUPPKEY",
+                "n_field": 2
+            },
+            "L_PARTKEY": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 5993546,
+                "sample_size": 20,
+                "stat_description": "L_ORDERKEY,L_SUPPKEY,L_PARTKEY",
+                "n_field": 3
+            },
+            "L_ID": {
+                "stat_name": "n_diff_pfx04",
+                "stat_value": 5993546,
+                "sample_size": 20,
+                "stat_description": "L_ORDERKEY,L_SUPPKEY,L_PARTKEY,L_ID",
+                "n_field": 4
+            }
+        },
+        "idx_L_PARTKEY_L_QUANTITY": {
+            "L_PARTKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 201953,
+                "sample_size": 20,
+                "stat_description": "L_PARTKEY",
+                "n_field": 1
+            },
+            "L_QUANTITY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 4503226,
+                "sample_size": 20,
+                "stat_description": "L_PARTKEY,L_QUANTITY",
+                "n_field": 2
+            },
+            "L_ID": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 5994198,
+                "sample_size": 20,
+                "stat_description": "L_PARTKEY,L_QUANTITY,L_ID",
+                "n_field": 3
+            }
+        },
+        "idx_L_RETURNFLAG_L_ORDERKEY": {
+            "L_RETURNFLAG": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 2,
+                "sample_size": 4,
+                "stat_description": "L_RETURNFLAG",
+                "n_field": 1
+            },
+            "L_ORDERKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 2075464,
+                "sample_size": 20,
+                "stat_description": "L_RETURNFLAG,L_ORDERKEY",
+                "n_field": 2
+            },
+            "L_ID": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 5996169,
+                "sample_size": 20,
+                "stat_description": "L_RETURNFLAG,L_ORDERKEY,L_ID",
+                "n_field": 3
+            }
+        },
+        "idx_L_SHIPDATE": {
+            "L_SHIPDATE": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 2464,
+                "sample_size": 20,
+                "stat_description": "L_SHIPDATE",
+                "n_field": 1
+            },
+            "L_ID": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 5997483,
+                "sample_size": 20,
+                "stat_description": "L_SHIPDATE,L_ID",
+                "n_field": 2
+            }
+        },
+        "idx_L_SHIPMODE_L_RECEIPTDATE": {
+            "L_SHIPMODE": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 6,
+                "sample_size": 8,
+                "stat_description": "L_SHIPMODE",
+                "n_field": 1
+            },
+            "L_RECEIPTDATE": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 19975,
+                "sample_size": 20,
+                "stat_description": "L_SHIPMODE,L_RECEIPTDATE",
+                "n_field": 2
+            },
+            "L_ID": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 5992650,
+                "sample_size": 20,
+                "stat_description": "L_SHIPMODE,L_RECEIPTDATE,L_ID",
+                "n_field": 3
+            }
+        },
+        "idx_L_SUPPKEY_L_ORDERKEY_L_PARTKEY": {
+            "L_SUPPKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 10333,
+                "sample_size": 20,
+                "stat_description": "L_SUPPKEY",
+                "n_field": 1
+            },
+            "L_ORDERKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 5991956,
+                "sample_size": 20,
+                "stat_description": "L_SUPPKEY,L_ORDERKEY",
+                "n_field": 2
+            },
+            "L_PARTKEY": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 5993546,
+                "sample_size": 20,
+                "stat_description": "L_SUPPKEY,L_ORDERKEY,L_PARTKEY",
+                "n_field": 3
+            },
+            "L_ID": {
+                "stat_name": "n_diff_pfx04",
+                "stat_value": 5993546,
+                "sample_size": 20,
+                "stat_description": "L_SUPPKEY,L_ORDERKEY,L_PARTKEY,L_ID",
+                "n_field": 4
+            }
+        }
+    },
+    "nation": {
+        "NATION_FK1": {
+            "N_REGIONKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 5,
+                "sample_size": 1,
+                "stat_description": "N_REGIONKEY",
+                "n_field": 1
+            },
+            "N_NATIONKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 25,
+                "sample_size": 1,
+                "stat_description": "N_REGIONKEY,N_NATIONKEY",
+                "n_field": 2
+            }
+        },
+        "PRIMARY": {
+            "N_NATIONKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 25,
+                "sample_size": 1,
+                "stat_description": "N_NATIONKEY",
+                "n_field": 1
+            }
+        },
+        "idx_N_NAME_N_NATIONKEY": {
+            "N_NAME": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 25,
+                "sample_size": 1,
+                "stat_description": "N_NAME",
+                "n_field": 1
+            },
+            "N_NATIONKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 25,
+                "sample_size": 1,
+                "stat_description": "N_NAME,N_NATIONKEY",
+                "n_field": 2
+            }
+        }
+    },
+    "orders": {
+        "ORDERS_FK1": {
+            "O_CUSTKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 98665,
+                "sample_size": 20,
+                "stat_description": "O_CUSTKEY",
+                "n_field": 1
+            },
+            "O_ORDERKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 1473021,
+                "sample_size": 20,
+                "stat_description": "O_CUSTKEY,O_ORDERKEY",
+                "n_field": 2
+            }
+        },
+        "PRIMARY": {
+            "O_ORDERKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 1494733,
+                "sample_size": 20,
+                "stat_description": "O_ORDERKEY",
+                "n_field": 1
+            }
+        },
+        "idx_O_CUSTKEY_O_ORDERKEY_O_ORDERDATE": {
+            "O_CUSTKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 100497,
+                "sample_size": 20,
+                "stat_description": "O_CUSTKEY",
+                "n_field": 1
+            },
+            "O_ORDERKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 1499075,
+                "sample_size": 20,
+                "stat_description": "O_CUSTKEY,O_ORDERKEY",
+                "n_field": 2
+            },
+            "O_ORDERDATE": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 1499075,
+                "sample_size": 20,
+                "stat_description": "O_CUSTKEY,O_ORDERKEY,O_ORDERDATE",
+                "n_field": 3
+            }
+        },
+        "idx_O_ORDERDATE": {
+            "O_ORDERDATE": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 2308,
+                "sample_size": 20,
+                "stat_description": "O_ORDERDATE",
+                "n_field": 1
+            },
+            "O_ORDERKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 1499046,
+                "sample_size": 20,
+                "stat_description": "O_ORDERDATE,O_ORDERKEY",
+                "n_field": 2
+            }
+        }
+    },
+    "part": {
+        "PRIMARY": {
+            "P_PARTKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 198300,
+                "sample_size": 20,
+                "stat_description": "P_PARTKEY",
+                "n_field": 1
+            }
+        },
+        "idx_P_CONTAINER_P_BRAND_P_PARTKEY": {
+            "P_CONTAINER": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 41,
+                "sample_size": 20,
+                "stat_description": "P_CONTAINER",
+                "n_field": 1
+            },
+            "P_BRAND": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 953,
+                "sample_size": 20,
+                "stat_description": "P_CONTAINER,P_BRAND",
+                "n_field": 2
+            },
+            "P_PARTKEY": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 199946,
+                "sample_size": 20,
+                "stat_description": "P_CONTAINER,P_BRAND,P_PARTKEY",
+                "n_field": 3
+            }
+        },
+        "idx_P_NAME": {
+            "P_NAME": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 201340,
+                "sample_size": 20,
+                "stat_description": "P_NAME",
+                "n_field": 1
+            },
+            "P_PARTKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 200807,
+                "sample_size": 20,
+                "stat_description": "P_NAME,P_PARTKEY",
+                "n_field": 2
+            }
+        },
+        "idx_P_SIZE_P_BRAND": {
+            "P_SIZE": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 51,
+                "sample_size": 20,
+                "stat_description": "P_SIZE",
+                "n_field": 1
+            },
+            "P_BRAND": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 1253,
+                "sample_size": 20,
+                "stat_description": "P_SIZE,P_BRAND",
+                "n_field": 2
+            },
+            "P_PARTKEY": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 199924,
+                "sample_size": 20,
+                "stat_description": "P_SIZE,P_BRAND,P_PARTKEY",
+                "n_field": 3
+            }
+        },
+        "idx_P_TYPE_P_PARTKEY": {
+            "P_TYPE": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 151,
+                "sample_size": 20,
+                "stat_description": "P_TYPE",
+                "n_field": 1
+            },
+            "P_PARTKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 200160,
+                "sample_size": 20,
+                "stat_description": "P_TYPE,P_PARTKEY",
+                "n_field": 2
+            }
+        }
+    },
+    "partsupp": {
+        "PARTSUPP_FK1": {
+            "PS_SUPPKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 9694,
+                "sample_size": 20,
+                "stat_description": "PS_SUPPKEY",
+                "n_field": 1
+            },
+            "PS_ID": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 783537,
+                "sample_size": 20,
+                "stat_description": "PS_SUPPKEY,PS_ID",
+                "n_field": 2
+            }
+        },
+        "PARTSUPP_FK2": {
+            "PS_PARTKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 200199,
+                "sample_size": 20,
+                "stat_description": "PS_PARTKEY",
+                "n_field": 1
+            },
+            "PS_ID": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 800532,
+                "sample_size": 20,
+                "stat_description": "PS_PARTKEY,PS_ID",
+                "n_field": 2
+            }
+        },
+        "PARTSUPP_UK1": {
+            "PS_PARTKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 199353,
+                "sample_size": 20,
+                "stat_description": "PS_PARTKEY",
+                "n_field": 1
+            },
+            "PS_SUPPKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 800001,
+                "sample_size": 20,
+                "stat_description": "PS_PARTKEY,PS_SUPPKEY",
+                "n_field": 2
+            }
+        },
+        "PRIMARY": {
+            "PS_ID": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 793680,
+                "sample_size": 20,
+                "stat_description": "PS_ID",
+                "n_field": 1
+            }
+        },
+        "idx_PS_SUPPKEY_PS_PARTKEY_PS_AVAILQTY": {
+            "PS_SUPPKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 10123,
+                "sample_size": 20,
+                "stat_description": "PS_SUPPKEY",
+                "n_field": 1
+            },
+            "PS_PARTKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 799240,
+                "sample_size": 20,
+                "stat_description": "PS_SUPPKEY,PS_PARTKEY",
+                "n_field": 2
+            },
+            "PS_AVAILQTY": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 799240,
+                "sample_size": 20,
+                "stat_description": "PS_SUPPKEY,PS_PARTKEY,PS_AVAILQTY",
+                "n_field": 3
+            },
+            "PS_ID": {
+                "stat_name": "n_diff_pfx04",
+                "stat_value": 799240,
+                "sample_size": 20,
+                "stat_description": "PS_SUPPKEY,PS_PARTKEY,PS_AVAILQTY,PS_ID",
+                "n_field": 4
+            }
+        },
+        "idx_PS_SUPPLYCOST_PS_PARTKEY_PS_SUPPKEY": {
+            "PS_SUPPLYCOST": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 101206,
+                "sample_size": 20,
+                "stat_description": "PS_SUPPLYCOST",
+                "n_field": 1
+            },
+            "PS_PARTKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 798973,
+                "sample_size": 20,
+                "stat_description": "PS_SUPPLYCOST,PS_PARTKEY",
+                "n_field": 2
+            },
+            "PS_SUPPKEY": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 799034,
+                "sample_size": 20,
+                "stat_description": "PS_SUPPLYCOST,PS_PARTKEY,PS_SUPPKEY",
+                "n_field": 3
+            },
+            "PS_ID": {
+                "stat_name": "n_diff_pfx04",
+                "stat_value": 799034,
+                "sample_size": 20,
+                "stat_description": "PS_SUPPLYCOST,PS_PARTKEY,PS_SUPPKEY,PS_ID",
+                "n_field": 4
+            }
+        }
+    },
+    "region": {
+        "PRIMARY": {
+            "R_REGIONKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 5,
+                "sample_size": 1,
+                "stat_description": "R_REGIONKEY",
+                "n_field": 1
+            }
+        },
+        "idx_R_NAME_R_REGIONKEY": {
+            "R_NAME": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 5,
+                "sample_size": 1,
+                "stat_description": "R_NAME",
+                "n_field": 1
+            },
+            "R_REGIONKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 5,
+                "sample_size": 1,
+                "stat_description": "R_NAME,R_REGIONKEY",
+                "n_field": 2
+            }
+        }
+    },
+    "supplier": {
+        "PRIMARY": {
+            "S_SUPPKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 9735,
+                "sample_size": 20,
+                "stat_description": "S_SUPPKEY",
+                "n_field": 1
+            }
+        },
+        "SUPPLIER_FK1": {
+            "S_NATIONKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 25,
+                "sample_size": 16,
+                "stat_description": "S_NATIONKEY",
+                "n_field": 1
+            },
+            "S_SUPPKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 10000,
+                "sample_size": 16,
+                "stat_description": "S_NATIONKEY,S_SUPPKEY",
+                "n_field": 2
+            }
+        },
+        "idx_S_NATIONKEY_S_SUPPKEY_S_NAME": {
+            "S_NATIONKEY": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 25,
+                "sample_size": 25,
+                "stat_description": "S_NATIONKEY",
+                "n_field": 1
+            },
+            "S_SUPPKEY": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 10000,
+                "sample_size": 25,
+                "stat_description": "S_NATIONKEY,S_SUPPKEY",
+                "n_field": 2
+            },
+            "S_NAME": {
+                "stat_name": "n_diff_pfx03",
+                "stat_value": 10000,
+                "sample_size": 25,
+                "stat_description": "S_NATIONKEY,S_SUPPKEY,S_NAME",
+                "n_field": 3
+            }
+        }
+    }
+}

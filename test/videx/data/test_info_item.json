@@ -1,0 +1,87 @@
+{
+  "item_type": "videx_request",
+  "properties": {
+    "dbname": "tpcc_4",
+    "function": "virtual int ha_videx::info_low(uint, bool)",
+    "table_name": "ITEM",
+    "target_storage_engine": "INNODB"
+  },
+  "data": [
+    {
+      "item_type": "key",
+      "properties": {
+        "key_length": "4",
+        "name": "PRIMARY"
+      },
+      "data": [
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "I_ID",
+            "store_length": "4"
+          },
+          "data": []
+        }
+      ]
+    },
+    {
+      "item_type": "key",
+      "properties": {
+        "key_length": "7",
+        "name": "idx_I_IM_ID_I_PRICE"
+      },
+      "data": [
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "I_IM_ID",
+            "store_length": "4"
+          },
+          "data": []
+        },
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "I_PRICE",
+            "store_length": "3"
+          },
+          "data": []
+        }
+      ]
+    },
+    {
+      "item_type": "key",
+      "properties": {
+        "key_length": "4",
+        "name": "idx_I_IM_ID"
+      },
+      "data": [
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "I_IM_ID",
+            "store_length": "4"
+          },
+          "data": []
+        }
+      ]
+    },
+    {
+      "item_type": "key",
+      "properties": {
+        "key_length": "26",
+        "name": "idx_I_NAME"
+      },
+      "data": [
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "I_NAME",
+            "store_length": "26"
+          },
+          "data": []
+        }
+      ]
+    }
+  ]
+}

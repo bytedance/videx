@@ -1,0 +1,698 @@
+[
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "lineitem",
+      "target_storage_engine": "INNODB",
+      "rows": 2896768
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {},
+        "data": []
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_L_SHIPDATE",
+          "length": "3",
+          "operator": ">"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "L_SHIPDATE",
+              "value": "'1998-09-18'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "part",
+      "target_storage_engine": "INNODB",
+      "rows": 3989
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_P_SIZE_P_BRAND",
+          "length": "4",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "P_SIZE",
+              "value": "24"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_P_SIZE_P_BRAND",
+          "length": "4",
+          "operator": ">"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "P_SIZE",
+              "value": "24"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "region",
+      "target_storage_engine": "INNODB",
+      "rows": 1
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_R_NAME_R_REGIONKEY",
+          "length": "100",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "R_NAME",
+              "value": "'AMERICA'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_R_NAME_R_REGIONKEY",
+          "length": "100",
+          "operator": ">"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "R_NAME",
+              "value": "'AMERICA'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "orders",
+      "target_storage_engine": "INNODB",
+      "rows": 740926
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {},
+        "data": []
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_O_ORDERDATE",
+          "length": "3",
+          "operator": "<"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "O_ORDERDATE",
+              "value": "'1995-03-08'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "lineitem",
+      "target_storage_engine": "INNODB",
+      "rows": 2896768
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_L_SHIPDATE",
+          "length": "3",
+          "operator": ">"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "L_SHIPDATE",
+              "value": "'1995-03-08'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {},
+        "data": []
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "orders",
+      "target_storage_engine": "INNODB",
+      "rows": 113652
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_O_ORDERDATE",
+          "length": "3",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "O_ORDERDATE",
+              "value": "'1994-02-01'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_O_ORDERDATE",
+          "length": "3",
+          "operator": "<"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "O_ORDERDATE",
+              "value": "'1994-05-01'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "orders",
+      "target_storage_engine": "INNODB",
+      "rows": 455706
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_O_ORDERDATE",
+          "length": "3",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "O_ORDERDATE",
+              "value": "'1994-01-01'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_O_ORDERDATE",
+          "length": "3",
+          "operator": "<"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "O_ORDERDATE",
+              "value": "'1995-01-01'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "region",
+      "target_storage_engine": "INNODB",
+      "rows": 1
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_R_NAME_R_REGIONKEY",
+          "length": "100",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "R_NAME",
+              "value": "'EUROPE'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_R_NAME_R_REGIONKEY",
+          "length": "100",
+          "operator": ">"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "R_NAME",
+              "value": "'EUROPE'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "lineitem",
+      "target_storage_engine": "INNODB",
+      "rows": 1740928
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_L_SHIPDATE",
+          "length": "3",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "L_SHIPDATE",
+              "value": "'1994-01-01'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_L_SHIPDATE",
+          "length": "3",
+          "operator": "<"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "L_SHIPDATE",
+              "value": "'1995-01-01'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "lineitem",
+      "target_storage_engine": "INNODB",
+      "rows": 2896768
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_L_SHIPDATE",
+          "length": "3",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "L_SHIPDATE",
+              "value": "'1995-01-01'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_L_SHIPDATE",
+          "length": "3",
+          "operator": ">"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "L_SHIPDATE",
+              "value": "'1996-12-31'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "nation",
+      "target_storage_engine": "INNODB",
+      "rows": 1
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_N_NAME_N_NATIONKEY",
+          "length": "100",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "N_NAME",
+              "value": "'CANADA'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_N_NAME_N_NATIONKEY",
+          "length": "100",
+          "operator": ">"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "N_NAME",
+              "value": "'CANADA'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "nation",
+      "target_storage_engine": "INNODB",
+      "rows": 1
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_N_NAME_N_NATIONKEY",
+          "length": "100",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "N_NAME",
+              "value": "'IRAN'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_N_NAME_N_NATIONKEY",
+          "length": "100",
+          "operator": ">"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "N_NAME",
+              "value": "'IRAN'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "part",
+      "target_storage_engine": "INNODB",
+      "rows": 1282
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_P_TYPE_P_PARTKEY",
+          "length": "102",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "P_TYPE",
+              "value": "'LARGE BURNISHED TIN'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_P_TYPE_P_PARTKEY",
+          "length": "102",
+          "operator": ">"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "P_TYPE",
+              "value": "'LARGE BURNISHED TIN'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "orders",
+      "target_storage_engine": "INNODB",
+      "rows": 740926
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_O_ORDERDATE",
+          "length": "3",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "O_ORDERDATE",
+              "value": "'1995-01-01'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_O_ORDERDATE",
+          "length": "3",
+          "operator": ">"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "O_ORDERDATE",
+              "value": "'1996-12-31'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "item_type": "videx_request",
+    "properties": {
+      "dbname": "videx_tpch",
+      "function": "virtual ha_rows ha_videx::records_in_range(uint, key_range *, key_range *)",
+      "table_name": "lineitem",
+      "target_storage_engine": "INNODB"
+    },
+    "data": [
+      {
+        "item_type": "min_key",
+        "properties": {
+          "index_name": "idx_L_SHIPMODE_L_RECEIPTDATE",
+          "length": "43",
+          "operator": "="
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "L_SHIPMODE",
+              "value": "'MAIL'"
+            },
+            "data": []
+          },
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "L_RECEIPTDATE",
+              "value": "'1993-01-01'"
+            },
+            "data": []
+          }
+        ]
+      },
+      {
+        "item_type": "max_key",
+        "properties": {
+          "index_name": "idx_L_SHIPMODE_L_RECEIPTDATE",
+          "length": "43",
+          "operator": "<"
+        },
+        "data": [
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "L_SHIPMODE",
+              "value": "'MAIL'"
+            },
+            "data": []
+          },
+          {
+            "item_type": "column_and_bound",
+            "properties": {
+              "column": "L_RECEIPTDATE",
+              "value": "'1994-01-01'"
+            },
+            "data": []
+          }
+        ]
+      }
+    ]
+  }
+]

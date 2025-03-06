@@ -1,0 +1,199 @@
+{
+  "steps": [
+    {
+      "lex_json_preparse_tables": ""
+    },
+    {
+      "join_preparation": {
+        "select#": 1,
+        "steps": [
+        ]
+      }
+    },
+    {
+      "lex_json_before_optimize": ""
+    },
+    {
+      "join_optimization": {
+        "select#": 1,
+        "steps": [
+          {
+            "condition_processing": {
+            }
+          },
+          {
+            "substitute_generated_columns": {
+            }
+          },
+          {
+            "table_dependencies": [
+            ]
+          },
+          {
+            "ref_optimizer_key_uses": [
+            ]
+          },
+          {
+            "rows_estimation": [
+              {
+                "table": "`item`",
+                "range_analysis": {
+                  "analyzing_range_alternatives": {
+                    "range_scan_alternatives": [
+                      {
+                        "index": "idx_I_IM_ID",
+                        "ranges": [
+                          "I_IM_ID = 70",
+                          "I_IM_ID = 80"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "in_memory": 0.0119048,
+                        "rows": 21,
+                        "cost": 3.12041,
+                        "chosen": true
+                      },
+                      {
+                        "index": "idx_s_test",
+                        "ranges": [
+                          "I_IM_ID = 70",
+                          "I_IM_ID = 80"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "in_memory": 0.00980392,
+                        "rows": 21,
+                        "cost": 3.1293,
+                        "chosen": false,
+                        "cause": "cost"
+                      },
+                      {
+                        "index": "idx_test_im",
+                        "ranges": [
+                          "I_IM_ID = 70",
+                          "I_IM_ID = 80"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "in_memory": 0.00980392,
+                        "rows": 21,
+                        "cost": 3.1293,
+                        "chosen": false,
+                        "cause": "cost"
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "table": "`item`",
+                "range_analysis": {
+                  "analyzing_range_alternatives": {
+                    "range_scan_alternatives": [
+                      {
+                        "index": "1_2_idx_I_IM_ID",
+                        "ranges": [
+                          "I_IM_ID = 70",
+                          "I_IM_ID = 80"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "in_memory": 0.0119048,
+                        "rows": 21,
+                        "cost": 3.12041,
+                        "chosen": true
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "join_optimization": {
+        "select#": 2,
+        "steps": [
+          {
+            "condition_processing": {
+            }
+          },
+          {
+            "substitute_generated_columns": {
+            }
+          },
+          {
+            "table_dependencies": [
+            ]
+          },
+          {
+            "ref_optimizer_key_uses": [
+            ]
+          },
+          {
+            "rows_estimation": [
+              {
+                "table": "`item2`",
+                "range_analysis": {
+                  "analyzing_range_alternatives": {
+                    "range_scan_alternatives": [
+                      {
+                        "index": "2_1_idx_I_IM_ID",
+                        "ranges": [
+                          "I_IM_ID = 70",
+                          "I_IM_ID = 80"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "in_memory": 0.0119048,
+                        "rows": 21,
+                        "cost": 3.12041,
+                        "chosen": true
+                      }
+                    ]
+                  }
+                }
+              },
+              {
+                "table": "`item4`",
+                "range_analysis": {
+                  "analyzing_range_alternatives": {
+                    "range_scan_alternatives": [
+                      {
+                        "index": "2_2_idx_I_IM_ID",
+                        "ranges": [
+                          "I_IM_ID = 70",
+                          "I_IM_ID = 80"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "in_memory": 0.0119048,
+                        "rows": 21,
+                        "cost": 3.12041,
+                        "chosen": true
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

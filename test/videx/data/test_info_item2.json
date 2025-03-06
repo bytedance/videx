@@ -1,0 +1,112 @@
+{
+  "item_type": "videx_request",
+  "properties": {
+    "dbname": "videx_tpch",
+    "function": "virtual int ha_videx::info_low(uint, bool)",
+    "table_name": "lineitem",
+    "target_storage_engine": "INNODB",
+    "videx_options": "{\"task_id\": \"127_0_0_1_13308@@@demo_tpch\", \"use_gt\": true}"
+  },
+  "data": [
+    {
+      "item_type": "key",
+      "properties": {
+        "key_length": "4",
+        "name": "PRIMARY"
+      },
+      "data": [
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "L_ID",
+            "store_length": "4"
+          },
+          "data": []
+        }
+      ]
+    },
+    {
+      "item_type": "key",
+      "properties": {
+        "key_length": "8",
+        "name": "LINEITEM_UK1"
+      },
+      "data": [
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "L_ORDERKEY",
+            "store_length": "4"
+          },
+          "data": []
+        },
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "L_LINENUMBER",
+            "store_length": "4"
+          },
+          "data": []
+        }
+      ]
+    },
+    {
+      "item_type": "key",
+      "properties": {
+        "key_length": "4",
+        "name": "LINEITEM_FK1"
+      },
+      "data": [
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "L_ORDERKEY",
+            "store_length": "4"
+          },
+          "data": []
+        },
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "L_ID",
+            "store_length": "4"
+          },
+          "data": []
+        }
+      ]
+    },
+    {
+      "item_type": "key",
+      "properties": {
+        "key_length": "8",
+        "name": "LINEITEM_FK2"
+      },
+      "data": [
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "L_PARTKEY",
+            "store_length": "4"
+          },
+          "data": []
+        },
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "L_SUPPKEY",
+            "store_length": "4"
+          },
+          "data": []
+        },
+        {
+          "item_type": "field",
+          "properties": {
+            "name": "L_ID",
+            "store_length": "4"
+          },
+          "data": []
+        }
+      ]
+    }
+  ]
+}

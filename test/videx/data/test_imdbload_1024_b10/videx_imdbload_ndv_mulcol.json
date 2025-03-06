@@ -1,0 +1,601 @@
+{
+    "aka_name": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 895315,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        },
+        "person_id_aka_name": {
+            "person_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 586537,
+                "sample_size": 20,
+                "stat_description": "person_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 901500,
+                "sample_size": 20,
+                "stat_description": "person_id,id",
+                "n_field": 2
+            }
+        }
+    },
+    "aka_title": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 345409,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        },
+        "kind_id_aka_title": {
+            "kind_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 5,
+                "sample_size": 7,
+                "stat_description": "kind_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 361802,
+                "sample_size": 20,
+                "stat_description": "kind_id,id",
+                "n_field": 2
+            }
+        },
+        "movie_id_aka_title": {
+            "movie_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 208246,
+                "sample_size": 20,
+                "stat_description": "movie_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 361802,
+                "sample_size": 20,
+                "stat_description": "movie_id,id",
+                "n_field": 2
+            }
+        }
+    },
+    "cast_info": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 37299227,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        },
+        "movie_id_cast_info": {
+            "movie_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 2210255,
+                "sample_size": 20,
+                "stat_description": "movie_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 36219866,
+                "sample_size": 20,
+                "stat_description": "movie_id,id",
+                "n_field": 2
+            }
+        },
+        "person_id_cast_info": {
+            "person_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 4367778,
+                "sample_size": 20,
+                "stat_description": "person_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 36219866,
+                "sample_size": 20,
+                "stat_description": "person_id,id",
+                "n_field": 2
+            }
+        },
+        "person_role_id_cast_info": {
+            "person_role_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 3255091,
+                "sample_size": 19,
+                "stat_description": "person_role_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 36219792,
+                "sample_size": 20,
+                "stat_description": "person_role_id,id",
+                "n_field": 2
+            }
+        },
+        "role_id_cast_info": {
+            "role_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 7304,
+                "sample_size": 9,
+                "stat_description": "role_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 36219866,
+                "sample_size": 20,
+                "stat_description": "role_id,id",
+                "n_field": 2
+            }
+        }
+    },
+    "char_name": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 3351432,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        }
+    },
+    "comp_cast_type": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 4,
+                "sample_size": 1,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        }
+    },
+    "company_name": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 234858,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        }
+    },
+    "company_type": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 4,
+                "sample_size": 1,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        }
+    },
+    "complete_cast": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 131967,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        },
+        "movie_id_complete_cast": {
+            "movie_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 97338,
+                "sample_size": 20,
+                "stat_description": "movie_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 135399,
+                "sample_size": 20,
+                "stat_description": "movie_id,id",
+                "n_field": 2
+            }
+        }
+    },
+    "info_type": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 113,
+                "sample_size": 1,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        }
+    },
+    "keyword": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 143616,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        }
+    },
+    "kind_type": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 7,
+                "sample_size": 1,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        }
+    },
+    "link_type": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 18,
+                "sample_size": 1,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        }
+    },
+    "movie_companies": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 2627753,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        },
+        "company_id_movie_companies": {
+            "company_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 257238,
+                "sample_size": 20,
+                "stat_description": "company_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 2607138,
+                "sample_size": 20,
+                "stat_description": "company_id,id",
+                "n_field": 2
+            }
+        },
+        "company_type_id_movie_companies": {
+            "company_type_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 1,
+                "sample_size": 3,
+                "stat_description": "company_type_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 2607138,
+                "sample_size": 20,
+                "stat_description": "company_type_id,id",
+                "n_field": 2
+            }
+        },
+        "movie_id_movie_companies": {
+            "movie_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 1075390,
+                "sample_size": 20,
+                "stat_description": "movie_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 2607138,
+                "sample_size": 20,
+                "stat_description": "movie_id,id",
+                "n_field": 2
+            }
+        }
+    },
+    "movie_info": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 13621894,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        },
+        "info_type_id_movie_info": {
+            "info_type_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 73,
+                "sample_size": 20,
+                "stat_description": "info_type_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 14824266,
+                "sample_size": 20,
+                "stat_description": "info_type_id,id",
+                "n_field": 2
+            }
+        },
+        "movie_id_movie_info": {
+            "movie_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 2597720,
+                "sample_size": 20,
+                "stat_description": "movie_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 14824266,
+                "sample_size": 20,
+                "stat_description": "movie_id,id",
+                "n_field": 2
+            }
+        }
+    },
+    "movie_info_idx": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 1376156,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        },
+        "info_type_id_movie_info_idx": {
+            "info_type_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 4,
+                "sample_size": 5,
+                "stat_description": "info_type_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 1379896,
+                "sample_size": 20,
+                "stat_description": "info_type_id,id",
+                "n_field": 2
+            }
+        },
+        "movie_id_movie_info_idx": {
+            "movie_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 459544,
+                "sample_size": 20,
+                "stat_description": "movie_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 1379896,
+                "sample_size": 20,
+                "stat_description": "movie_id,id",
+                "n_field": 2
+            }
+        }
+    },
+    "movie_keyword": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 4515366,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        },
+        "keyword_id_movie_keyword": {
+            "keyword_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 226444,
+                "sample_size": 20,
+                "stat_description": "keyword_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 4520722,
+                "sample_size": 20,
+                "stat_description": "keyword_id,id",
+                "n_field": 2
+            }
+        },
+        "movie_id_movie_keyword": {
+            "movie_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 537258,
+                "sample_size": 20,
+                "stat_description": "movie_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 4520722,
+                "sample_size": 20,
+                "stat_description": "movie_id,id",
+                "n_field": 2
+            }
+        }
+    },
+    "movie_link": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 29597,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        },
+        "link_type_id_movie_link": {
+            "link_type_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 16,
+                "sample_size": 25,
+                "stat_description": "link_type_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 29997,
+                "sample_size": 25,
+                "stat_description": "link_type_id,id",
+                "n_field": 2
+            }
+        },
+        "linked_movie_id_movie_link": {
+            "linked_movie_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 16169,
+                "sample_size": 25,
+                "stat_description": "linked_movie_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 29997,
+                "sample_size": 25,
+                "stat_description": "linked_movie_id,id",
+                "n_field": 2
+            }
+        },
+        "movie_id_movie_link": {
+            "movie_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 6411,
+                "sample_size": 25,
+                "stat_description": "movie_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 29997,
+                "sample_size": 25,
+                "stat_description": "movie_id,id",
+                "n_field": 2
+            }
+        }
+    },
+    "name": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 4198695,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        }
+    },
+    "person_info": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 3172552,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        },
+        "info_type_id_person_info": {
+            "info_type_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 21,
+                "sample_size": 20,
+                "stat_description": "info_type_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 2961728,
+                "sample_size": 20,
+                "stat_description": "info_type_id,id",
+                "n_field": 2
+            }
+        },
+        "person_id_person_info": {
+            "person_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 559820,
+                "sample_size": 20,
+                "stat_description": "person_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 2961728,
+                "sample_size": 20,
+                "stat_description": "person_id,id",
+                "n_field": 2
+            }
+        }
+    },
+    "role_type": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 12,
+                "sample_size": 1,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        }
+    },
+    "title": {
+        "PRIMARY": {
+            "id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 2241343,
+                "sample_size": 20,
+                "stat_description": "id",
+                "n_field": 1
+            }
+        },
+        "kind_id_title": {
+            "kind_id": {
+                "stat_name": "n_diff_pfx01",
+                "stat_value": 6,
+                "sample_size": 7,
+                "stat_description": "kind_id",
+                "n_field": 1
+            },
+            "id": {
+                "stat_name": "n_diff_pfx02",
+                "stat_value": 2526604,
+                "sample_size": 20,
+                "stat_description": "kind_id,id",
+                "n_field": 2
+            }
+        }
+    }
+}

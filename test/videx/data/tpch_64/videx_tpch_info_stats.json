@@ -1,0 +1,430 @@
+{
+    "customer": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "customer",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 148651,
+        "AVG_ROW_LENGTH": 201,
+        "DATA_LENGTH": 29933568,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 3686400,
+        "DATA_FREE": 4194304,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1711238772,
+        "UPDATE_TIME": null,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 148651,
+        "CLUSTERED_INDEX_SIZE": 1827,
+        "SUM_OF_OTHER_INDEX_SIZES": 225,
+        "pct_cached": {
+            "CUSTOMER_FK1": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 150125.0
+            },
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 151778.0
+            },
+            "idx_C_ADDRESS_C_PHONE_C_NAME_C_COMMENT_C_ACCTBAL": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 151021.0
+            }
+        }
+    },
+    "lineitem": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "lineitem",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 5799239,
+        "AVG_ROW_LENGTH": 161,
+        "DATA_LENGTH": 936378368,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 1146257408,
+        "DATA_FREE": 96468992,
+        "AUTO_INCREMENT": 6002015.0,
+        "CREATE_TIME": 1711238729,
+        "UPDATE_TIME": null,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 5799239,
+        "CLUSTERED_INDEX_SIZE": 57152,
+        "SUM_OF_OTHER_INDEX_SIZES": 69962,
+        "pct_cached": {
+            "LINEITEM_FK1": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 6006211.0
+            },
+            "LINEITEM_FK2": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 6009649.0
+            },
+            "LINEITEM_UK1": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 6001602.0
+            },
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 6058280.0
+            },
+            "idx_L_ORDERKEY_L_SUPPKEY_L_PARTKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 0.7407,
+                "pool_rows": 4295594.0
+            },
+            "idx_L_PARTKEY_L_QUANTITY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 6008805.0
+            },
+            "idx_L_RETURNFLAG_L_ORDERKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 0.6264,
+                "pool_rows": 3632396.0
+            },
+            "idx_L_SHIPDATE": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 6005837.0
+            },
+            "idx_L_SHIPMODE_L_RECEIPTDATE": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 6008735.0
+            },
+            "idx_L_SUPPKEY_L_ORDERKEY_L_PARTKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 6009190.0
+            }
+        }
+    },
+    "nation": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "nation",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 25,
+        "AVG_ROW_LENGTH": 655,
+        "DATA_LENGTH": 16384,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 16384,
+        "DATA_FREE": 0,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1711238775,
+        "UPDATE_TIME": null,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 25,
+        "CLUSTERED_INDEX_SIZE": 1,
+        "SUM_OF_OTHER_INDEX_SIZES": 1,
+        "pct_cached": {
+            "NATION_FK1": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 25.0
+            },
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 25.0
+            },
+            "idx_N_NAME_N_NATIONKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 50.0
+            }
+        }
+    },
+    "orders": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "orders",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 1494733,
+        "AVG_ROW_LENGTH": 135,
+        "DATA_LENGTH": 202047488,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 39403520,
+        "DATA_FREE": 3145728,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1711238755,
+        "UPDATE_TIME": null,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 1494733,
+        "CLUSTERED_INDEX_SIZE": 12332,
+        "SUM_OF_OTHER_INDEX_SIZES": 2405,
+        "pct_cached": {
+            "ORDERS_FK1": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 1502051.0
+            },
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 1501451.0
+            },
+            "idx_O_CUSTKEY_O_ORDERKEY_O_ORDERDATE": {
+                "page_type": "INDEX",
+                "pct_cached": 0.1394,
+                "pool_rows": 208418.0
+            },
+            "idx_O_ORDERDATE": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 1501156.0
+            }
+        }
+    },
+    "part": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "part",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 198300,
+        "AVG_ROW_LENGTH": 166,
+        "DATA_LENGTH": 33095680,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 31555584,
+        "DATA_FREE": 3145728,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1711238771,
+        "UPDATE_TIME": null,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 198300,
+        "CLUSTERED_INDEX_SIZE": 2020,
+        "SUM_OF_OTHER_INDEX_SIZES": 1926,
+        "pct_cached": {
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 202002.0
+            },
+            "idx_P_CONTAINER_P_BRAND_P_PARTKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 0.1503,
+                "pool_rows": 29798.0
+            },
+            "idx_P_NAME": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 200535.0
+            },
+            "idx_P_SIZE_P_BRAND": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 200302.0
+            },
+            "idx_P_TYPE_P_PARTKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 0.4058,
+                "pool_rows": 80464.0
+            }
+        }
+    },
+    "partsupp": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "partsupp",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 793680,
+        "AVG_ROW_LENGTH": 183,
+        "DATA_LENGTH": 145375232,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 45727744,
+        "DATA_FREE": 2097152,
+        "AUTO_INCREMENT": 800124.0,
+        "CREATE_TIME": 1711238763,
+        "UPDATE_TIME": null,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 793680,
+        "CLUSTERED_INDEX_SIZE": 8873,
+        "SUM_OF_OTHER_INDEX_SIZES": 2791,
+        "pct_cached": {
+            "PARTSUPP_FK1": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 801050.0
+            },
+            "PARTSUPP_FK2": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 800666.0
+            },
+            "PARTSUPP_UK1": {
+                "page_type": "INDEX_NOSTATS",
+                "pct_cached": 0.0,
+                "pool_rows": 0.0
+            },
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 808812.0
+            },
+            "idx_PS_SUPPKEY_PS_PARTKEY_PS_AVAILQTY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 800639.0
+            },
+            "idx_PS_SUPPLYCOST_PS_PARTKEY_PS_SUPPKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 801213.0
+            }
+        }
+    },
+    "region": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "region",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 5,
+        "AVG_ROW_LENGTH": 3276,
+        "DATA_LENGTH": 16384,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 0,
+        "DATA_FREE": 0,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1711238775,
+        "UPDATE_TIME": null,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 5,
+        "CLUSTERED_INDEX_SIZE": 1,
+        "SUM_OF_OTHER_INDEX_SIZES": 0,
+        "pct_cached": {
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 5.0
+            },
+            "idx_R_NAME_R_REGIONKEY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 10.0
+            }
+        }
+    },
+    "supplier": {
+        "TABLE_CATALOG": "def",
+        "TABLE_SCHEMA": "tpch",
+        "TABLE_NAME": "supplier",
+        "TABLE_TYPE": "BASE TABLE",
+        "ENGINE": "InnoDB",
+        "VERSION": 10,
+        "ROW_FORMAT": "Dynamic",
+        "TABLE_ROWS": 9735,
+        "AVG_ROW_LENGTH": 270,
+        "DATA_LENGTH": 2637824,
+        "MAX_DATA_LENGTH": 0,
+        "INDEX_LENGTH": 1867776,
+        "DATA_FREE": 5242880,
+        "AUTO_INCREMENT": NaN,
+        "CREATE_TIME": 1711238772,
+        "UPDATE_TIME": null,
+        "CHECK_TIME": null,
+        "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+        "CHECKSUM": null,
+        "CREATE_OPTIONS": "",
+        "TABLE_COMMENT": "",
+        "innodb_page_size": 16384,
+        "myisam_max_sort_file_size": 9223372036853727232,
+        "innodb_buffer_pool_size": 4294967296,
+        "N_ROWS": 9735,
+        "CLUSTERED_INDEX_SIZE": 161,
+        "SUM_OF_OTHER_INDEX_SIZES": 114,
+        "pct_cached": {
+            "PRIMARY": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 10110.0
+            },
+            "SUPPLIER_FK1": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 10016.0
+            },
+            "idx_S_NATIONKEY_S_SUPPKEY_S_NAME": {
+                "page_type": "INDEX",
+                "pct_cached": 1.0,
+                "pool_rows": 10050.0
+            }
+        }
+    }
+}

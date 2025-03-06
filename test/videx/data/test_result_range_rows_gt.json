@@ -1,0 +1,100 @@
+[
+  {
+    "index": "idx_I_IM_ID",
+    "ranges": [
+      "I_IM_ID = 70",
+      "I_IM_ID = 80"
+    ],
+    "index_dives_for_eq_ranges": true,
+    "rowid_ordered": false,
+    "using_mrr": false,
+    "index_only": true,
+    "in_memory": 0.0119048,
+    "rows": 21,
+    "cost": 3.12041,
+    "chosen": true,
+    "table": "`item`"
+  },
+  {
+    "index": "idx_s_test",
+    "ranges": [
+      "I_IM_ID = 70",
+      "I_IM_ID = 80"
+    ],
+    "index_dives_for_eq_ranges": true,
+    "rowid_ordered": false,
+    "using_mrr": false,
+    "index_only": true,
+    "in_memory": 0.00980392,
+    "rows": 21,
+    "cost": 3.1293,
+    "chosen": false,
+    "cause": "cost",
+    "table": "`item`"
+  },
+  {
+    "index": "idx_test_im",
+    "ranges": [
+      "I_IM_ID = 70",
+      "I_IM_ID = 80"
+    ],
+    "index_dives_for_eq_ranges": true,
+    "rowid_ordered": false,
+    "using_mrr": false,
+    "index_only": true,
+    "in_memory": 0.00980392,
+    "rows": 21,
+    "cost": 3.1293,
+    "chosen": false,
+    "cause": "cost",
+    "table": "`item`"
+  },
+  {
+    "index": "1_2_idx_I_IM_ID",
+    "ranges": [
+      "I_IM_ID = 70",
+      "I_IM_ID = 80"
+    ],
+    "index_dives_for_eq_ranges": true,
+    "rowid_ordered": false,
+    "using_mrr": false,
+    "index_only": true,
+    "in_memory": 0.0119048,
+    "rows": 21,
+    "cost": 3.12041,
+    "chosen": true,
+    "table": "`item`"
+  },
+  {
+    "index": "2_1_idx_I_IM_ID",
+    "ranges": [
+      "I_IM_ID = 70",
+      "I_IM_ID = 80"
+    ],
+    "index_dives_for_eq_ranges": true,
+    "rowid_ordered": false,
+    "using_mrr": false,
+    "index_only": true,
+    "in_memory": 0.0119048,
+    "rows": 21,
+    "cost": 3.12041,
+    "chosen": true,
+    "table": "`item2`"
+  },
+  {
+    "index": "2_2_idx_I_IM_ID",
+    "ranges": [
+      "I_IM_ID = 70",
+      "I_IM_ID = 80"
+    ],
+    "index_dives_for_eq_ranges": true,
+    "rowid_ordered": false,
+    "using_mrr": false,
+    "index_only": true,
+    "in_memory": 0.0119048,
+    "rows": 21,
+    "cost": 3.12041,
+    "chosen": true,
+    "table": "`item4`"
+  }
+]

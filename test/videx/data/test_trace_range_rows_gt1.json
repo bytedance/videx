@@ -1,0 +1,298 @@
+{
+  "steps": [
+    {
+      "lex_json_preparse_tables": "{\"item_type\":\"table_list\",\"properties\":{},\"data\":[{\"item_type\":\"table\",\"properties\":{\"address\":\"0x7f876a3ca128\",\"alias\":\"ITEM\",\"db\":\"tpcc\",\"prompt\":\"select_precheck\",\"table\":\"item\",\"tableno\":\"0\"},\"data\":[]}]}"
+    },
+    {
+      "join_preparation": {
+        "select#": 1,
+        "steps": [
+          {
+            "expanded_query": "/* select#1 */ select count(1) AS `count(1)` from `item` where ((`item`.`I_IM_ID` = 80) or (`item`.`I_IM_ID` = 70))"
+          }
+        ]
+      }
+    },
+    {
+      "lex_json_before_optimize": "{\"item_type\":\"root\",\"properties\":{},\"data\":[{\"item_type\":\"st_select_lex_unit\",\"properties\":{\"opt_SQL\":\"select count(1) AS `count(1)` from `tpcc`.`item` where ((`tpcc`.`item`.`I_IM_ID` = 80) or (`tpcc`.`item`.`I_IM_ID` = 70))\",\"prompt\":\"root\",\"raw_SQL\":\"explain SELECT count(1)  FROM ITEM where `I_IM_ID` = 80 or `I_IM_ID` = 70\"},\"data\":[{\"item_type\":\"select\",\"properties\":{\"address\":\"0x7f876a3c83b8\",\"opt_SQL\":\"select count(1) AS `count(1)` from `tpcc`.`item` where ((`tpcc`.`item`.`I_IM_ID` = 80) or (`tpcc`.`item`.`I_IM_ID` = 70))\",\"prompt\":\"\",\"raw_SQL\":\"explain SELECT count(1)  FROM ITEM where `I_IM_ID` = 80 or `I_IM_ID` = 70\",\"select_number\":\"1\"},\"data\":[{\"item_type\":\"field_list\",\"properties\":{\"prompt\":\"\"},\"data\":[{\"item_type\":\"field\",\"properties\":{},\"data\":[{\"item_type\":\"SUM_FUNC_ITEM\",\"properties\":{\"address\":\"0x7f876a3c88a0\",\"cmp_context\":\"INVALID_RESULT\",\"code\":\"unprocessed\",\"full_name\":\"count(1)\",\"func_name\":\"count\",\"functype\":\"UNKNOWN_FUNC\",\"item_name\":\"count(1)\",\"msg\":\"count(1)\",\"orig_name\":\"NULL\",\"prompt\":\"\"},\"data\":[{\"item_type\":\"INT_ITEM\",\"properties\":{\"address\":\"0x7f876a3c8758\",\"cmp_context\":\"INVALID_RESULT\",\"full_name\":\"1\",\"item_name\":\"1\",\"orig_name\":\"NULL\",\"prompt\":\"\",\"value\":\"1\"},\"data\":[]}]}]}]},{\"item_type\":\"table_list\",\"properties\":{\"prompt\":\"\"},\"data\":[{\"item_type\":\"table\",\"properties\":{\"address\":\"0x7f876a3ca128\",\"alias\":\"ITEM\",\"db\":\"tpcc\",\"prompt\":\"table_in_select\",\"table\":\"item\",\"tableno\":\"0\"},\"data\":[]}]},{\"item_type\":\"where_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[{\"item_type\":\"COND_ITEM\",\"properties\":{\"address\":\"0x7f876a3c9438\",\"cmp_context\":\"INVALID_RESULT\",\"cond_result\":\"COND_UNDEF\",\"full_name\":\"???\",\"func_name\":\"or\",\"functype\":\"COND_OR_FUNC\",\"item_name\":\"NULL\",\"orig_name\":\"NULL\",\"prompt\":\"\"},\"data\":[{\"item_type\":\"FUNC_ITEM\",\"properties\":{\"address\":\"0x7f876a3cace8\",\"cmp_context\":\"INVALID_RESULT\",\"code\":\"unprocessed\",\"full_name\":\"???\",\"func_name\":\"=\",\"functype\":\"EQ_FUNC\",\"item_name\":\"NULL\",\"msg\":\"(`tpcc`.`item`.`I_IM_ID` = 80)\",\"orig_name\":\"NULL\",\"prompt\":\"\"},\"data\":[{\"item_type\":\"FIELD_ITEM\",\"properties\":{\"actual_field_type\":\"MYSQL_TYPE_LONG\",\"address\":\"0x7f876a3caba0\",\"cmp_context\":\"INT_RESULT\",\"column\":\"I_IM_ID\",\"db\":\"tpcc\",\"field_type\":\"MYSQL_TYPE_LONG\",\"full_name\":\"tpcc.ITEM.I_IM_ID\",\"item_name\":\"I_IM_ID\",\"orig_name\":\"NULL\",\"prompt\":\"\",\"table\":\"ITEM\",\"table_ref_in_field\":\"0x7f876a3ca128\"},\"data\":[]},{\"item_type\":\"INT_ITEM\",\"properties\":{\"address\":\"0x7f876a3c90c0\",\"cmp_context\":\"INT_RESULT\",\"full_name\":\"80\",\"item_name\":\"80\",\"orig_name\":\"NULL\",\"prompt\":\"\",\"value\":\"80\"},\"data\":[]}]},{\"item_type\":\"FUNC_ITEM\",\"properties\":{\"address\":\"0x7f876a3cafe8\",\"cmp_context\":\"INVALID_RESULT\",\"code\":\"unprocessed\",\"full_name\":\"???\",\"func_name\":\"=\",\"functype\":\"EQ_FUNC\",\"item_name\":\"NULL\",\"msg\":\"(`tpcc`.`item`.`I_IM_ID` = 70)\",\"orig_name\":\"NULL\",\"prompt\":\"\"},\"data\":[{\"item_type\":\"FIELD_ITEM\",\"properties\":{\"actual_field_type\":\"MYSQL_TYPE_LONG\",\"address\":\"0x7f876a3caea0\",\"cmp_context\":\"INT_RESULT\",\"column\":\"I_IM_ID\",\"db\":\"tpcc\",\"field_type\":\"MYSQL_TYPE_LONG\",\"full_name\":\"tpcc.ITEM.I_IM_ID\",\"item_name\":\"I_IM_ID\",\"orig_name\":\"NULL\",\"prompt\":\"\",\"table\":\"ITEM\",\"table_ref_in_field\":\"0x7f876a3ca128\"},\"data\":[]},{\"item_type\":\"INT_ITEM\",\"properties\":{\"address\":\"0x7f876a3c92e0\",\"cmp_context\":\"INT_RESULT\",\"full_name\":\"70\",\"item_name\":\"70\",\"orig_name\":\"NULL\",\"prompt\":\"\",\"value\":\"70\"},\"data\":[]}]}]}]},{\"item_type\":\"groupby_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[]},{\"item_type\":\"having_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[]},{\"item_type\":\"window_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[]},{\"item_type\":\"order_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[]},{\"item_type\":\"limit_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[]}]}]}]}"
+    },
+    {
+      "join_optimization": {
+        "select#": 1,
+        "steps": [
+          {
+            "condition_processing": {
+              "condition": "WHERE",
+              "original_condition": "((`item`.`I_IM_ID` = 80) or (`item`.`I_IM_ID` = 70))",
+              "steps": [
+                {
+                  "transformation": "equality_propagation",
+                  "resulting_condition": "(multiple equal(80, `item`.`I_IM_ID`) or multiple equal(70, `item`.`I_IM_ID`))"
+                },
+                {
+                  "transformation": "constant_propagation",
+                  "resulting_condition": "(multiple equal(80, `item`.`I_IM_ID`) or multiple equal(70, `item`.`I_IM_ID`))"
+                },
+                {
+                  "transformation": "trivial_condition_removal",
+                  "resulting_condition": "(multiple equal(80, `item`.`I_IM_ID`) or multiple equal(70, `item`.`I_IM_ID`))"
+                }
+              ]
+            }
+          },
+          {
+            "substitute_generated_columns": {
+            }
+          },
+          {
+            "table_dependencies": [
+              {
+                "table": "`item`",
+                "row_may_be_null": false,
+                "map_bit": 0,
+                "depends_on_map_bits": [
+                ]
+              }
+            ]
+          },
+          {
+            "ref_optimizer_key_uses": [
+            ]
+          },
+          {
+            "rows_estimation": [
+              {
+                "table": "`item`",
+                "range_analysis": {
+                  "table_scan": {
+                    "rows": 96756,
+                    "cost": 10286.7
+                  },
+                  "potential_range_indexes": [
+                    {
+                      "index": "PRIMARY",
+                      "usable": false,
+                      "cause": "not_applicable"
+                    },
+                    {
+                      "index": "idx_I_PRICE",
+                      "usable": false,
+                      "cause": "not_applicable"
+                    },
+                    {
+                      "index": "idx_I_NAME",
+                      "usable": false,
+                      "cause": "not_applicable"
+                    },
+                    {
+                      "index": "idx_I_IM_ID",
+                      "usable": true,
+                      "key_parts": [
+                        "I_IM_ID",
+                        "I_ID"
+                      ]
+                    },
+                    {
+                      "index": "idx_s_test",
+                      "usable": true,
+                      "key_parts": [
+                        "I_IM_ID",
+                        "I_PRICE",
+                        "I_ID"
+                      ]
+                    },
+                    {
+                      "index": "idx_test_im",
+                      "usable": true,
+                      "key_parts": [
+                        "I_IM_ID",
+                        "I_PRICE",
+                        "I_ID"
+                      ]
+                    }
+                  ],
+                  "best_covering_index_scan": {
+                    "index": "idx_I_IM_ID",
+                    "cost": 9770.14,
+                    "chosen": true
+                  },
+                  "setup_range_conditions": [
+                  ],
+                  "group_index_range": {
+                    "chosen": false,
+                    "cause": "not_group_by_or_distinct"
+                  },
+                  "skip_scan_range": {
+                    "potential_skip_scan_indexes": [
+                      {
+                        "index": "idx_I_IM_ID",
+                        "usable": false,
+                        "cause": "no_range_predicate"
+                      },
+                      {
+                        "index": "idx_s_test",
+                        "usable": false,
+                        "cause": "no_range_predicate"
+                      },
+                      {
+                        "index": "idx_test_im",
+                        "usable": false,
+                        "cause": "no_range_predicate"
+                      }
+                    ]
+                  },
+                  "analyzing_range_alternatives": {
+                    "range_scan_alternatives": [
+                      {
+                        "index": "idx_I_IM_ID",
+                        "ranges": [
+                          "I_IM_ID = 70",
+                          "I_IM_ID = 80"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "in_memory": 0.0119048,
+                        "rows": 21,
+                        "cost": 3.12041,
+                        "chosen": true
+                      },
+                      {
+                        "index": "idx_s_test",
+                        "ranges": [
+                          "I_IM_ID = 70",
+                          "I_IM_ID = 80"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "in_memory": 0.00980392,
+                        "rows": 21,
+                        "cost": 3.1293,
+                        "chosen": false,
+                        "cause": "cost"
+                      },
+                      {
+                        "index": "idx_test_im",
+                        "ranges": [
+                          "I_IM_ID = 70",
+                          "I_IM_ID = 80"
+                        ],
+                        "index_dives_for_eq_ranges": true,
+                        "rowid_ordered": false,
+                        "using_mrr": false,
+                        "index_only": true,
+                        "in_memory": 0.00980392,
+                        "rows": 21,
+                        "cost": 3.1293,
+                        "chosen": false,
+                        "cause": "cost"
+                      }
+                    ],
+                    "analyzing_roworder_intersect": {
+                      "usable": false,
+                      "cause": "too_few_roworder_scans"
+                    }
+                  },
+                  "chosen_range_access_summary": {
+                    "range_access_plan": {
+                      "type": "range_scan",
+                      "index": "idx_I_IM_ID",
+                      "rows": 21,
+                      "ranges": [
+                        "I_IM_ID = 70",
+                        "I_IM_ID = 80"
+                      ]
+                    },
+                    "rows_for_plan": 21,
+                    "cost_for_plan": 3.12041,
+                    "chosen": true
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "considered_execution_plans": [
+              {
+                "plan_prefix": [
+                ],
+                "table": "`item`",
+                "best_access_path": {
+                  "considered_access_paths": [
+                    {
+                      "rows_to_scan": 21,
+                      "filtering_effect": [
+                      ],
+                      "final_filtering_effect": 1,
+                      "access_type": "range",
+                      "range_details": {
+                        "used_index": "idx_I_IM_ID"
+                      },
+                      "resulting_rows": 21,
+                      "cost": 5.22041,
+                      "chosen": true
+                    }
+                  ]
+                },
+                "condition_filtering_pct": 100,
+                "rows_for_plan": 21,
+                "cost_for_plan": 5.22041,
+                "chosen": true
+              }
+            ]
+          },
+          {
+            "attaching_conditions_to_tables": {
+              "original_condition": "((`item`.`I_IM_ID` = 80) or (`item`.`I_IM_ID` = 70))",
+              "attached_conditions_computation": [
+              ],
+              "attached_conditions_summary": [
+                {
+                  "table": "`item`",
+                  "attached": "((`item`.`I_IM_ID` = 80) or (`item`.`I_IM_ID` = 70))"
+                }
+              ]
+            }
+          },
+          {
+            "optimizing_distinct_group_by_order_by": {
+            }
+          },
+          {
+            "finalizing_table_conditions": [
+              {
+                "table": "`item`",
+                "original_table_condition": "((`item`.`I_IM_ID` = 80) or (`item`.`I_IM_ID` = 70))",
+                "final_table_condition   ": "((`item`.`I_IM_ID` = 80) or (`item`.`I_IM_ID` = 70))"
+              }
+            ]
+          },
+          {
+            "refine_plan": [
+              {
+                "table": "`item`"
+              }
+            ]
+          },
+          {
+            "considering_tmp_tables": [
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "lex_json_after_optimize": "{\"item_type\":\"root\",\"properties\":{},\"data\":[{\"item_type\":\"st_select_lex_unit\",\"properties\":{\"opt_SQL\":\"select count(1) AS `count(1)` from `tpcc`.`item` where ((`tpcc`.`item`.`I_IM_ID` = 80) or (`tpcc`.`item`.`I_IM_ID` = 70))\",\"prompt\":\"root\",\"raw_SQL\":\"explain SELECT count(1)  FROM ITEM where `I_IM_ID` = 80 or `I_IM_ID` = 70\"},\"data\":[{\"item_type\":\"select\",\"properties\":{\"address\":\"0x7f876a3c83b8\",\"opt_SQL\":\"select count(1) AS `count(1)` from `tpcc`.`item` where ((`tpcc`.`item`.`I_IM_ID` = 80) or (`tpcc`.`item`.`I_IM_ID` = 70))\",\"prompt\":\"\",\"raw_SQL\":\"explain SELECT count(1)  FROM ITEM where `I_IM_ID` = 80 or `I_IM_ID` = 70\",\"select_number\":\"1\"},\"data\":[{\"item_type\":\"field_list\",\"properties\":{\"prompt\":\"\"},\"data\":[{\"item_type\":\"field\",\"properties\":{},\"data\":[{\"item_type\":\"SUM_FUNC_ITEM\",\"properties\":{\"address\":\"0x7f876a3c88a0\",\"cmp_context\":\"INVALID_RESULT\",\"code\":\"unprocessed\",\"full_name\":\"count(1)\",\"func_name\":\"count\",\"functype\":\"UNKNOWN_FUNC\",\"item_name\":\"count(1)\",\"msg\":\"count(1)\",\"orig_name\":\"NULL\",\"prompt\":\"\"},\"data\":[{\"item_type\":\"INT_ITEM\",\"properties\":{\"address\":\"0x7f876a3c8758\",\"cmp_context\":\"INVALID_RESULT\",\"full_name\":\"1\",\"item_name\":\"1\",\"orig_name\":\"NULL\",\"prompt\":\"\",\"value\":\"1\"},\"data\":[]}]}]}]},{\"item_type\":\"table_list\",\"properties\":{\"prompt\":\"\"},\"data\":[{\"item_type\":\"table\",\"properties\":{\"address\":\"0x7f876a3ca128\",\"alias\":\"ITEM\",\"db\":\"tpcc\",\"prompt\":\"table_in_select\",\"table\":\"item\",\"tableno\":\"0\"},\"data\":[]}]},{\"item_type\":\"where_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[{\"item_type\":\"COND_ITEM\",\"properties\":{\"address\":\"0x7f876a3c9438\",\"cmp_context\":\"INVALID_RESULT\",\"cond_result\":\"COND_UNDEF\",\"full_name\":\"???\",\"func_name\":\"or\",\"functype\":\"COND_OR_FUNC\",\"item_name\":\"NULL\",\"orig_name\":\"NULL\",\"prompt\":\"\"},\"data\":[{\"item_type\":\"FUNC_ITEM\",\"properties\":{\"address\":\"0x7f8768962a08\",\"cmp_context\":\"INVALID_RESULT\",\"code\":\"unprocessed\",\"full_name\":\"???\",\"func_name\":\"=\",\"functype\":\"EQ_FUNC\",\"item_name\":\"NULL\",\"msg\":\"(`tpcc`.`item`.`I_IM_ID` = 80)\",\"orig_name\":\"NULL\",\"prompt\":\"\"},\"data\":[{\"item_type\":\"FIELD_ITEM\",\"properties\":{\"actual_field_type\":\"MYSQL_TYPE_LONG\",\"address\":\"0x7f876a3caba0\",\"cmp_context\":\"INT_RESULT\",\"column\":\"I_IM_ID\",\"db\":\"tpcc\",\"field_type\":\"MYSQL_TYPE_LONG\",\"full_name\":\"tpcc.ITEM.I_IM_ID\",\"item_name\":\"I_IM_ID\",\"orig_name\":\"NULL\",\"prompt\":\"\",\"table\":\"ITEM\",\"table_ref_in_field\":\"0x7f876a3ca128\"},\"data\":[]},{\"item_type\":\"INT_ITEM\",\"properties\":{\"address\":\"0x7f876a3c90c0\",\"cmp_context\":\"INT_RESULT\",\"full_name\":\"80\",\"item_name\":\"80\",\"orig_name\":\"NULL\",\"prompt\":\"\",\"value\":\"80\"},\"data\":[]}]},{\"item_type\":\"FUNC_ITEM\",\"properties\":{\"address\":\"0x7f8768962bc0\",\"cmp_context\":\"INVALID_RESULT\",\"code\":\"unprocessed\",\"full_name\":\"???\",\"func_name\":\"=\",\"functype\":\"EQ_FUNC\",\"item_name\":\"NULL\",\"msg\":\"(`tpcc`.`item`.`I_IM_ID` = 70)\",\"orig_name\":\"NULL\",\"prompt\":\"\"},\"data\":[{\"item_type\":\"FIELD_ITEM\",\"properties\":{\"actual_field_type\":\"MYSQL_TYPE_LONG\",\"address\":\"0x7f876a3caea0\",\"cmp_context\":\"INT_RESULT\",\"column\":\"I_IM_ID\",\"db\":\"tpcc\",\"field_type\":\"MYSQL_TYPE_LONG\",\"full_name\":\"tpcc.ITEM.I_IM_ID\",\"item_name\":\"I_IM_ID\",\"orig_name\":\"NULL\",\"prompt\":\"\",\"table\":\"ITEM\",\"table_ref_in_field\":\"0x7f876a3ca128\"},\"data\":[]},{\"item_type\":\"INT_ITEM\",\"properties\":{\"address\":\"0x7f876a3c92e0\",\"cmp_context\":\"INT_RESULT\",\"full_name\":\"70\",\"item_name\":\"70\",\"orig_name\":\"NULL\",\"prompt\":\"\",\"value\":\"70\"},\"data\":[]}]}]}]},{\"item_type\":\"groupby_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[]},{\"item_type\":\"having_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[]},{\"item_type\":\"window_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[]},{\"item_type\":\"order_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[]},{\"item_type\":\"limit_clause\",\"properties\":{\"prompt\":\"\"},\"data\":[]}]}]}]}"
+    },
+    {
+      "join_explain": {
+        "select#": 1,
+        "steps": [
+        ]
+      }
+    }
+  ]
+}
