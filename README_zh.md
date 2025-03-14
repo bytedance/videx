@@ -92,7 +92,7 @@ VIDEX-Server 和 VIDEX-MySQL 是解耦的；用户可以添加新的代价估计
 ```bash
 VIDEX_HOME=videx
 
-git clone git@code.byted.org:bytebrain/videx.git $VIDEX_HOME
+git clone git@github.com:bytedance/videx.git $VIDEX_HOME
 
 cd $VIDEX_HOME
 
