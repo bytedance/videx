@@ -1,38 +1,37 @@
 # -*- coding: utf-8 -*-
 """
-TODO: add file description.
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
 
 @ author: kangrong
 @ date: 2023/11/8
 """
+import copy
 import json
 import logging
 import os
 import shutil
-from collections import defaultdict
-from copy import deepcopy
-from dataclasses import dataclass, field
 import time
+from abc import ABC, abstractmethod
+from collections import defaultdict
+from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional, Union
 
 import numpy as np
 import pandas as pd
-import pymysql
 from dataclasses_json import DataClassJsonMixin
 
 from sub_platforms.sql_opt.column_statastics.statistics_info import TableStatisticsInfo
 from sub_platforms.sql_opt.common.db_variable import VariablesAboutIndex, DEFAULT_INNODB_PAGE_SIZE
 from sub_platforms.sql_opt.common.exceptions import TraceLoadException
 from sub_platforms.sql_opt.common.sample_file_info import SampleFileInfo
-
-from sub_platforms.sql_opt.videx.videx_mysql_utils import OpenMySQLUtils, _parse_col_names
 from sub_platforms.sql_opt.env.rds_env import Env
 from sub_platforms.sql_opt.meta import Table, Column
+from sub_platforms.sql_opt.videx.common.estimate_stats_length import estimate_data_length
 from sub_platforms.sql_opt.videx.videx_histogram import HistogramStats, generate_fetch_histogram
+from sub_platforms.sql_opt.videx.videx_mysql_utils import _parse_col_names
 from sub_platforms.sql_opt.videx.videx_utils import load_json_from_file, dump_json_to_file, GT_Table_Return, \
     target_env_available_for_videx
-from abc import ABC, abstractmethod
-
 
 # VIDEX Statistic attribute keys
 EXTRA_INFO_KEY_pct_cached = 'pct_cached'
@@ -131,7 +130,7 @@ class VidexDBTaskStats(DataClassJsonMixin):
         )):
             return None
 
-        target = self if inplace else deepcopy(self)
+        target = self if inplace else copy.deepcopy(self)
 
         # Merge meta_dict
         for db, tables in other.meta_dict.items():
@@ -295,17 +294,31 @@ class VidexTableStats:
         single_ndvs = {col: ndv for col, ndv in single_ndvs.items()}
         innodb_page_size = int(
             db_config.innodb_page_size.value) if db_config.innodb_page_size.value is not None else DEFAULT_INNODB_PAGE_SIZE
-        if raw_meta_dict.data_length is not None:
-            data_length = int(raw_meta_dict.data_length)
-        elif raw_meta_dict.table_size is not None:
-            data_length = int(raw_meta_dict.table_size)
-        else:
-            data_length = 0
+
+        raw_meta_dict = copy.deepcopy(raw_meta_dict) # not affect raw data
+
+        if raw_meta_dict.data_length is None:
+            if raw_meta_dict.table_size is None:
+                raise Exception(f"All stats about table size is None, including table_size, data_length")
+            try:
+                res = estimate_data_length(raw_meta_dict, fix_row_overhead=10, consider_delete=True,
+                                           data_free_coefficient=0.1)
+                logging.info(f"Miss data_length, estimate for {table_name}: {res}")
+                raw_meta_dict.data_length = res["combined_estimate"]
+                raw_meta_dict.avg_row_length = res["avg_row_length"]
+                raw_meta_dict.data_free = res["data_free"]
+            except Exception as e:
+                logging.error(f"data_length is None, estimate_data_length meet errors: {e}")
+                raw_meta_dict.data_length = raw_meta_dict.table_size * 0.9
+
+        if raw_meta_dict.cluster_index_size is None:
+            raw_meta_dict.cluster_index_size = int(raw_meta_dict.data_length / innodb_page_size)
+
         res = VidexTableStats(
             dbname=dbname,
             table_name=table_name,
-            data_file_length=data_length,
-            max_data_file_length=data_length,
+            data_file_length=raw_meta_dict.data_length,
+            max_data_file_length=raw_meta_dict.data_length,
             index_file_length=int(raw_meta_dict.index_length) if raw_meta_dict.index_length is not None else 0,
             records=int(raw_meta_dict.rows),
             mean_rec_length=int(raw_meta_dict.avg_row_length) if raw_meta_dict.avg_row_length is not None else 0,
@@ -322,8 +335,7 @@ class VidexTableStats:
             data_free_length=int(raw_meta_dict.data_free) if raw_meta_dict.data_free is not None else 0,
 
             # innodb_stats
-            clustered_index_size=raw_meta_dict.cluster_index_size if raw_meta_dict.cluster_index_size is not None else int(
-                raw_meta_dict.table_size / innodb_page_size),
+            clustered_index_size=raw_meta_dict.cluster_index_size,
             sum_of_other_index_sizes=raw_meta_dict.other_index_sizes if raw_meta_dict.other_index_sizes is not None else int(
                 raw_meta_dict.index_length / innodb_page_size) if raw_meta_dict.index_length is not None else 0,
             UNIV_PAGE_SIZE=UNIV_PAGE_SIZE_DEF,
@@ -793,14 +805,7 @@ def execute_sql_to_videx(sql: str, env: Env, videx_py_ip_port: str, videx_option
         if not videx_options or 'task_id' not in videx_options:
             raise Exception(f"VIDEX options misses task_id: {videx_options=}")
 
-    aa: OpenMySQLUtils = env.mysql_util
-
-    conn = pymysql.connect(host=aa.host,
-                           user=aa.user,
-                           password=aa.password,
-                           port=aa.port,
-                           charset='utf8mb4',
-                           database=aa.database)
+    conn = env.mysql_util.get_connection()
 
     with conn.cursor() as cursor:
         if skip_http:
@@ -828,49 +833,34 @@ def execute_sql_to_videx(sql: str, env: Env, videx_py_ip_port: str, videx_option
 def extract_rec_in_range_gt_from_explain(env: Env, sql: str, videx_py_ip_port: str = None, videx_options: dict = None,
                                          ret_trace: bool = True,
                                          verbose: bool = True,
-                                         ) -> Tuple[
-    pd.DataFrame, dict, List[dict]]:
+                                         need_set_trace: bool = True,
+                                         ) -> Tuple[pd.DataFrame, Optional[dict], Optional[List[dict]]]:
     """
-    执行 explain range_rows
+    Conduct explain range_rows
 
     Returns:
         explain_result, trace_result, rec_in_range_gt
 
     """
     assert hasattr(env, "mysql_util"), f"env must has 'mysql_util'. maybe it's not RdsEnv or OpenEnv. type={type(env)}"
-    videx_options = json.dumps(videx_options)
     sql = sql.strip()
     if not sql.lower().startswith("explain"):
         sql = 'EXPLAIN ' + sql
-    # 获取 trace，舍弃 preparse_tables_key，仅采用完整 trace_dict
-    # _, trace_dict = get_lex_trace(env.mysql_util.get_connection(), sql, is_preparse=True)
-
-    # conn = env.mysql_util.get_connection()
-    import pymysql
-    aa: OpenMySQLUtils = env.mysql_util
-
-    conn = pymysql.connect(host=aa.host,
-                           user=aa.user,
-                           password=aa.password,
-                           port=aa.port,
-                           charset='utf8mb4',
-                           database=aa.database)
-
+    conn = env.mysql_util.get_connection()
     with conn.cursor() as cursor:
-        if ret_trace:
-            # 启用 optimizer_trace
+        if ret_trace and need_set_trace:
+            # turn on optimizer_trace
             cursor.execute('SET SESSION optimizer_trace="enabled=on", SESSION optimizer_trace_max_mem_size=4294967295;')
-        if videx_py_ip_port is not None:
+        if videx_py_ip_port is not None and videx_py_ip_port != '127.0.0.1:5001':
+            # '127.0.0.1:5001' is default value in VIDEX engine.
             cursor.execute(f"SET @VIDEX_SERVER='{videx_py_ip_port}';")
             if verbose:
                 logging.info(f"SET @VIDEX_SERVER='{videx_py_ip_port}';")
         if videx_options is not None:
+            videx_options = json.dumps(videx_options)
             cursor.execute(f"SET @VIDEX_OPTIONS='{videx_options}';")
             if verbose:
                 logging.info(f"SET @VIDEX_OPTIONS='{videx_options}';")
-        # cursor.execute(sql, None)
-        # TODO 下面的代码拷贝自 sub_platforms.sql_opt.databases.mysql.mysql_command.MySQLCommand.explain
-        #  未来可以考虑将环境变量和trace 功能嵌入到最底层
         try:
             if verbose:
                 logging.info(f"videx explain: {sql=}")

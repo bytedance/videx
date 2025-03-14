@@ -1,8 +1,18 @@
-from dataclasses import dataclass
-from typing import List
+"""
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
+
+@ author: bytebrain
+@ date: 2025-03-13
+
+"""
+
+from dataclasses import dataclass, field
+from typing import List, Optional
 
 import pandas as pd
-from dataclasses_json import dataclass_json
+from dataclasses_json import dataclass_json, config
+
 
 @dataclass_json
 @dataclass
@@ -28,6 +38,8 @@ class MySQLExplainResult:
     explain_items: List[MySQLExplainItem] = None
     # if format is json, fill the explain_json
     explain_json: dict = None
+    trace_dict: Optional[dict] = field(default=None,
+                                       metadata=config(exclude=lambda x: True, metadata={'skip_dumps': True}))
 
     @staticmethod
     def from_df(explain_df: pd.DataFrame) -> 'MySQLExplainResult':
@@ -68,12 +80,27 @@ class MySQLExplainResult:
 
         key_max_len = max(len(str(it.key)) for it in self.explain_items) + 1
         table_max_len = max(len(str(it.table)) for it in self.explain_items) + 1
-        res = [f"id\t{'select_type':>{12}}\t{'table':>{table_max_len}}\t{'key':>{key_max_len}}\tpossible_keys"]
+        key_len_max = max(len(str(it.key_len)) for it in self.explain_items) + 1
+        ref_max_len = max(len(str(it.ref)) for it in self.explain_items) + 1
+        rows_max_len = max(len(str(it.rows)) for it in self.explain_items) + 1
+        filtered_max_len = max(len(str(it.filtered)) for it in self.explain_items) + 1
+        extra_max_len = max(len(str(it.extra)) for it in self.explain_items) + 1
+
+        res = [f"id\t{'select_type':>{12}}\t{'table':>{table_max_len}}\t{'key':>{key_max_len}}\t"
+               f"{'key_len':>{key_len_max}}\t{'ref':>{ref_max_len}}\t{'rows':>{rows_max_len}}\t"
+               f"{'filtered':>{filtered_max_len}}\t{'extra':>{extra_max_len}}\tpossible_keys"]
+
         for in_item in self.explain_items:
             in_item: MySQLExplainItem
             res.append(
-                f"{in_item.id}\t{str(in_item.type):>{12}}" 
-                f"\t{str(in_item.table):>{table_max_len}}\t" 
-                f"{str(in_item.key):>{key_max_len}}\t{in_item.possible_keys}"
+                f"{in_item.id}\t{str(in_item.type):>{12}}"
+                f"\t{str(in_item.table):>{table_max_len}}\t"
+                f"{str(in_item.key):>{key_max_len}}\t"
+                f"{str(in_item.key_len):>{key_len_max}}\t"
+                f"{str(in_item.ref):>{ref_max_len}}\t"
+                f"{str(in_item.rows):>{rows_max_len}}\t"
+                f"{str(in_item.filtered):>{filtered_max_len}}\t"
+                f"{str(in_item.extra):>{extra_max_len}}\t"
+                f"{in_item.possible_keys}"
             )
         return '\n'.join(res)

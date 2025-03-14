@@ -1,0 +1,322 @@
+{
+    "stats_dict": {
+        "test_columns": {
+            "TABLE_CATALOG": "def",
+            "TABLE_SCHEMA": "test_null_db",
+            "TABLE_NAME": "test_columns",
+            "TABLE_TYPE": "BASE TABLE",
+            "ENGINE": "InnoDB",
+            "VERSION": 10,
+            "ROW_FORMAT": "Dynamic",
+            "TABLE_ROWS": 50,
+            "AVG_ROW_LENGTH": 327,
+            "DATA_LENGTH": 16384,
+            "MAX_DATA_LENGTH": 0,
+            "INDEX_LENGTH": 0,
+            "DATA_FREE": 0,
+            "AUTO_INCREMENT": 51,
+            "CREATE_TIME": 1741024949,
+            "UPDATE_TIME": 1741024661,
+            "CHECK_TIME": null,
+            "TABLE_COLLATION": "utf8mb4_0900_ai_ci",
+            "CHECKSUM": null,
+            "CREATE_OPTIONS": "",
+            "TABLE_COMMENT": "",
+            "innodb_page_size": 16384,
+            "myisam_max_sort_file_size": 9223372036853727232,
+            "innodb_buffer_pool_size": 134217728,
+            "N_ROWS": 50,
+            "CLUSTERED_INDEX_SIZE": 1,
+            "SUM_OF_OTHER_INDEX_SIZES": 0,
+            "pct_cached": {
+                "PRIMARY": {
+                    "page_type": "INDEX",
+                    "pct_cached": 1.0,
+                    "pool_rows": 50.0
+                },
+                "idx_nullable_code": {
+                    "page_type": "INDEX",
+                    "pct_cached": 1.0,
+                    "pool_rows": 50.0
+                },
+                "idx_required_num": {
+                    "page_type": "INDEX",
+                    "pct_cached": 1.0,
+                    "pool_rows": 100.0
+                }
+            },
+            "DDL": "CREATE TABLE `test_columns` (\n  `id` int NOT NULL AUTO_INCREMENT,\n  `nullable_code` char(1) DEFAULT NULL,\n  `required_num` int NOT NULL,\n  PRIMARY KEY (`id`),\n  KEY `idx_nullable_code` (`nullable_code`),\n  KEY `idx_required_num` (`required_num`)\n) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci"
+        }
+    },
+    "hist_dict": {
+        "test_columns": {
+            "id": {
+                "buckets": [
+                    {
+                        "min_value": 1,
+                        "max_value": 3,
+                        "cum_freq": 0.06,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 4,
+                        "max_value": 6,
+                        "cum_freq": 0.12,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 7,
+                        "max_value": 9,
+                        "cum_freq": 0.18,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 10,
+                        "max_value": 12,
+                        "cum_freq": 0.24,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 13,
+                        "max_value": 15,
+                        "cum_freq": 0.3,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 16,
+                        "max_value": 18,
+                        "cum_freq": 0.36,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 19,
+                        "max_value": 21,
+                        "cum_freq": 0.42,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 22,
+                        "max_value": 24,
+                        "cum_freq": 0.48,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 25,
+                        "max_value": 27,
+                        "cum_freq": 0.54,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 28,
+                        "max_value": 30,
+                        "cum_freq": 0.6000000000000001,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 31,
+                        "max_value": 33,
+                        "cum_freq": 0.6600000000000001,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 34,
+                        "max_value": 36,
+                        "cum_freq": 0.7200000000000002,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 37,
+                        "max_value": 39,
+                        "cum_freq": 0.7800000000000002,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 40,
+                        "max_value": 42,
+                        "cum_freq": 0.8400000000000003,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 43,
+                        "max_value": 45,
+                        "cum_freq": 0.9000000000000004,
+                        "row_count": 3,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 46,
+                        "max_value": 50,
+                        "cum_freq": 1.0000000000000004,
+                        "row_count": 5,
+                        "size": 0
+                    }
+                ],
+                "data_type": "int",
+                "histogram_type": "brute_force_equi_width",
+                "null_values": 0,
+                "collation_id": -1357,
+                "last_updated": null,
+                "sampling_rate": 1.0,
+                "number_of_buckets_specified": 16
+            },
+            "nullable_code": {
+                "buckets": [
+                    {
+                        "min_value": "A",
+                        "max_value": "A",
+                        "cum_freq": 0.1,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "B",
+                        "max_value": "B",
+                        "cum_freq": 0.2,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "C",
+                        "max_value": "C",
+                        "cum_freq": 0.3,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "D",
+                        "max_value": "D",
+                        "cum_freq": 0.4,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "E",
+                        "max_value": "E",
+                        "cum_freq": 0.5,
+                        "row_count": 1,
+                        "size": 0
+                    }
+                ],
+                "data_type": "string",
+                "histogram_type": "singleton",
+                "null_values": 0.5,
+                "collation_id": 255,
+                "last_updated": "2025-03-03 10:50:26.102701",
+                "sampling_rate": 1.0,
+                "number_of_buckets_specified": 16
+            },
+            "required_num": {
+                "buckets": [
+                    {
+                        "min_value": 1,
+                        "max_value": 1,
+                        "cum_freq": 0.2,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 2,
+                        "max_value": 2,
+                        "cum_freq": 0.4,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 3,
+                        "max_value": 3,
+                        "cum_freq": 0.6,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 4,
+                        "max_value": 4,
+                        "cum_freq": 0.8,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 5,
+                        "max_value": 5,
+                        "cum_freq": 1.0,
+                        "row_count": 1,
+                        "size": 0
+                    }
+                ],
+                "data_type": "int",
+                "histogram_type": "singleton",
+                "null_values": 0.0,
+                "collation_id": 8,
+                "last_updated": "2025-03-03 10:50:26.112096",
+                "sampling_rate": 1.0,
+                "number_of_buckets_specified": 16
+            }
+        }
+    },
+    "ndv_single_dict": {
+        "test_columns": {
+            "id": 50,
+            "nullable_code": 5,
+            "required_num": 5
+        }
+    },
+    "ndv_mulcol_dict": {
+        "test_columns": {
+            "PRIMARY": {
+                "id": {
+                    "stat_name": "n_diff_pfx01",
+                    "stat_value": 50,
+                    "sample_size": 1,
+                    "stat_description": "id",
+                    "n_field": 1
+                }
+            },
+            "idx_nullable_code": {
+                "nullable_code": {
+                    "stat_name": "n_diff_pfx01",
+                    "stat_value": 6,
+                    "sample_size": 1,
+                    "stat_description": "nullable_code",
+                    "n_field": 1
+                },
+                "id": {
+                    "stat_name": "n_diff_pfx02",
+                    "stat_value": 50,
+                    "sample_size": 1,
+                    "stat_description": "nullable_code,id",
+                    "n_field": 2
+                }
+            },
+            "idx_required_num": {
+                "required_num": {
+                    "stat_name": "n_diff_pfx01",
+                    "stat_value": 5,
+                    "sample_size": 1,
+                    "stat_description": "required_num",
+                    "n_field": 1
+                },
+                "id": {
+                    "stat_name": "n_diff_pfx02",
+                    "stat_value": 50,
+                    "sample_size": 1,
+                    "stat_description": "required_num,id",
+                    "n_field": 2
+                }
+            }
+        }
+    }
+}

@@ -1,14 +1,23 @@
+"""
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
+
+@ author: bytebrain
+@ date: 2025-03-13
+
+"""
+
 import logging
 
 import numpy as np
 import pandas as pd
 from typing import List, Dict
 
+import sqlglot.expressions
 
-from sub_platforms.sql_opt.meta import Table, mysql_to_pandas_type
+from sub_platforms.sql_opt.meta import Column, Index, Table, mysql_to_pandas_type
 from sub_platforms.sql_opt.common.exceptions import UnsupportedException
 from sqlglot.dialects.mysql import MySQL
-import sqlglot.expressions
 
 
 def parse_from_expression(expression):

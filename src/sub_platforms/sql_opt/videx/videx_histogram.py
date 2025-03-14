@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-TODO: add file description.
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
 
 @ author: kangrong
 @ date: 2023/11/16
@@ -10,7 +11,7 @@ import json
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import timedelta, datetime
 from typing import List, Optional, Union, Dict
 
 from dataclasses_json import dataclass_json
@@ -22,11 +23,15 @@ from sub_platforms.sql_opt.videx.videx_utils import BTreeKeySide, target_env_ava
 
 MEANINGLESS_INT = -1357
 
+# MySQL will pass 'NULL' to the rec_in_ranges function.
+# Note that this NULL is distinct from "NULL"—the latter is a string with the value 'NULL'.
+NULL_STR = 'NULL'
+
 
 def decode_base64(raw):
     """
-    'base64' 是表示数据编码方式的标识符，意味着后面的数据是用 Base64 方式编码的。
-    'type254' 可能是表示数据类型的标识符。在 MySQL 中，数据类型的编号 254 通常代表 CHAR 类型，但具体含义可能取决于你的特定上下文。
+    'base64' is an identifier indicating the data encoding method, meaning the following data is encoded using Base64.
+    'type254': In MySQL, data type number 254 typically represents CHAR type, but the specific meaning may depend on your context.
     Args:
         raw:
 
@@ -63,7 +68,10 @@ def convert_str_by_type(raw, data_type: str, str_in_base4: bool = True):
     Returns:
 
     """
-    NULL_STR_SET = {'NULL', 'None'}
+    if raw == NULL_STR:
+        return None
+
+    NULL_STR_SET = {NULL_STR, 'None'}
     if data_type_is_int(data_type):
         if raw in NULL_STR_SET:
             return None
@@ -147,11 +155,12 @@ def init_bucket_by_type(bucket_raw: list, data_type: str, hist_type: str) -> His
 @dataclass
 class HistogramStats:
     """
-    bucket.min_value <= bucket.max_value，
-    且 buckets 是递增的，bucket[i].max_value <= bucket[i + 1].min_value
-    但是 buckets 之间可能有间隔，例如 [1,2], [3,4]
-    但这并不意味着间隔，而是说相邻但不重叠的边界。
-    用 double 距离，bucket 之间：
+    bucket.min_value <= bucket.max_value,
+    and buckets are increasing, bucket[i].max_value <= bucket[i + 1].min_value
+    buckets may have gaps, e.g., [1,2], [3,4]
+    however, this doesn't necessarily mean gaps, but rather adjacent non-overlapping boundaries.
+
+    For double values, between buckets:
     [
       6.22951651565178,
       8.72513181167602,
@@ -164,7 +173,7 @@ class HistogramStats:
       0.2004,
       2004
     ],
-    看起来相邻两个边界可以认为是不重叠、但也不遗漏的
+    adjacent boundaries can be considered non-overlapping and without gaps
 
     for int：
     {
@@ -184,16 +193,26 @@ class HistogramStats:
     buckets: Optional[List[HistogramBucket]]
     data_type: Optional[str]
     histogram_type: Optional[str]
-    null_values: Optional[float] = MEANINGLESS_INT
+    null_values: Optional[float] = 0
     collation_id: Optional[int] = MEANINGLESS_INT
     last_updated: Optional[str] = str(MEANINGLESS_INT)
     sampling_rate: Optional[float] = MEANINGLESS_INT
     number_of_buckets_specified: Optional[int] = MEANINGLESS_INT
 
     def __post_init__(self):
+        if int(self.null_values) == MEANINGLESS_INT:
+            self.null_values = 0
+        assert self.null_values >= 0, f"null_values must >= 0, got {self.null_values}"
         for b in self.buckets:
             b.min_value = convert_str_by_type(b.min_value, self.data_type)
             b.max_value = convert_str_by_type(b.max_value, self.data_type)
+        if len(self.buckets) > 0:
+            # check: sum(freq(buckets[-1] + null ratio) should be almost 1. if not, scale it.
+            if abs(self.null_values + self.buckets[-1].cum_freq - 1) > 0.01:
+                scale_factor = self.buckets[-1].cum_freq / (1 - self.null_values)
+                for bucket in self.buckets:
+                    bucket.cum_freq = bucket.cum_freq * scale_factor
+                self.buckets[-1].cum_freq = 1
 
     def find_nearest_key_pos(self, value, side: BTreeKeySide) -> Union[int, float]:
         """
@@ -213,7 +232,13 @@ class HistogramStats:
         value = convert_str_by_type(value, self.data_type, str_in_base4=False)  # histogram is base4 encoding，but request is raw string
 
         if value is None:
-            return 0
+            if side == BTreeKeySide.left:
+                return 0
+            elif side == BTreeKeySide.right:
+                return self.null_values
+            else:
+                raise ValueError(f"only support key pos side left and right, but get {side}")
+
         # convert to 0
         if value > self.buckets[-1].max_value:
             key_cum_freq = 1
@@ -264,13 +289,13 @@ class HistogramStats:
                             # min_date = datetime.strptime(cur.min_value, '%Y-%m-%d')
                             # max_date = datetime.strptime(cur.max_value, '%Y-%m-%d')
                             # value_date = datetime.strptime(value, '%Y-%m-%d')
-                            min_date = parse_datetime(cur.min_value)
-                            max_date = parse_datetime(cur.max_value)
-                            value_date = parse_datetime(value)
+                            min_date = parse_datetime(cur.min_value).date()
+                            max_date = parse_datetime(cur.max_value).date()
+                            value_date = parse_datetime(value).date()
 
-                            total_days = (max_date - min_date).days
+                            total_days = (max_date - min_date).days + 1
                             one_value_width = max(1 / total_days, one_value_width)
-                            one_value_offset = (value_date - min_date).days / total_days if total_days != 0 else 0
+                            one_value_offset = (value_date - min_date).days / total_days
 
                         elif self.data_type in ['datetime']:
                             # datetime 包括时分秒，但格式也会被固定转化为 '2023-12-12 00:00:00'
@@ -301,7 +326,11 @@ class HistogramStats:
                     key_cum_freq = pre_cum_freq + (cur.cum_freq - pre_cum_freq) * pos_in_bucket
                     break
         assert key_cum_freq is not None
-        return key_cum_freq
+
+        # MySQL histogram frequency is inconsistent with the in-equation condition.
+        # We follow the in-equation format, i.e.
+        # 0, null_values(ratio), null_values + buckets[0].min, null_values + buckets[-1].max(almost 1)
+        return key_cum_freq + self.null_values
 
     @staticmethod
     def init_from_mysql_json(data: dict):

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-TODO: add file description.
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
 
 @ author: kangrong
 @ date: 2023/11/17 
@@ -10,6 +11,7 @@ import os
 import unittest
 from typing import List
 
+from sub_platforms.sql_opt.videx import videx_logging
 from sub_platforms.sql_opt.videx.videx_histogram import HistogramBucket, HistogramStats, init_bucket_by_type
 from sub_platforms.sql_opt.videx.videx_service import VidexSingleton
 from sub_platforms.sql_opt.videx.videx_utils import IndexRangeCond, GT_Table_Return, load_json_from_file, \
@@ -31,13 +33,13 @@ class TestHist_find_first_key_pos(unittest.TestCase):
         self.int_table_rows = 100
         self.int_histogram = HistogramStats(
             buckets=[bucket1, bucket2, bucket3],
-            data_type="int", null_values=0.1, collation_id=1, last_updated="2023-11-19",
+            data_type="int", null_values=0., collation_id=1, last_updated="2023-11-19",
             sampling_rate=0.8, histogram_type="basic", number_of_buckets_specified=3)
 
         self.float_table_rows = 100
         self.float_histogram = HistogramStats(
             buckets=[bucket1, bucket2, bucket3],
-            data_type="float", null_values=0.1, collation_id=1, last_updated="2023-11-19",
+            data_type="float", null_values=0., collation_id=1, last_updated="2023-11-19",
             sampling_rate=0.8, histogram_type="basic", number_of_buckets_specified=3)
 
         str_bucket_list = {
@@ -120,7 +122,7 @@ class TestHist_find_first_key_pos(unittest.TestCase):
         self.string_table_rows = 80
         self.string_histogram = HistogramStats(
             buckets=str_buckets,
-            data_type=data_type, null_values=0.1, collation_id=1, last_updated="2023-11-19",
+            data_type=data_type, null_values=0., collation_id=1, last_updated="2023-11-19",
             sampling_rate=0.8, histogram_type=histogram_type, number_of_buckets_specified=3)
 
     def test_find_in_histogram(self):
@@ -303,7 +305,7 @@ class Test_record_in_ranges_algorithm(unittest.TestCase):
                             HistogramBucket(min_value=4, max_value=4, cum_freq=0.8, row_count=20),
                             HistogramBucket(min_value=5, max_value=6, cum_freq=1, row_count=20)
                         ],
-                        data_type="decimal", null_values=0.1, collation_id=1, last_updated="2023-11-19",
+                        data_type="decimal", null_values=0., collation_id=1, last_updated="2023-11-19",
                         sampling_rate=0.8, histogram_type="basic", number_of_buckets_specified=3),
                     "I_IM_ID": HistogramStats(
                         buckets=[
@@ -312,7 +314,7 @@ class Test_record_in_ranges_algorithm(unittest.TestCase):
                             HistogramBucket(min_value=3, max_value=3, cum_freq=0.75, row_count=1),
                             HistogramBucket(min_value=4, max_value=4, cum_freq=1, row_count=1),
                         ],
-                        data_type="int", null_values=0.1, collation_id=1, last_updated="2023-11-19",
+                        data_type="int", null_values=0., collation_id=1, last_updated="2023-11-19",
                         sampling_rate=0.8, histogram_type="basic", number_of_buckets_specified=3)
                 }
             }
@@ -574,7 +576,7 @@ class Test_record_in_ranges_algorithm(unittest.TestCase):
 
 class Test_rec_in_ranges_compare(unittest.TestCase):
     def setUp(self) -> None:
-        pass
+        videx_logging.initial_config()  # 已含logging模块的配置
 
     def test_single_eq_int(self):
         # EXPLAIN select I_PRICE from ITEM where I_IM_ID = 3

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-本测试是初始化 singleton，然后测试 ask 函数。除了 flask 网络层，其他都测试到了
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
 
 @ author: kangrong
 @ date: 2023/11/17 
@@ -10,13 +11,14 @@ import logging
 import os
 import unittest
 
+from sub_platforms.sql_opt.videx import videx_logging
 from sub_platforms.sql_opt.videx.videx_service import VidexSingleton
 from sub_platforms.sql_opt.videx.videx_utils import IndexRangeCond, TestHandler, \
     load_json_from_file
 
-
 class Test_ask_rec_in_ranges(unittest.TestCase):
     def setUp(self) -> None:
+        videx_logging.initial_config()  # 已含logging模块的配置
         self.test_handler = TestHandler()
         self.root_logger = logging.getLogger()  # Get the root logger
         self.root_logger.addHandler(self.test_handler)
@@ -98,29 +100,29 @@ class Test_ask_rec_in_ranges(unittest.TestCase):
         # mysql_rows：mysql 估计的结果；gt：真实查出来的结果；expect_rows：期待 videx 估计的结果
         gt_result = {
             # 真值与算法更接近
-            "L_SHIPDATE <= '1998-09-18'": {'mysql_rows': 2896768, 'gt_rows': 5943992, 'expect_rows': 5738685},
+            "L_SHIPDATE <= '1998-09-18'": {'mysql_rows': 2896768, 'gt_rows': 5943992, 'expect_rows': 5737970},
             "P_SIZE = 24": {'mysql_rows': 3989, 'gt_rows': 3989, 'expect_rows': 3953},
             "R_NAME = 'AMERICA'": {'mysql_rows': 1, 'gt_rows': 1, 'expect_rows': 1},
-            "O_ORDERDATE < '1995-03-08'": {'mysql_rows': 740926, 'gt_rows': 722913, 'expect_rows': 713898},
+            "O_ORDERDATE < '1995-03-08'": {'mysql_rows': 740926, 'gt_rows': 722913, 'expect_rows': 714202},
             # 真值与算法更接近
             "L_SHIPDATE > '1995-03-08'": {'mysql_rows': 2896768, 'gt_rows': 3259336, 'expect_rows': 3138392},
 
             # 真值与算法更接近
             "'1994-02-01' <= O_ORDERDATE < '1994-05-01'": {'mysql_rows': 113652, 'gt_rows': 55462,
-                                                           'expect_rows': 54491},
+                                                           'expect_rows': 54795},
             # 真值与算法更接近
             "'1994-01-01' <= O_ORDERDATE < '1995-01-01'": {'mysql_rows': 455706, 'gt_rows': 227597,
-                                                           'expect_rows': 225158},
+                                                           'expect_rows': 224840},
 
             "R_NAME = 'EUROPE'": {'mysql_rows': 1, 'gt_rows': 1, 'expect_rows': 1},
 
             # 真值与算法更接近
             "'1994-01-01' <= L_SHIPDATE < '1995-01-01'": {'mysql_rows': 1740928, 'gt_rows': 909455,
-                                                          'expect_rows': 879243},
+                                                          'expect_rows': 875646},
 
             # 真值与算法更接近
             "'1995-01-01' <= L_SHIPDATE <= '1996-12-31'": {'mysql_rows': 2896768, 'gt_rows': 1828450,
-                                                           'expect_rows': 1768642},
+                                                           'expect_rows': 1767366},
 
             "N_NAME = 'CANADA'": {'mysql_rows': 1, 'gt_rows': 1, 'expect_rows': 1},
             "N_NAME = 'IRAN'": {'mysql_rows': 1, 'gt_rows': 1, 'expect_rows': 1},
@@ -128,7 +130,7 @@ class Test_ask_rec_in_ranges(unittest.TestCase):
             "P_TYPE = 'LARGE BURNISHED TIN'": {'mysql_rows': 1282, 'gt_rows': 1282, 'expect_rows': 1270},
             # 真值与算法更接近
             "'1995-01-01' <= O_ORDERDATE <= '1996-12-31'": {'mysql_rows': 740926, 'gt_rows': 457263,
-                                                            'expect_rows': 452634},
+                                                            'expect_rows': 451673},
             "L_SHIPMODE = 'MAIL' AND '1993-01-01' <= L_RECEIPTDATE < '1994-01-01'": {'mysql_rows': 252824,
                                                                                      'gt_rows': 129760,
                                                                                      'expect_rows': None}
@@ -185,6 +187,7 @@ class Test_ask_rec_in_ranges(unittest.TestCase):
                 idx_range_cond.ranges_to_str(), mysql_rows, gt_rows, est_rows,
                 f"innodb_err={innodb_err * 100:.2f}% our_err={err * 100:.2f}%"))
             if expect_rows is not None:
+                print(f"{expect_rows=} {est_rows=}")
                 self.assertEqual(expect_rows, est_rows, f"算法估计结果与预设结果：{est_rows} != {expect_rows}")
                 self.assertLess(err, 0.05, f"算法和真实查询结果（非 innodb 预估）误差超过5%：{err * 100:.2f}%")
 

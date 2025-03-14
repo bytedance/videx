@@ -1,11 +1,18 @@
+"""
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
+
+@ author: bytebrain
+@ date: 2025-03-13
+
+"""
 import logging
 from dataclasses import dataclass, field
-from enum import Enum
-from typing import List, Dict
-
 from dataclasses_json import dataclass_json
+from enum import Enum
+from typing import List, Dict, Union
 
-from sub_platforms.sql_opt.env.mysql_command import MySQLVersion
+from sub_platforms.sql_opt.databases.mysql.mysql_command import MySQLVersion
 
 
 class VariableScope(Enum):

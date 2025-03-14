@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-TODO: add file description.
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
 
 @ author: kangrong
 @ date: 2023/11/8 

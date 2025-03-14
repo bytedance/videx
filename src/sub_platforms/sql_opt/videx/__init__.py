@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-TODO: add file description.
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
 
 @ author: kangrong
-@ date: 2023/11/6 
+@ date: 2025-03-13
 """
 
 if __name__ == '__main__':

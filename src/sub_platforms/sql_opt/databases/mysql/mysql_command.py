@@ -1,3 +1,12 @@
+"""
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
+
+@ author: bytebrain
+@ date: 2025-03-13
+
+"""
+
 import datetime
 import logging
 import re
@@ -8,29 +17,12 @@ from typing import List
 import numpy as np
 from numpy import datetime64
 
-from sub_platforms.sql_opt.common.common_operation import parse_from_expression
-from sub_platforms.sql_opt.common.exceptions import TableNotFoundException, UnsupportedException
-from sub_platforms.sql_opt.common.sqlbrain_constants import UNSUPPORTED_MYSQL_DATATYPE
-from sub_platforms.sql_opt.env.explain_result import MySQLExplainResult, MySQLExplainItem
 from sub_platforms.sql_opt.videx.videx_mysql_utils import AbstractMySQLUtils
+from sub_platforms.sql_opt.common.exceptions import TableNotFoundException, UnsupportedException
 from sub_platforms.sql_opt.meta import Table, Column, Index, IndexColumn, IndexType
-
-def mapping_index_columns(table: Table):
-    column_dict = {}
-    for column in table.columns:
-        column_dict[column.name] = column
-
-    for index in table.indexes:
-        for index_column in index.columns:
-            column_name = index_column.name
-            if column_name is None or column_name == "":
-                if index_column.expression is not None:
-                    # use replace to support "cast(json_extract(`owners`,_utf8mb4\\'$\\') as char(100) array)"
-                    column_name = parse_from_expression(index_column.expression.replace("\\'", "\'"))
-                    index_column.name = column_name
-                else:
-                    raise UnsupportedException(f"table [{table.name}] index[{index.name}] column name is empty")
-            index_column.column_ref = column_dict[column_name]
+from sub_platforms.sql_opt.databases.mysql.common_operation import mapping_index_columns
+from sub_platforms.sql_opt.databases.mysql.explain_result import MySQLExplainResult, MySQLExplainItem
+from sub_platforms.sql_opt.sql_opt_utils.sqlbrain_constants import UNSUPPORTED_MYSQL_DATATYPE
 
 
 class MySQLVersion(Enum):
@@ -41,7 +33,7 @@ class MySQLVersion(Enum):
     def get_version_enum(version: str):
         if version is None:
             version = ""
-        return MySQLVersion.MySQL_8 if version.startswith("8") else MySQLVersion.MySQL_57
+        return MySQLVersion.MySQL_8 if (version.startswith("8") or version == MySQLVersion.MySQL_8.value) else MySQLVersion.MySQL_57
 
     def __str__(self):
         return self.value
@@ -138,7 +130,6 @@ class MySQLCommand:
         group_df = df.groupby(by=group_keys, dropna=False)
         indexes = []
         for index_info, column_info in group_df:
-            index_info = list(index_info)
             non_unique = column_info['non_unique'].values[0]
             # 'table_name', 'index_name', 'seq_in_index', 'column_name',
             # , 'non_unique', 'is_visible', 'expression'
@@ -162,8 +153,7 @@ class MySQLCommand:
             index.columns = []
             sorted_columns = column_info.sort_values(by=['seq_in_index'])
             for idx, row in sorted_columns.iterrows():
-                column = IndexColumn()
-                column.name = row['column_name']
+                column = IndexColumn.simple_column(row['column_name'], db_name, table_name)
                 column.cardinality = row['cardinality']
                 column.sub_part = row['sub_part']
                 column.expression = row['expression']

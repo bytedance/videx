@@ -1,3 +1,11 @@
+"""
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
+
+@ author: kangrong
+@ date: 2025-03-05
+"""
+
 import json
 import logging
 import time
@@ -7,8 +15,9 @@ from typing import List
 import numpy as np
 from cachetools import TTLCache
 
-from sub_platforms.sql_opt.histogram.histogram_utils import NDVEstimator
+from sub_platforms.sql_opt.histogram.ndv_estimator import NDVEstimator
 from sub_platforms.sql_opt.histogram.histogram_utils import load_sample_file
+from sub_platforms.sql_opt.videx.videx_histogram import MEANINGLESS_INT
 from sub_platforms.sql_opt.videx.videx_metadata import VidexTableStats, PCT_CACHED_MODE_PREFER_META
 from sub_platforms.sql_opt.videx.model.videx_strategy import VidexModelBase, VidexStrategy, calc_mulcol_ndv_independent
 from sub_platforms.sql_opt.videx.videx_utils import IndexRangeCond, RangeCond
@@ -45,9 +54,12 @@ class VidexModelInnoDB(VidexModelBase):
     def loading_ndv_model(self):
         if self.table_stats.sample_file_info is not None:
             logging.info(f"loading ndv model: NDVEstimator, table_name={self.table_name}")
+            st = time.perf_counter()
             table_rows = self.table_stats.records
             self.ndv_model = NDVEstimator(table_rows)
             self.df_sample_raw = load_sample_file(self.table_stats)
+            logging.info(f"loading ndv model: NDVEstimator, table_name={self.table_name}, "
+                         f"use {time.perf_counter() - st:.2f} seconds")
 
     def scan_time(self, req_json_item: dict) -> float:
         return self.table_stats.clustered_index_size
@@ -87,6 +99,9 @@ class VidexModelInnoDB(VidexModelBase):
             # for multi-column, the first few columns cannot be processed as the usual manner.
             # Refer to the parsing method of `range_cond`.
             if rc.has_min():
+                # TODO Handle the case for NULL < c.
+                #  In MySQL conditions, NULL is represented as the string 'NULL',
+                #  and the string 'NULL' is represented as "'NULL'".
                 min_freqs[c] = col_hist.find_nearest_key_pos(rc.min_value, rc.min_key_pos_side)
             if rc.has_max():
                 max_freqs[c] = col_hist.find_nearest_key_pos(rc.max_value, rc.max_key_pos_side)
@@ -97,6 +112,10 @@ class VidexModelInnoDB(VidexModelBase):
                     min_freqs[c], max_freqs[c] = max_freqs[c], min_freqs[c]
                 else:
                     raise Exception(f"invalid range: {self.table_name}.{rc.col} {rc} min={min_freqs[c]} max={max_freqs[c]}")
+            logging.info(f"card_range_cond ({self.table_name}({self.table_stats.records}), {idx_range_cond.index_name}) "
+                         f"[{c}/{len(ranges)}]: {rc} selectivity={max_freqs[c]-min_freqs[c]:.3%}, "
+                         f"after_rows={int(self.table_stats.records * np.prod(np.array(max_freqs[:c+1]) - np.array(min_freqs[:c+1])))} "
+                         f"freq: [{min_freqs[c]:.4f}, {max_freqs[c]:.4f}], ")
         records_in_ranges = int(self.table_stats.records * np.prod(np.array(max_freqs) - np.array(min_freqs)))
         if records_in_ranges == 0:
             # refer to innodb.cc
@@ -115,8 +134,8 @@ class VidexModelInnoDB(VidexModelBase):
                 table_rows = self.table_stats.records
                 # table_ndv_estimator = NDVEstimator(table_rows)
                 st = time.perf_counter()
-                ndv = self.ndv_model.estiamte_multi_columns(self.df_sample_raw, field_list, table_rows)
-                # ndv = table_ndv_estimator.estiamte_multi_columns(df_sample_raw, field_list)
+                ndv = self.ndv_model.estimate_multi_columns(self.df_sample_raw, field_list, table_rows)
+                # ndv = table_ndv_estimator.estimate_multi_columns(df_sample_raw, field_list)
                 elapsed_time = time.perf_counter() - st
                 logging.info(f"ndv calculate: {ndv=} {elapsed_time=:.2f}s")
             else:
@@ -159,16 +178,21 @@ class VidexModelInnoDB(VidexModelBase):
             # TODO Based on preliminary experiments, pct_cached significantly influences index selection.
             #  We should adopt the configuration most inclined to use indexes,
             #  especially for TPCE 6b49df9400c7d1840df47168761e0831.
-            if self.pct_cached == PCT_CACHED_MODE_PREFER_META and key_name in self.table_stats.pct_cached:
-                index_pct_cached = self.table_stats.pct_cached[key_name]['pct_cached']
-            else:
-                # index_pct_cached = 1
-                # if key_name == 'PRIMARY':
-                #     index_pct_cached = 1
-                # else:
-                #     index_pct_cached = 1
-                # 0 may be a good choice, indicating that no index data is loaded into memory.
+
+            # index_pct_cached = 1
+            # if key_name == 'PRIMARY':
+            #     index_pct_cached = 1
+            # else:
+            #     index_pct_cached = 1
+            # 0 may be a good choice, indicating that no index data is loaded into memory.
+            DEFAULT_PCT = 0
+            if self.pct_cached == PCT_CACHED_MODE_PREFER_META:
+                index_pct_cached = self.table_stats.pct_cached.get(key_name, {}).get('pct_cached', 0)
+            elif 0 <= self.pct_cached <= 1:
                 index_pct_cached = self.pct_cached
+            else:
+                index_pct_cached = DEFAULT_PCT
+
             res["pct_cached" + CONCAT + key_name] = index_pct_cached
 
             first_fields = []

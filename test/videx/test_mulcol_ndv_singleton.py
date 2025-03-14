@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 """
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
+
 本测试是初始化 singleton，然后测试 ask 函数。除了 flask 网络层，其他都测试到了
 
 @ author: kangrong
@@ -11,7 +14,7 @@ import os
 import unittest
 
 from sub_platforms.sql_opt.videx.videx_service import VidexSingleton
-from sub_platforms.sql_opt.videx.videx_utils import load_json_from_file, TestHandler
+from sub_platforms.sql_opt.videx.videx_utils import TestHandler, load_json_from_file
 
 
 class Test_mulcol_ndv(unittest.TestCase):
@@ -99,6 +102,12 @@ class Test_mulcol_ndv(unittest.TestCase):
                 # self.assertLess(err, 0.11, f"table={table_name}, index={idx_key_actual}, err={err} > 10%")
 
     def test_independent_job_singleton(self):
+        """
+        测试 job 指定索引计算 ndv。为什么 innodb ndv 是 1，但我们的是 2 ？
+        原因：InnoDB 估计错了。正确的应该就是 2，参见文档 https://bytedance.larkoffice.com/docx/NcNxdtZHNobPyPx8qc5c8mhanJd
+        Returns:
+
+        """
         print("test")
         videx_meta_singleton = VidexSingleton()
         task_id = '127_0_0_1_13308@@@demo_imdbload_nohist'

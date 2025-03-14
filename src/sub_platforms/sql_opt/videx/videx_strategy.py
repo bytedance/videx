@@ -283,7 +283,7 @@ class VidexModelInnoDB(VidexModelBase):
                 table_rows = self.table_stats.records
                 table_ndv_estimator = NDVEstimator(table_rows)
                 df_sample_raw = load_sample_file(self.table_stats)
-                ndv = table_ndv_estimator.estiamte_multi_columns(df_sample_raw, field_list)
+                ndv = table_ndv_estimator.estimate_multi_columns(df_sample_raw, field_list)
             else:
                 ndv = calc_mulcol_ndv_independent(field_list, self.table_stats.ndvs_single,
                                                   self.table_stats.records)

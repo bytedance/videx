@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-TODO: add file description.
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
 
 @ author: kangrong
 @ date: 2023/11/17 
@@ -18,6 +19,8 @@ from enum import Enum
 from typing import List, Dict, Union, Tuple, Set
 
 import msgpack
+import numpy as np
+import pandas as pd
 
 from sub_platforms.sql_opt.env.rds_env import Env, OpenMySQLEnv
 from sub_platforms.sql_opt.meta import TableId
@@ -857,5 +860,106 @@ def get_local_ip():
     return ip
 
 
+def join_path(base: str, relative: str) -> str:
+    """
+    Join absolute path by joining a base path with a relative path.
+    The base can be either a file path (e.g. __file__) or a directory path.
+
+    Args:
+        base: Base path to resolve from. Can be:
+            - A file path (e.g. __file__)
+            - A directory path
+        relative: Path relative to the base path
+
+    Returns:
+        str: Resolved absolute path
+
+    Examples:
+        >>> # When base is a file
+        >>> join_path(__file__, '../data/test.txt')
+        '/absolute/path/to/data/test.txt'
+
+        >>> # When base is a directory
+        >>> join_path('/path/to/dir', 'data/test.txt')
+        '/path/to/dir/data/test.txt'
+    """
+    if os.path.isdir(base):
+        return os.path.join(base, relative)
+    return os.path.join(os.path.dirname(base), relative)
+
+
+def get_func_with_parent(func):
+    """
+    Return function name directly if module is None or empty (e.g. built-in functions)
+    Args:
+        func:
+
+    Returns:
+
+    """
+
+    if not func.__module__:
+        return func.__name__
+    # e.g. 'foo.bar.utils.function_name' -> 'utils.function_name'
+    module = func.__module__.split('.')[-1]
+    return f"{module}.{func.__name__}"
+
+
+def safe_tolist(series: pd.Series) -> list:
+    """
+    Safely convert a pandas Series to a Python list, with optimized performance.
+
+    Uses Series.tolist() for non-datetime types for better performance, only applies
+    safe conversion when datetime64 values are present.
+
+    Args:
+        series (pd.Series): Input pandas Series of any dtype
+
+    Returns:
+        list: A Python list preserving original values and proper datetime conversion
+
+    Examples:
+        >>> series = pd.Series([np.datetime64('2000-01-01'), 1, 'string'])
+        >>> safe_tolist(series)
+        [datetime.datetime(2000, 1, 1, 0, 0), 1, 'string']
+    """
+    # Fast path for safe types
+    if not np.issubdtype(series.dtype, np.datetime64):
+        return series.values.tolist()
+
+    # Safe conversion for datetime64
+    def safe_convert(val):
+        if isinstance(val, np.datetime64):
+            return pd.Timestamp(val).to_pydatetime()
+        return val
+
+    return [safe_convert(x) for x in series.values]
+
+
 if __name__ == '__main__':
     pass
+
+
+def get_column_data_type(column_type: str):
+    """
+    convert mysql data type to inner type
+    """
+    data_type = None
+    if 'int' in column_type:
+        data_type = 'int'
+    elif column_type == 'float':
+        data_type = 'float'
+    elif column_type == 'double':
+        data_type = 'double'
+    elif column_type == 'decimal':
+        data_type = 'decimal'
+    elif column_type in ['date', 'timestamp']:
+        data_type = 'date'
+    elif column_type == 'datetime':
+        # histogram 需要区分 datetime 和 date，因为 videx find_nearest_buckets 会用到
+        data_type = 'datetime'
+    elif column_type in ['string', 'varchar', 'char', 'text', 'longtext']:
+        data_type = 'string'
+    elif column_type == 'json':
+        data_type = 'json'
+    return data_type

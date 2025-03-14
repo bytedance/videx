@@ -1,7 +1,19 @@
+"""
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
+
+@ author: bytebrain
+@ date: 2025-03-13
+
+"""
+
 from dataclasses import dataclass, field
-from typing import Set, Dict, Optional
+from typing import List, Set, Dict, Optional
+from collections import defaultdict
 
 from sub_platforms.sql_opt.meta import Column, TableId
+
+
 
 
 @dataclass

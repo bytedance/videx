@@ -1,3 +1,12 @@
+"""
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
+
+@ author: kangrong
+@ date: 2025-03-13
+
+"""
+
 import enum
 import gzip
 import json
@@ -20,7 +29,7 @@ from sub_platforms.sql_opt.videx.videx_metadata import VidexTableStats, VidexDBT
     EXTRA_INFO_KEY_mulcol, EXTRA_INFO_KEY_gt_rec_in_ranges, construct_videx_task_meta_from_local_files
 from sub_platforms.sql_opt.videx.model.videx_strategy import VidexModelBase
 from sub_platforms.sql_opt.videx.model.videx_model_innodb import VidexModelInnoDB
-from sub_platforms.sql_opt.videx.videx_utils import GT_Table_Return, get_local_ip
+from sub_platforms.sql_opt.videx.videx_utils import GT_Table_Return, get_local_ip, get_func_with_parent
 
 app = Flask(__name__)
 ENV_KEY_POST_VIDEX_META = 'POST_VIDEX_META'
@@ -146,16 +155,21 @@ class VidexSingleton:
             return 502, f"db task key not in cache and load_func is None: given task_key={task_id}, " \
                         f"videx_db={videx_db}, we have: {list(self.cache.keys())}", {}
         else:
+            func_name = get_func_with_parent(self.load_meta_by_task_id_func)
             st = time.perf_counter()
             db_task_stats: VidexDBTaskStats = self.load_meta_by_task_id_func(task_id)
-            task_cache = VidexTaskCache(db_task_stats)
             end = time.perf_counter()
+            if db_task_stats is None:
+                logging.error(f"=== loading task_meta failed by using func {func_name}. {task_id=} {req_json_item=}")
+                return 502, f"load task_meta using func={func_name}, ", {}
+
+            task_cache = VidexTaskCache(db_task_stats)
             before_keys = list(self.cache.keys())
             self.cache[task_id] = task_cache
             now_keys = list(self.cache.keys())
 
             db_tables = {db: {tb for tb in v} for db, v in db_task_stats.stats_dict.items()}
-            logging.info(f"=== load task_meta from remote dao. use {end - st:.2f}s. "
+            logging.info(f"=== load task_meta using func={func_name}. use {end - st:.2f}s. "
                          f"key={db_task_stats.key} db:tables={db_tables} {before_keys=} {now_keys=}")
 
         if db_task_stats is None:
@@ -466,6 +480,7 @@ def post_add_videx_meta(req: VidexDBTaskStats, videx_server_ip_port: str, use_gz
     else:
         headers = {'Content-Type': 'application/json'}
     # send request
+    logging.info(f"post videx metadata to {videx_server_ip_port}")
     return requests.post(f'http://{videx_server_ip_port}/create_task_meta', data=json_data, headers=headers)
 
 
@@ -503,6 +518,12 @@ def create_videx_env_multi_db(videx_env: Env,
             videx_env.set_default_db(target_db)
             for table in table_dict.values():
                 create_table_ddl = re.sub(r"ENGINE=\w+", "ENGINE={}".format(new_engine), table.ddl)
+                # remove secondary index
+                match = re.search(r'SECONDARY_ENGINE=(\w+)', create_table_ddl)
+                if match:
+                    value = match.group(1)
+                    logging.warning(f"find SECONDARY_ENGINE={value}, remove it from CREATE TABLE DDL")
+                    create_table_ddl = re.sub(r'SECONDARY_ENGINE=\w+', '', create_table_ddl)
                 videx_env.execute(create_table_ddl)
         finally:
             videx_env.set_default_db(videx_default_db)

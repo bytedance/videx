@@ -1,9 +1,21 @@
+"""
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
+
+@ author: bytebrain
+@ date: 2025-03-13
+
+"""
+
+import enum
+import json
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import List, Optional
 
 from dataclasses_json import config
 from dataclasses_json import dataclass_json
+from datetime import datetime
 
 
 @dataclass_json
@@ -71,6 +83,10 @@ class Column:
         if self.data_type == 'enum':
             self.enum_candidates = self.column_type.split('(')[1].split(')')[0].split(',')
         return self.enum_candidates
+
+    def __str__(self):
+        return f"{self.db}.{self.table}.{self.name}"
+
 
 @dataclass_json
 @dataclass
@@ -222,6 +238,16 @@ class Table:
     cluster_index_size: Optional[int] = None
     other_index_sizes: Optional[int] = None
 
+    def __post_init__(self):
+        # fill index meta info (db_name, table_name)
+        if self.indexes is None:
+            return
+        for index in self.indexes:
+            if index.db_name is None:
+                index.db_name = self.db
+            if index.table_name is None:
+                index.table_name = self.name
+
     @property
     def table_id(self):
         return TableId(self.db, self.name)
@@ -252,6 +278,8 @@ class OpTypeName(Enum):
     MULT_EQUAL_FUNC = ("MULT_EQUAL_FUNC",), ()
     CONSTANT_FUNC = ("TRUE_FUNC", "FALSE_FUNC"), ()
 
+    JSON_FUNC = ("MEMBER_OF_FUNC", "JSON_CONTAINS", "JSON_OVERLAPS"), ()
+
     @property
     def func_type(self):
         return self.value[0]
@@ -272,6 +300,30 @@ class JoinItem:
     op_type: OpTypeName = None
     left: Column = None
     right: Column = None
+
+    def __str__(self):
+        return f"{self.left} {self.operation} {self.right}"
+
+
+# json multi array 是一种更为复杂的函数索引，未来可以自然地拓展到支持函数索引
+@dataclass_json
+@dataclass
+class JsonMultiValueItem:
+    # 例如 custinfo->'$.zipcode'
+    column_func_str: str = None
+    # (empty), SIGNED, UNSIGNED, CHAR(N)
+    array_type: str = None
+    column: Column = None
+
+    @property
+    def index_expression(self) -> str:
+        """
+        创建索引时，应该填入什么字段。
+        ALTER TABLE customers ADD INDEX idx_age_zips(age, (CAST(custinfo->'$.zipcode' AS UNSIGNED ARRAY)) );
+        如上，则填入 (CAST(custinfo->'$.zipcode' AS UNSIGNED ARRAY))
+        """
+        return f"(CAST({self.column_func_str} AS {self.array_type} ARRAY))"
+
 
 def get_table_uk(table_meta: Table) -> List[List[str]]:
     """

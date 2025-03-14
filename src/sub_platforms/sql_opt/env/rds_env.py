@@ -1,15 +1,14 @@
 import logging
 from abc import ABC, abstractmethod
-import pandas as pd
 from typing import Dict, List, Optional, Set
-from pymysql import InternalError
 
-from sub_platforms.sql_opt.env.mysql_command import MySQLCommand, get_mysql_version
-from sub_platforms.sql_opt.videx.videx_mysql_utils import get_mysql_utils, MySQLConnectionConfig, DBTYPE
+import pandas as pd
+
 from sub_platforms.sql_opt.common.db_variable import VariablesAboutIndex
-from sub_platforms.sql_opt.common.exceptions import UnsupportedSamplingException
 from sub_platforms.sql_opt.common.sample_info import SampleColumnInfo
+from sub_platforms.sql_opt.databases.mysql.mysql_command import MySQLCommand, get_mysql_version, MySQLVersion
 from sub_platforms.sql_opt.meta import Table, Column, IndexColumn, IndexType
+from sub_platforms.sql_opt.videx.videx_mysql_utils import get_mysql_utils, MySQLConnectionConfig, DBTYPE
 
 
 def add_backquote(name):
@@ -45,7 +44,7 @@ class Env(ABC):
     def __init__(self, default_db):
         self.default_db = default_db
         # meta_info : {db: {table: Table:class } }
-        self.meta_info: Dict[str, Dict] = {}
+        self.meta_info: Dict[str, Dict[str, Table]] = {}
         self.config_info = {}  # 相关配置
         self.mysql_variables: VariablesAboutIndex = VariablesAboutIndex()
         self.mysql_util = None
@@ -163,7 +162,7 @@ class Env(ABC):
 
     @abstractmethod
     def get_pk_id_range(self, db_name: str, table_name: str, part_no: int):
-       raise NotImplementedError
+        raise NotImplementedError
 
     @abstractmethod
     def _request_meta_info(self, db_name, table_name, logic_db) -> Table:
@@ -204,6 +203,9 @@ class Env(ABC):
     @abstractmethod
     def reconstruct_connections(self):
         raise NotImplementedError
+
+    def get_version(self) -> MySQLVersion:
+        return MySQLVersion.MySQL_8
 
 
 def support_sampling(pk_cols: List[IndexColumn]) -> bool:
@@ -247,8 +249,6 @@ class DirectConnectMySQLEnv(Env, ABC):
         pk_names = [add_backquote(pk_name) for pk_name in pk_names]
 
         pk_cols = self.get_pk_columns(db_name, table_name)
-        if not support_sampling(pk_cols):
-            raise UnsupportedSamplingException(f'non int pk, db:{db_name}, table: {table_name}')
 
         def handle_pk_condition(boundary):
             # Note: 保证列名是关键字的列，可以不影响SQL正确性
@@ -272,8 +272,6 @@ class DirectConnectMySQLEnv(Env, ABC):
 
     def get_pk_id_range(self, db_name: str, table_name: str, shard_no: str):
         pk_cols = self.get_pk_columns(db_name, table_name)
-        if not support_sampling(pk_cols):
-            raise UnsupportedSamplingException(f'non int pk, db:{db_name}, table: {table_name}')
         pk_names = [f"`{pk_col.column_ref.name}`" for pk_col in pk_cols]
 
         # request lower bound
@@ -334,7 +332,6 @@ class DirectConnectMySQLEnv(Env, ABC):
     def reconstruct_connections(self):
         logging.info("reconstruct connection pool for OpenMySQLEnv")
         self.mysql_util.reconstruct_pool()
-
 
 
 class OpenMySQLEnv(DirectConnectMySQLEnv):
