@@ -70,17 +70,9 @@ echo "Copying libraries and scripts..."
 # cp /usr/local/gcc-9.3.0/lib64/* "$MYSQL_BUILD_DIR/lib64/"
 # cp ../build/scripts/* "$MYSQL_BUILD_DIR/"
 
-# Copy configuration file
-if [ -f "$SCRIPT_DIR/my.cnf" ]; then
-    cp "$SCRIPT_DIR/my.cnf" "$MYSQL_BUILD_DIR/etc/my.cnf"
-else
-    echo "Warning: my.cnf not found!"
-    exit 1
-fi
-
 # Add MySQL and mysqld to PATH environment variable
 echo "Adding MySQL client and server to PATH..."
-MYSQL_BIN_DIR="$MYSQL_BUILD_DIR/ "
+MYSQL_BIN_DIR="$MYSQL_BUILD_DIR/build/runtime_output_directory/"
 
 if [ -d "$MYSQL_BIN_DIR" ]; then
     export PATH="$MYSQL_BIN_DIR:$PATH"
