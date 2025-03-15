@@ -6,6 +6,7 @@ WORKDIR /root
 # copy MySQL source files
 COPY mysql_server /root/mysql_server
 COPY videx_server/build/config.sh /root/videx_server/build/
+COPY videx_server/src/mysql/videx /root/videx_server/src/mysql/videx
 COPY videx_server/build/build.sh /root/videx_server/build/
 
 # build
