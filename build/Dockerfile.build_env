@@ -1,92 +1,60 @@
-# 构建阶段
-FROM debian:bullseye AS builder
+# build GCC
+FROM debian:bullseye AS gcc-builder
+ENV GCC_VERSION=9.3.0
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential wget \
+    libgmp-dev libmpfr-dev libmpc-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ENV GCC_VERSION=9.3.0 \
-    PYTHON_VERSION=3.9.16 \
-    BISON_VERSION=3.4.2
-
-# 构建时依赖
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    build-essential \
-    cmake \
-    pkg-config \
-    m4 \
-    git \
-    wget \
-    curl \
-    software-properties-common \
-    flex \
-    git-lfs \
-    # MySQL编译所需依赖
-    libssl-dev \
-    libreadline-dev \
-    zlib1g-dev \
-    libcurl4-openssl-dev \
-    libldap2-dev \
-    libsasl2-dev \
-    libsasl2-modules-gssapi-mit \
-    libkrb5-dev \
-    bzip2 \
-    libbz2-dev \
-    libncurses5-dev \
-    libgdbm-dev \
-    liblzma-dev \
-    libsqlite3-dev \
-    tk-dev \
-    uuid-dev \
-    libnuma-dev \
-    libmecab-dev \
-    libaio-dev \
-    libncurses-dev \
-    libtirpc-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# 编译安装 GCC
 WORKDIR /build
-RUN wget https://mirrors.tuna.tsinghua.edu.cn/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz && \
-    tar -xf gcc-${GCC_VERSION}.tar.gz && \
-    cd gcc-${GCC_VERSION} && \
-    # 手动下载并解压依赖
-    wget https://mirrors.tuna.tsinghua.edu.cn/gnu/gmp/gmp-6.1.0.tar.bz2 && \
-    tar -xf gmp-6.1.0.tar.bz2 && \
-    mv gmp-6.1.0 gmp && \
-    wget https://mirrors.tuna.tsinghua.edu.cn/gnu/mpfr/mpfr-3.1.4.tar.bz2 && \
-    tar -xf mpfr-3.1.4.tar.bz2 && \
-    mv mpfr-3.1.4 mpfr && \
-    wget https://mirrors.tuna.tsinghua.edu.cn/gnu/mpc/mpc-1.0.3.tar.gz && \
-    tar -xf mpc-1.0.3.tar.gz && \
-    mv mpc-1.0.3 mpc && \
-    # 继续构建
-    mkdir build && cd build && \
-    ../configure --prefix=/usr/local/gcc-${GCC_VERSION} --disable-multilib --enable-languages=c,c++ && \
-    make -j $(nproc) && \
-    make install && \
-    cd /build && rm -rf *
+RUN wget https://mirrors.tuna.tsinghua.edu.cn/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz \
+    && tar -xf gcc-${GCC_VERSION}.tar.gz \
+    && cd gcc-${GCC_VERSION} \
+    && mkdir build && cd build \
+    && ../configure \
+        --prefix=/usr/local/gcc-${GCC_VERSION} \
+        --disable-multilib \
+        --enable-languages=c,c++ \
+        --disable-bootstrap \
+        --disable-nls \
+        --disable-libsanitizer \
+        --disable-libvtv \
+        --disable-libssp \
+        --disable-libquadmath \
+        --disable-libgomp \
+        --disable-libada \
+        --disable-libstdcxx-pch \
+    && make -j $(nproc) \
+    && make install-strip DESTDIR=/gcc-install \
+    && cd /build && rm -rf *
 
-# 编译安装 Bison
-RUN wget --no-check-certificate https://ftp.gnu.org/gnu/bison/bison-${BISON_VERSION}.tar.gz && \
-    tar -xf bison-${BISON_VERSION}.tar.gz && \
-    cd bison-${BISON_VERSION} && \
-    ./configure && \
-    make -j $(nproc) && \
-    make install && \
-    cd /build && rm -rf *
+# build Bison 
+FROM debian:bullseye AS bison-builder
+ENV BISON_VERSION=3.4.2
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential wget \
+    flex \
+    m4 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 最终阶段
+WORKDIR /build
+RUN wget --no-check-certificate https://ftp.gnu.org/gnu/bison/bison-${BISON_VERSION}.tar.gz \
+    && tar -xf bison-${BISON_VERSION}.tar.gz \
+    && cd bison-${BISON_VERSION} \
+    && ./configure --prefix=/usr/local \
+    && make -j $(nproc) \
+    && make install DESTDIR=/bison-install \
+    && cd /build && rm -rf *
+
+# final stage
 FROM debian:bullseye
+COPY --from=gcc-builder /gcc-install/usr/local/gcc-9.3.0 /usr/local/gcc-9.3.0
+COPY --from=bison-builder /bison-install/usr/local/bin/bison /usr/local/bin/bison
+COPY --from=bison-builder /bison-install/usr/local/lib/liby.* /usr/local/lib/
+COPY --from=bison-builder /bison-install/usr/local/share/bison /usr/local/share/bison
 
-# 复制 GCC, Bison 及其依赖
-COPY --from=builder /usr/local/gcc-9.3.0 /usr/local/gcc-9.3.0
-COPY --from=builder /usr/local/bin/bison /usr/local/bin/bison
-COPY --from=builder /usr/local/lib/liby.* /usr/local/lib/
-COPY --from=builder /usr/local/share/bison /usr/local/share/bison
-
-# 第一步：安装系统包
-RUN apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    build-essential \
+# online required part
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     cmake \
     curl \
     python3.9 \
@@ -98,9 +66,6 @@ RUN apt-get update && \
     m4 \
     pkg-config \
     git \
-    wget \
-    software-properties-common \
-    flex \
     git-lfs \
     libssl-dev \
     libreadline-dev \
@@ -110,53 +75,39 @@ RUN apt-get update && \
     libsasl2-dev \
     libsasl2-modules-gssapi-mit \
     libkrb5-dev \
-    bzip2 \
-    libbz2-dev \
-    libncurses5-dev \
-    libgdbm-dev \
-    liblzma-dev \
-    libsqlite3-dev \
-    tk-dev \
-    uuid-dev \
     libnuma-dev \
     libmecab-dev \
     libaio-dev \
     libncurses-dev \
-    libtirpc-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    libtirpc-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# 第二步：设置 GCC 环境和库文件
-RUN mkdir -p /usr/local/gcc-9.3.0/lib64 && \
-    echo "/usr/local/gcc-9.3.0/lib64" > /etc/ld.so.conf.d/gcc.conf && \
-    # 复制系统的库文件作为基础
-    cp /usr/lib/x86_64-linux-gnu/libgmp.so.10* /usr/local/gcc-9.3.0/lib64/ && \
-    cp /usr/lib/x86_64-linux-gnu/libmpfr.so.6* /usr/local/gcc-9.3.0/lib64/ && \
-    cp /usr/lib/x86_64-linux-gnu/libmpc.so.3* /usr/local/gcc-9.3.0/lib64/ && \
-    # 创建符号链接
-    ln -sf libgmp.so.10 /usr/local/gcc-9.3.0/lib64/libgmp.so && \
-    ln -sf libmpfr.so.6 /usr/local/gcc-9.3.0/lib64/libmpfr.so && \
-    ln -sf libmpc.so.3 /usr/local/gcc-9.3.0/lib64/libmpc.so && \
-    # 更新动态链接器缓存
-    ldconfig
+# set GCC env
+RUN mkdir -p /usr/local/gcc-9.3.0/lib64 \
+    && echo "/usr/local/gcc-9.3.0/lib64" > /etc/ld.so.conf.d/gcc.conf \
+    && cp /usr/lib/x86_64-linux-gnu/libgmp.so.10* /usr/local/gcc-9.3.0/lib64/ \
+    && cp /usr/lib/x86_64-linux-gnu/libmpfr.so.6* /usr/local/gcc-9.3.0/lib64/ \
+    && cp /usr/lib/x86_64-linux-gnu/libmpc.so.3* /usr/local/gcc-9.3.0/lib64/ \
+    && ln -sf libgmp.so.10 /usr/local/gcc-9.3.0/lib64/libgmp.so \
+    && ln -sf libmpfr.so.6 /usr/local/gcc-9.3.0/lib64/libmpfr.so \
+    && ln -sf libmpc.so.3 /usr/local/gcc-9.3.0/lib64/libmpc.so \
+    && ldconfig
 
-# 第三步：配置 GCC
-RUN ln -sf /usr/local/gcc-9.3.0/bin/gcc /usr/local/bin/gcc
+# 配置 Python 和其他工具
+RUN ln -sf /usr/local/gcc-9.3.0/bin/gcc /usr/local/bin/gcc \
+    && ln -sf /usr/bin/python3.9 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.9 /usr/bin/python \
+    && curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+    && python3.9 get-pip.py \
+    && rm get-pip.py
 
-# 第四步：安装 Python pip
-RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
-    python3.9 get-pip.py && \
-    rm get-pip.py && \
-    ln -sf /usr/bin/python3.9 /usr/bin/python3 && \
-    ln -sf /usr/bin/python3.9 /usr/bin/python
-
-# 第五步：版本校验
-RUN gcc --version | grep "9.3.0" && \
-    bison --version && \
-    curl --version | grep "curl" && \
-    python3.9 --version | grep "3.9" && \
-    cmake --version | grep "cmake version" && \
-    echo "All version checks passed!"
+# validation
+RUN gcc --version | grep "9.3.0" \
+    && bison --version \
+    && curl --version | grep "curl" \
+    && python3.9 --version | grep "3.9" \
+    && cmake --version | grep "cmake version" \
+    && echo "All version checks passed!"
 
 ENV PATH=/usr/local/gcc-9.3.0/bin:/opt/tiger/typhoon-blade:/opt/common_tools:$PATH \
     LD_LIBRARY_PATH=/usr/local/gcc-9.3.0/lib64:$LD_LIBRARY_PATH

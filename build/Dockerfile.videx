@@ -1,0 +1,37 @@
+# Build MySQL
+FROM videx_build:latest as builder
+
+WORKDIR /root
+
+# copy MySQL source files
+COPY mysql_server /root/mysql_server
+COPY videx_server/build/config.sh /root/videx_server/build/
+COPY videx_server/build/build.sh /root/videx_server/build/
+
+# build
+WORKDIR /root/videx_server/build
+RUN chmod +x *.sh && \
+    ./build.sh
+
+# collect dependency
+RUN mkdir -p /root/mysql_server/mysql_build_output/lib64 && \
+    cp /usr/local/gcc-9.3.0/lib64/libstdc++.so* /root/mysql_server/mysql_build_output/lib64/ && \
+    cp /usr/local/gcc-9.3.0/lib64/libgcc_s.so* /root/mysql_server/mysql_build_output/lib64/
+
+# Build final
+FROM videx_build:latest
+
+WORKDIR /root
+
+COPY --from=builder /root/mysql_server/mysql_build_output /root/mysql_server/mysql_build_output
+COPY videx_server /root/videx_server
+
+WORKDIR /root/videx_server/build
+
+RUN chmod +x *.sh
+
+RUN ./init_server.sh
+
+EXPOSE 13308 5001
+
+CMD ["./start_server.sh"]
