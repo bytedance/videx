@@ -1904,12 +1904,17 @@ static SHOW_VAR func_status[] = {
      SHOW_SCOPE_GLOBAL},
     {nullptr, nullptr, SHOW_UNDEF, SHOW_SCOPE_UNDEF}};
 
-mysql_declare_plugin(videx){
+#ifdef STATIC_VIDEX
+mysql_declare_plugin(videx_static)
+#else
+mysql_declare_plugin(videx)
+#endif
+{
     MYSQL_STORAGE_ENGINE_PLUGIN,
     &videx_storage_engine,
     "VIDEX",
     "Kang Rong",
-    "VIDEX storage engine",
+    "Disaggregated, Extensible Virtual Index Engine for What-If Analysis",
     PLUGIN_LICENSE_GPL,
     videx_init_func, /* Plugin Init */
     nullptr,           /* Plugin check uninstall */

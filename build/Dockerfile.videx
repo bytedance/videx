@@ -1,45 +1,38 @@
-# 第一阶段：构建 MySQL
+# Build MySQL
 FROM videx_build:latest as builder
 
-# 设置工作目录
 WORKDIR /root
 
-# 复制 MySQL 源代码和构建脚本
+# copy MySQL source files
 COPY mysql_server /root/mysql_server
 COPY videx_server/build/config.sh /root/videx_server/build/
+COPY videx_server/src/mysql/videx /root/videx_server/src/mysql/videx
 COPY videx_server/build/build.sh /root/videx_server/build/
 
-# 执行构建
+# build
 WORKDIR /root/videx_server/build
 RUN chmod +x *.sh && \
     ./build.sh
 
-# 收集必要的运行时库
+# collect dependency
 RUN mkdir -p /root/mysql_server/mysql_build_output/lib64 && \
     cp /usr/local/gcc-9.3.0/lib64/libstdc++.so* /root/mysql_server/mysql_build_output/lib64/ && \
     cp /usr/local/gcc-9.3.0/lib64/libgcc_s.so* /root/mysql_server/mysql_build_output/lib64/
 
-# 第二阶段：创建最终镜像
+# Build final
 FROM videx_build:latest
 
-# 设置工作目录
 WORKDIR /root
 
-# 只复制 MySQL 构建结果和 Videx 代码
 COPY --from=builder /root/mysql_server/mysql_build_output /root/mysql_server/mysql_build_output
 COPY videx_server /root/videx_server
 
-# 设置工作目录到脚本所在位置
 WORKDIR /root/videx_server/build
 
-# 确保脚本具有执行权限
 RUN chmod +x *.sh
 
-# 执行初始化
 RUN ./init_server.sh
 
-# 暴露端口
 EXPOSE 13308 5001
 
-# 设置启动命令
 CMD ["./start_server.sh"]

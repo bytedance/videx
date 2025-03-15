@@ -73,7 +73,7 @@ VIDEX 根据原始实例中指定的目标数据库（`target_db`）创建一个
 
 ```shell
 # 注意，这是字节跳动的镜像，下一步会替换为 dockerhub 的镜像。即将推出。
-docker run -itd --name videx -p 13383:3306 -p 5001:5001 \
+docker run -itd --name videx -p 13308:3306 -p 5001:5001 \
 --entrypoint=/bin/bash hub.byted.org/boe/toutiao.mysql.sqlbrain_parse_80:54a3bf649b5c6e0795954669ee4447b9 \
 -c "cd /opt/tiger/mysql-server && bash init_start.sh"
 ```
@@ -121,7 +121,7 @@ python start_videx_server.py --port 5001
 
 ```bash
 cd $VIDEX_HOME/src/sub_platforms/sql_opt/videx/scripts
-python videx_build_env.py --target 127.0.0.1:13383:tpch_sf1:user:password \
+python videx_build_env.py --target 127.0.0.1:13308:tpch_sf1:user:password \
 [--videx 127.0.0.1:13309:videx_tpch_sf1:user:password] \
 [--videx_server 127.0.0.1:5001] \
 [--meta_path /path/to/file]
@@ -143,18 +143,24 @@ python videx_build_env.py --target 127.0.0.1:13383:tpch_sf1:user:password \
 
 我们已经准备了一个导入  数据、导入 TPCH 元数据的实例。用户可以跳过 Step 1~3，直接进入 step 4 EXPLAIN sql：
 ```shell
-mysql -h10.37.59.194 -P13383 -ubytebrain -pbytebrain@2023 -Dvidex_tpch_tiny
+mysql -h10.37.59.194 -P13308 -ubytebrain -pbytebrain@2023 -Dvidex_tpch_tiny
 ```
 
 ### Step 1: 准备 VIDEX 环境
 
 我们假设用户的生产实例和 VIDEX 的连接信息如下：
 
-- `target-MySQL`：目标实例（生产库）。连接信息为 127.0.0.1:13383:tpch_tiny:user:password
+- `target-MySQL`：目标实例（生产库）。连接信息为 127.0.0.1:13308:tpch_tiny:user:password
 - `VIDEX-MySQL`：以插件形式安装在 `target-MySQL` 中，因此连接信息同上。 
 - `VIDEX-Server`：与 `VIDEX-MySQL` 安装在同一个节点，开启默认端口。地址为 127.0.0.1:5001。
 
 通过 `Docker` 启动是最简单的方式，可以一次性启动 VIDEX 所有组件。当然，用户完全可以自定义启动 `VIDEX-MySQL` 和 `VIDEX-Server`。  
+
+```shell
+cd $VIDEX_HOME
+   
+docker run -d  -p 13308:13308 -p 5001:5001 --name videx  videx:latest
+```
 
 ### Step 2: 导入 TPCH-Tiny 库表
 
@@ -163,9 +169,9 @@ mysql -h10.37.59.194 -P13383 -ubytebrain -pbytebrain@2023 -Dvidex_tpch_tiny
 ```shell
 cd $VIDEX_HOME
 
-mysql -h127.0.0.1 -P13383 -uroot -ppassword -e "create database tpch_tiny;"
+mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
 tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
-mysql -h127.0.0.1 -P13383 -uroot -ppassword -Dtpch_tiny < tpch_tiny.sql
+mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```
 
 ### Step 3: 采集并导入 VIDEX 元数据
@@ -175,8 +181,8 @@ mysql -h127.0.0.1 -P13383 -uroot -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```shell
 cd $VIDEX_HOME
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
- --target 127.0.0.1:13383:tpch_tiny:user:password \
- --videx 127.0.0.1:13383:videx_tpch_tiny:user:password
+ --target 127.0.0.1:13308:tpch_tiny:videx:password \
+ --videx 127.0.0.1:13308:videx_tpch_tiny:videx:password
 
 ```
 
@@ -186,7 +192,7 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
 You are running in non-task mode.
 To use VIDEX, please set the following variable before explaining your SQL:
 --------------------
--- Connect VIDEX-MySQL: mysql -h127.0.0.1 -P13383 -uroot -ppassowrd -Dvidex_tpch_tiny
+-- Connect VIDEX-MySQL: mysql -h127.0.0.1 -P13308 -uvidex -ppassowrd -Dvidex_tpch_tiny
 USE videx_tpch_tiny;
 SET @VIDEX_SERVER='127.0.0.1:5001';
 -- EXPLAIN YOUR_SQL;
@@ -274,7 +280,7 @@ ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 ```shell
 cd $VIDEX_HOME
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
- --target 127.0.0.1:13383:tpch_sf1:user:password \
+ --target 127.0.0.1:13308:tpch_sf1:user:password \
  --meta_path data/tpch_sf1/videx_metadata_tpch_sf1.json
 
 ```

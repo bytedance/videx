@@ -1,5 +1,5 @@
-# Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
-#
+# Copyright (c) 2006, 2023, Oracle and/or its affiliates.
+# 
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License, version 2.0,
 # as published by the Free Software Foundation.
@@ -27,32 +27,46 @@ ADD_DEFINITIONS(-DMUTEX_FUTEX)
 INCLUDE_DIRECTORIES(
         ${CMAKE_SOURCE_DIR}/sql
         ${CMAKE_SOURCE_DIR}/sql/auth
-        ${CMAKE_SOURCE_DIR}/storage/innobase/include
-        ${CMAKE_SOURCE_DIR}/storage/innobase
         ${CMAKE_SOURCE_DIR}/extra/rapidjson/include
         ${CMAKE_SOURCE_DIR}/extra/curl/curl-8.1.2/include
 )
 
-IF(WITH_VIDEX_STORAGE_ENGINE AND NOT WITHOUT_VIDEX_STORAGE_ENGINE)
-  MYSQL_ADD_PLUGIN(VIDEX
-    videx_json_item.cc
-    videx_log_utils.cc
-    ha_videx.cc
-    STORAGE_ENGINE
-    DEFAULT
-    LINK_LIBRARIES ext::zlib ext::curl  # 添加这里
-    # ${CMAKE_SOURCE_DIR}/sql/videx_info_global.cc  # 添加此行
-    )
-ELSEIF(NOT WITHOUT_VIDEX_STORAGE_ENGINE)
-  MYSQL_ADD_PLUGIN(VIDEX
-    videx_json_item.cc
-    videx_log_utils.cc
-    ha_videx.cc
-    STORAGE_ENGINE
-    MODULE_ONLY
-    LINK_LIBRARIES ext::zlib ext::curl  # 添加这里
-    # ${CMAKE_SOURCE_DIR}/sql/videx_info_global.cc  # 添加此行
-    )
-ENDIF()
+IF (WITH_VIDEX_STORAGE_ENGINE AND NOT WITHOUT_VIDEX_STORAGE_ENGINE)
+  # Check if the dynamic library is explicitly specified
+  IF (PLUGIN_VIDEX STREQUAL "DYNAMIC")
+    # Build only the dynamic library
+    MESSAGE(STATUS "Building VIDEX as dynamic plugin only")
+    MYSQL_ADD_PLUGIN(videx
+            videx_json_item.cc
+            videx_log_utils.cc
+            ha_videx.cc
+            STORAGE_ENGINE
+            MODULE_ONLY
+            LINK_LIBRARIES ext::zlib ext::curl
+            )
+  ELSE ()
+    # Default: Build both static and dynamic libraries
+    MESSAGE(STATUS "Building VIDEX as static plugin (default)")
+    MYSQL_ADD_PLUGIN(videx_static
+            videx_json_item.cc
+            videx_log_utils.cc
+            ha_videx.cc
+            STORAGE_ENGINE
+            DEFAULT
+            STATIC_ONLY
+            LINK_LIBRARIES ext::zlib ext::curl
+            )
+    target_compile_definitions(videx_static PRIVATE STATIC_VIDEX)
 
-ADD_DEPENDENCIES(videx innobase)
+    MESSAGE(STATUS "Building VIDEX as dynamic plugin")
+    # Generate the dynamic library at the same time
+    MYSQL_ADD_PLUGIN(videx
+            videx_json_item.cc
+            videx_log_utils.cc
+            ha_videx.cc
+            STORAGE_ENGINE
+            MODULE_ONLY
+            LINK_LIBRARIES ext::zlib ext::curl
+            )
+  ENDIF ()
+ENDIF ()
