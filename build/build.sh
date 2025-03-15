@@ -6,6 +6,14 @@ source "${SCRIPT_DIR}/config.sh"
 set -e  # Exit on error
 set -x  # Print commands for debugging
 
+if [ -d "$MYSQL_HOME/storage/videx" ]; then
+    echo "Deleting existing $MYSQL_HOME/storage/videx directory..."
+    rm -rf "$MYSQL_HOME/storage/videx"
+fi
+
+echo "Copying $VIDEX_HOME/src/mysql/videx to $MYSQL_HOME/storage..."
+cp -r "$VIDEX_HOME/src/mysql/videx" "$MYSQL_HOME/storage"
+
 BOOST_DIR=$MYSQL_HOME/boost
 
 # Clean previous build if exists
@@ -53,6 +61,9 @@ cmake --build build --target mysqld -- -j "$(nproc)"
 # Build MySQL client
 echo "Building MySQL client..."
 cmake --build build --target mysql -- -j "$(nproc)"
+
+# build videx
+cmake --build build --target videx -- -j "$(nproc)"
 
 # Check if build was successful
 if [ ! -f "build/runtime_output_directory/mysqld" ]; then

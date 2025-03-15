@@ -8,8 +8,7 @@
 </p>
 
 
-**VIDEX** provides A Disaggregated, Extensible Open-Source **\[VI\]**rtual in**\[DEX\]** Engine for MySQL
- 🚀
+**VIDEX**: The Disaggregated, Extensible **\[VI\]**rtual in**\[DEX\]** Engine for What-If Analysis in MySQL 🚀
 - **Virtual Index**: Does not require real data, relies only on statistical information and algorithm models to accurately simulate query plans, table join orders, and index selections;
 - **Decoupled**: VIDEX can be deployed on a separate instance with no impact on the production MySQL environment.
 - **Scalable**: VIDEX offers convenient interfaces allowing users to apply models like `cardinality` and `ndv` to downstream MySQL tasks (e.g., index recommendation);
