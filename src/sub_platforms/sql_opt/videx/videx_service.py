@@ -345,7 +345,8 @@ class VidexSingleton:
         before_keys = list(self.cache.keys())
         if key_list is None or len(key_list) == 0:
             self.cache.clear()
-            logging.info(f"=== clear all task_meta. ")
+            self.non_task_cache = VidexTaskCache(db_tasks_stats=None)
+            logging.info("all task caches cleared")
         else:
             for key in key_list:
                 if key in self.cache:

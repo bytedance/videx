@@ -354,7 +354,12 @@ VIDEX-MySQL 将基于用户指定的地址，通过 `HTTP` 请求索引元数据
 
 ## License
 
-该项目在 MIT 许可证下授权。详见 [LICENSE](LICENSE) 文件。
+本项目采用双重许可协议：
+
+- MySQL 引擎实现采用 GNU 通用公共许可证第 2 版（GPL - 2.0）许可。
+- 所有其他代码和脚本采用 MIT 许可。
+
+详情请参阅 [LICENSE](./LICENSES) 目录。
 
 ## Authors
 SQLBrain Group, ByteBrain, 字节跳动

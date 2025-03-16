@@ -416,7 +416,12 @@ VIDEX-MySQL will request NDV and cardinality results via HTTP based on the user-
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is dual-licensed:
+
+- The MySQL engine implementation is licensed under GPL-2.0
+- All other codes and scripts are licensed under MIT
+
+See the [LICENSE](./LICENSES) directory for details.
 
 ## Authors
 SQLBrain Group, ByteBrain, Bytedance
