@@ -47,7 +47,7 @@ We expect that VIDEX can provide users with a better platform to more easily tes
 ---
 
 
-# Overview
+## 1. Overview
 
 <p align="center">
   <img src="doc/videx-structure.png" width="600">
@@ -61,242 +61,119 @@ VIDEX consists of two parts:
 VIDEX creates an individual virtual database according to the specified target database in the raw instance,
 containing a series of tables with the same DDL, but replacing the engine from `InnoDB` to `VIDEX`.
 
-# Startup VIDEX-MySQL and VIDEX-Statistic-Server
+Here's the English translation of the documentation for GitHub:
 
-## From Docker Image
+## Quick Start
 
-```shell
-docker run -itd --name videx -p 13383:3306 -p 5001:5001 \
---entrypoint=/bin/bash hub.byted.org/boe/toutiao.mysql.sqlbrain_parse_80:54a3bf649b5c6e0795954669ee4447b9 \
--c "cd /opt/tiger/mysql-server && bash init_start.sh"
-```
+### 2.1 Install Python Environment
 
-The dockerhub version will come soon.
-
-Considering the complexity of compiling VIDEX-MySQL, a Docker image has been created for ease of use. This image includes both the VIDEX-MySQL instance and the VIDEX-Statistic-Server, with the VIDEX engine plugin already installed. It is based on [Percona-MySQL release-8.0.34-26](https://github.com/percona/percona-server/tree/release-8.0.34-26), where Percona-MySQL is a fully compatible, enhanced version of MySQL.
-
-VIDEX-Statistic-Server and VIDEX-MySQL are decoupled; users can add new cost estimation algorithms (NDV, cardinality, index cache pct), start their own VIDEX-Statistic-Server, and specify the IP of the VIDEX Statistic Server when executing queries.
-
-
-## From Source Code
-### Compile VIDEX-MySQL Plugin
-
-Clone the MySQL or Percona server (verified with MySQL-server 8.0+ and Percona-server 8.0.34-26+).
+VIDEX requires Python 3.9 for metadata collection tasks. We recommend using Anaconda/Miniconda to create an isolated Python environment:
 
 ```bash
-MySQL8_HOME=MySQL8_Server_Source
-# mysql
-git clone --depth=1 --recursive -b 8.0 https://github.com/mysql/mysql-server.git $MySQL8_HOME
-# percona
-git clone --depth=1 --recursive -b release-8.0.34-26 https://github.com/percona/percona-server.git $MySQL8_HOME
-
-```
-
-copy VIDEX-MySQL codes into `$MySQL8_HOME/storage`:
-
-```bash
-cp -r $VIDEX_HOME/src/mysql/videx $MySQL8_HOME/storage
-```
-
-Generate the necessary Makefile with cmake.
-
-```bash
-cmake .. \
-    -B./build \
-    -DWITH_DEBUG=0 \
-    -DCMAKE_INSTALL_PREFIX=. \
-    -DMYSQL_DATADIR=./data \
-    -DSYSCONFDIR=./etc \
-    -DWITH_BOOST=../boost \
-    -DDOWNLOAD_BOOST=1 \
-    -DWITH_ROCKSDB=OFF
-```
-
-Navigate to the videx directory and compile videx individually.
-
-```bash
-cd $MySQL8_HOME/build/storage/videx/
-make -j `nproc`
-```
-
-Store the generated `ha_videx.so` in `plugin_dir`:
-
-```sql
-SHOW VARIABLES LIKE "%plugin%"
-    -> ;
-+-----------------------------------------------+-----------------------------------------------+
-| Variable_name                                 | Value                                         |
-+-----------------------------------------------+-----------------------------------------------+
-| default_authentication_plugin                 | caching_sha2_password                         |
-| plugin_dir                                    | /root/mysql8/lib/plugin/ |
-| replication_optimize_for_static_plugin_config | OFF                                           |
-+-----------------------------------------------+-----------------------------------------------+
-
-cp ha_videx.so /root/mysql8/lib/plugin/
-```
-
-Install the plugin.
-
-```sql
-INSTALL PLUGIN VIDEX SONAME 'ha_videx.so';
-UNINSTALL PLUGIN VIDEX;
-```
-
-Verify that VIDEX has been installed. You will see a new engine VIDEX.
-
-```sql
-SHOW ENGINES;
-```
-
-### Startup Videx-Stats-Server
-We recommend using Anaconda or Miniconda to create a standalone Python environment, then install VIDEX.
-
-```bash
+# Clone repository
+VIDEX_HOME=videx_server
+git clone git@github.com:bytedance/videx.git $VIDEX_HOME
 cd $VIDEX_HOME
 
+# Create and activate Python environment
 conda create -n videx_py39 python=3.9
-
 conda activate videx_py39
 
+# Install VIDEX
 python3.9 -m pip install -e . --use-pep517
 ```
 
-Specify the port for Videx-Stats-Server and start the service.
+### 2.2 Launch VIDEX (Docker Mode)
 
+For simplified deployment, we provide pre-built Docker images containing:
+- VIDEX-MySQL: Based on [Percona-MySQL 8.0.34-26](https://github.com/percona/percona-server/tree/release-8.0.34-26) with integrated VIDEX plugin
+- VIDEX-Server: NDV and cardinality algorithm service
+
+#### Install Docker
+If you haven't installed Docker yet:
+- [Docker Desktop for Windows/Mac](https://www.docker.com/products/docker-desktop/)
+- Linux: Follow the [official installation guide](https://docs.docker.com/engine/install/)
+
+#### Launch VIDEX Container
 ```bash
-cd $VIDEX_HOME/src/sub_platforms/sql_opt/videx/scripts
-python start_videx_server.py --port 5001
+docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:0.0.2
 ```
 
-## Import VIDEX Metadata and Do EXPLAIN
+> **Alternative Deployment Options**
+>
+> VIDEX also supports the following deployment methods, see [Installation Guide](doc/installation.md):
+> - Build complete MySQL Server from source
+> - Build VIDEX plugin only and install on existing MySQL
+> - Deploy VIDEX-Server independently (supports custom optimization algorithms)
 
-Specify the connection details for the original database and the videx-stats-server. 
-Gather statistics from the original database, save them to an intermediate file, 
-then import them into the VIDEX database.
+## Examples
 
-> - If VIDEX-MySQL is started independently rather than as a plugin on the target-MySQL, users can specify the VIDEX-MySQL address using the `--videx` parameter.
-> - If VIDEX-Server is started independently rather than being deployed on the same machine as VIDEX-MySQL, users can specify the VIDEX-Server address using the `--videx_server` parameter.
-> - If metadata files have already been generated, users can specify the `--meta_path` parameter to skip the collection process.
+### TPCH-Tiny Example
 
-```bash
-cd $VIDEX_HOME/src/sub_platforms/sql_opt/videx/scripts
-python videx_build_env.py --target 127.0.0.1:13383:tpch_sf1:user:password \
-[--target 127.0.0.1:13309:videx_tpch_sf1:user:password] \
-[--videx_server 127.0.0.1:5001] \
-[--meta_path /path/to/file]
+This example demonstrates the complete VIDEX workflow using the `TPC-H Tiny` dataset (1% random sample from TPC-H sf1).
 
+#### Environment Details
+
+The example assumes all components are deployed locally via Docker:
+
+Component | Connection Info
+---|---
+Target-MySQL (Production DB) | 127.0.0.1:13308, username:videx, password:password  
+VIDEX-MySQL (Plugin) | Same as Target-MySQL
+VIDEX-Server | 127.0.0.1:5001
+
+#### Step 1: Import Test Data
+
+```bash 
+cd $VIDEX_HOME
+
+# Create database
+mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
+
+# Import data
+tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
+mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```
 
-You can use MySQL's native DDL syntax to create indexes, without any adaption and modification.
+### Step 2: Collect and Import VIDEX Metadata
 
-```sql
-ALTER TABLE t1 ADD INDEX idx_videx_c1c2(c1, c2);
-```
-
-The only difference introduced by VIDEX is that you need to set the address of the videx-stats-server before querying. 
-Then, you can then use `EXPLAIN SQL` to obtain the query plan and see the impact of VIDEX virtual indexes.
-
-> - The default value for `VIDEX_SERVER` is `127.0.0.1:5001`.
-> - If VIDEX-MySQL and VIDEX-Server are deployed on the same instance or machine, there is no need to specify `SET @VIDEX_SERVER`.
-
-```sql
-SET @VIDEX_SERVER='127.0.0.1:5001';
-EXPLAIN select * from t1 where c2 > 10 and c1 = 5
-```
-
-Explain results are displayed as follows:
-
-```sql
-+----+-------------+-------+------------+-------+------------------------+---------+---------+-------+------+----------+--------+
-| id | select_type | table | partitions | type  | possible_keys          | key     | key_len | ref   | rows | filtered | Extra  |
-+----+-------------+-------+------------+-------+------------------------+---------+---------+-------+------+----------+--------+
-| 1  | SIMPLE      | t1    | <null>     | const | PRIMARY,idx_videx_c1c2 | PRIMARY | 4       | const | 1    | 100.0    | <null> |
-+----+-------------+-------+------------+-------+------------------------+---------+---------+-------+------+----------+--------+
-```
-
-Use MySQL's native DDL syntax to delete indexes.
-
-```sql
-ALTER TABLE t1 DROP INDEX idx_videx_c1c2(c1, c2);
-```
-
-## <a id="example-tpch">Example: TPC-H</a>
-### TPC-H tiny
-
-In this example, we will start by importing data from TPC-H-tiny, which randomly samples 1% of the data from TPC-H sf1(1g), 
-to demonstrate how to use VIDEX.
-
-To demonstrate the effectiveness of VIDEX, we compare the explain details on TPC-H Q21, 
-a complex query involving a 4-table join that includes various elements such as `WHERE`, `aggregation`, `ORDER BY`, 
-`GROUP BY`, `EXISTS`, and `self-join`. There are 11 indexes on 4 tables available for MySQL to choose from.
-
-**Prepare VIDEX Environment**
-
-Given a target database (target-MySQL), users can independently start `VIDEX-MySQL` and `VIDEX-Server` on any node.
-
-Particularly, launching VIDEX through Docker is the simplest approach. The VIDEX Docker container includes 
-both `VIDEX-MySQL` and `VIDEX-Server` deployed on the same instance, simplifying many parameter configurations.
-
-```shell
-# TODO: The following image is ByteDance's image. In the next step, it will be replaced with the Docker Hub image.
-docker run -itd --name videx -p 13383:3306 -p 5001:5001 \
---entrypoint=/bin/bash hub.byted.org/boe/toutiao.mysql.sqlbrain_parse_80:54a3bf649b5c6e0795954669ee4447b9 \
--c "cd /opt/tiger/mysql-server && bash init_start.sh"
-```
-
-We assume the user environment is as follows:
-- `target-MySQL`: The target instance (production database) with the address 127.0.0.1:13383:tpch_tiny:user:password.
-- `VIDEX-MySQL`: An instance with the VIDEX plugin installed, located on the production database with the same address.
-- `VIDEX-Server`: The VIDEX metadata and algorithm server installed on the same node, running on the default port. Address: 127.0.0.1:5001.
-
-**Import TPCH-Tiny**
-
-Import TPCH-tiny.sql into the target instance.
+Ensure VIDEX environment is installed. If not, refer to [2.1 Install Python Environment](#21-install-python-environment).
 
 ```shell
 cd $VIDEX_HOME
-
-mysql -h127.0.0.1 -P13383 -uroot -ppassword -e "create database tpch_tiny;"
-tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
-mysql -h127.0.0.1 -P13383 -uroot -ppassword -Dtpch_tiny < tpch_tiny.sql
-```
-
-**Import VIDEX Metadata**
-
-
-```shell
-pip install -e . -r requirements.txt # if the python env hasn't installed
-
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
- --target 127.0.0.1:13383:tpch_sf1:user:password
-
+ --target 127.0.0.1:13308:tpch_tiny:videx:password \
+ --videx 127.0.0.1:13308:videx_tpch_tiny:videx:password
 ```
 
-The output is as follows:
-
+Output:
 ```log
 2025-02-17 13:46:48 [2855595:140670043553408] INFO     root            [videx_build_env.py:178] - Build env finished. Your VIDEX server is 127.0.0.1:5001.
 You are running in non-task mode.
 To use VIDEX, please set the following variable before explaining your SQL:
 --------------------
--- Connect VIDEX-MySQL: mysql -h127.0.0.1 -P13383 -uroot -ppassowrd -Dvidex_tpch_tiny
+-- Connect VIDEX-MySQL: mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dvidex_tpch_tiny
 USE videx_tpch_tiny;
 SET @VIDEX_SERVER='127.0.0.1:5001';
 -- EXPLAIN YOUR_SQL;
 ```
 
-Now the metadata file has already been written to `videx_metadata_tpch_tiny.json` and imported into VIDEX-Server. 
-If the metadata file is prepared in advance, users can specify `--meta_path` to bypass the collection process.
+Metadata is now collected and imported to VIDEX-Server. The JSON file is written to `videx_metadata_tpch_tiny.json`.
 
-**EXPLAIN SQL**
+If users have prepared metadata files, they can specify `--meta_path` to skip collection and import directly.
 
-Connect to VIDEX-MySQL and execute EXPLAIN. 
-Since VIDEX-Server is deployed on the same node as VIDEX-MySQL and is running on the default port (5001), there is no need to set `VIDEX_SERVER` additionally.
+### Step 3: EXPLAIN SQL
 
+Connect to `VIDEX-MySQL` and execute EXPLAIN.
+
+To demonstrate VIDEX's effectiveness, we compare EXPLAIN details for TPC-H Q21, a complex query with four-table joins involving `WHERE`, `aggregation`, `ORDER BY`, `GROUP BY`, `EXISTS` and `self-joins`. MySQL can choose from 11 indexes across 4 tables.
+
+Since VIDEX-Server is deployed on the VIDEX-MySQL node with default port (5001), we don't need to set `VIDEX_SERVER` additionally.
+If VIDEX-Server is deployed elsewhere, execute `SET @VIDEX_SERVER` first.
 
 ```sql
--- SET @VIDEX_SERVER='127.0.0.1:5001'; 
-EXPLAIN
+-- SET @VIDEX_SERVER='127.0.0.1:5001'; -- Not needed for Docker deployment
+EXPLAIN 
 FORMAT = JSON
 SELECT s_name, count(*) AS numwait
 FROM supplier,
@@ -322,38 +199,73 @@ GROUP BY s_name
 ORDER BY numwait DESC, s_name;
 ```
 
-We compared VIDEX with InnoDB using `EXPLAIN FORMAT=JSON`, a more rigorous format. 
-We evaluated not only the `table join order` and `index selection`,
-but also every detail of the query plan, including the number of rows and cost at each step.
+We compare VIDEX and InnoDB. We use `EXPLAIN FORMAT=JSON`, a more strict format.
+We compare not only table join order and index selection but every detail of query plans (e.g., rows and cost at each step).
 
-As shown in the following image, VIDEX (left) can generate a query plan almost 100% the same as InnoDB (right).
-The complete EXPLAIN result files are located in `data/explain_result`.
+As shown below, VIDEX (left) generates a query plan almost 100% identical to InnoDB (right).
+Complete EXPLAIN results are in `data/tpch_tiny`.
 
-![explain.png](doc/explain_tpch_tiny_compare.png)
+[explain_tpch_tiny_compare.png](doc/explain_tpch_tiny_compare.png)
 
-Note that, The simulation accuracy of VIDEX dependencies on three crucial interfaces:
+Note that VIDEX accuracy depends on three key algorithm interfaces:
 - `ndv`
-- `cardinality` 
-- `pct_cached` (the percentage of the index loaded into memory).
+- `cardinality`
+- `pct_cached` (percentage of index data loaded in memory). Can be set to 0 (cold start) or 1 (hot data) if unknown, but production instances' `pct_cached` may vary constantly.
 
-### TPC-H sf1
+A key VIDEX function is simulating index costs. We add an extra index. VIDEX's index addition cost is `O(1)`:
 
-We also prepared a metadata file for TPC-H sf1: `data/videx_metadata_tpch_sf1.json`.
+```sql
+ALTER TABLE tpch_tiny.orders ADD INDEX idx_o_orderstatus (o_orderstatus);
+ALTER TABLE videx_tpch_tiny.orders ADD INDEX idx_o_orderstatus (o_orderstatus);
+```
+
+Re-running EXPLAIN shows MySQL-InnoDB and VIDEX query plans changed identically, both adopting the new index.
+
+[explain_tpch_tiny_compare_alter_index.png](doc/explain_tpch_tiny_compare_alter_index.png)
+
+> VIDEX's row estimate (7404) differs from MySQL-InnoDB (7362) by ~0.56%, due to cardinality estimation algorithm error.
+
+Finally, we remove the index:
+
+```sql
+ALTER TABLE tpch_tiny.orders DROP INDEX idx_o_orderstatus;
+ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
+```
+
+## Example 3.2 TPCH sf1 (1g)
+
+We provide metadata file for TPC-H sf1: `data/videx_metadata_tpch_sf1.json`, allowing direct import without collection.
 
 ```shell
 cd $VIDEX_HOME
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
- --target 127.0.0.1:13383:tpch_sf1:user:password --videx_server 5001 \
- --meta_path data/videx_metadata_tpch_sf1.json
-
+ --target 127.0.0.1:13308:tpch_sf1:user:password \
+ --meta_path data/tpch_sf1/videx_metadata_tpch_sf1.json
 ```
 
-Consistent with TPCH-tiny, VIDEX can generate a query plan for` TPCH-sf1 Q21` that is almost identical to InnoDB's, 
-as detailed in `data/tpch_sf1`.
+Like TPCH-tiny, VIDEX generates nearly identical query plans to InnoDB for `TPCH-sf1 Q21`, see `data/tpch_sf1`.
 
-![explain.png](doc/explain_tpch_sf1_compare.png)
+[explain_tpch_sf1_compare.png](doc/explain_tpch_sf1_compare.png)
 
-## 🚀 Integrate Your Custom Model
+## 4. API
+
+Specify connection methods for original database and videx-stats-server. Collect statistics from original database, save to intermediate file, then import to VIDEX database.
+
+> - If VIDEX-MySQL starts separately rather than installing plugin on target-MySQL, users can specify `VIDEX-MySQL` address via `--videx`
+> - If VIDEX-Server starts separately rather than deploying on VIDEX-MySQL machine, users can specify `VIDEX-Server` address via `--videx_server`
+> - If users have generated metadata file, specify `--meta_path` to skip collection
+
+Command example:
+
+```bash
+cd $VIDEX_HOME/src/sub_platforms/sql_opt/videx/scripts
+python videx_build_env.py --target 127.0.0.1:13308:tpch_tiny:videx:password \
+[--videx 127.0.0.1:13309:videx_tpch_tiny:videx:password] \
+[--videx_server 127.0.0.1:5001] \
+[--meta_path /path/to/file]
+```
+
+## 🚀 5. Integrate Your Custom Model
 
 ### Method 1: Add into VIDEX-Statistic-Server
 
