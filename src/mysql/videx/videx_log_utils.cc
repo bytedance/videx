@@ -76,13 +76,19 @@ void videx_print_key_value(String *out, const KEY_PART_INFO *key_part,
 
     if (field->is_flag_set(BLOB_FLAG)) {
         // Byte 0 of a nullable key is the null-byte. If set, key is NULL.
-        if (field->is_nullable() && *key)
-            out->append(STRING_WITH_LEN("NULL"));
+        if (field->is_nullable() && *key) {
+          out->append(STRING_WITH_LEN("NULL"));
+          return;
+        }
         else
-            (field->type() == MYSQL_TYPE_GEOMETRY)
-            ? out->append(STRING_WITH_LEN("unprintable_geometry_value"))
-            : out->append(STRING_WITH_LEN("unprintable_blob_value"));
-        return;
+            if (field->type() == MYSQL_TYPE_GEOMETRY) {
+              out->append(STRING_WITH_LEN("unprintable_geometry_value"));
+              return;
+            } else {
+              // if uncomment, videx will return fixed "unprintable_blob_value"
+              // out->append(STRING_WITH_LEN("unprintable_blob_value"));
+              // return;
+            }
     }
 
     uint store_length = key_part->store_length;
