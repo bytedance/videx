@@ -345,6 +345,7 @@ class VidexSingleton:
         before_keys = list(self.cache.keys())
         if key_list is None or len(key_list) == 0:
             self.cache.clear()
+            logging.info(f"=== clear all task_meta. ")
         else:
             for key in key_list:
                 if key in self.cache:
@@ -385,15 +386,10 @@ def create_task_meta():
     return jsonify(code=code, message=message, data=response_data)
 
 
-@app.route('/clear_cache', methods=['POST'])
+@app.route('/clear_cache', methods=['GET'])
 def clear_cache():
-    """
-    将内存中所有缓存的 meta 信息全部清理
-    传入待清理的 key，如果为空，则全部清理
-    """
-    req_json_item = request.get_json()
     global videx_meta_singleton
-    videx_meta_singleton.clear_cache(req_json_item)
+    videx_meta_singleton.clear_cache({})
 
     code, message, response_data = 200, "OK", {}
     return jsonify(code=code, message=message, data=response_data)
