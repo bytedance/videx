@@ -5,20 +5,21 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "videx"
 version = "0.0.1"
-description = "videx"
+description = "videx, the Disaggregated, Extensible Virtual Index Engine for What-If Analysis"
 readme = "README.md"
-requires-python = ">=3.8"
-license = {text = "MIT"}
+requires-python = ">=3.9"
+license = {text = "MIT and GPL-2.0"}
 authors = [
     {name = "kangrong", email = "kr11thss@gmail.com"}
 ]
+keywords = ["index", "database", "what-if", "mysql", "virtual index"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Build Tools",
     "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: GNU General Public License v2 (GPLv2)",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3 :: Only",
@@ -48,5 +49,12 @@ dependencies = [
     "sqlglot==25.4.1",
     "pydantic==2.10.4"
 ]
+
+[project.urls]
+Homepage = "https://github.com/bytedance/videx"
+Repository = "https://github.com/bytedance/videx"
+Documentation = "https://github.com/bytedance/videx/blob/main/README.md"
+"Bug Tracker" = "https://github.com/bytedance/videx/issues"
+
 [tool.setuptools.packages.find]
 where = ["src"]

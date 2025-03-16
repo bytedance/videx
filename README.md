@@ -158,7 +158,7 @@ conda create -n videx_py39 python=3.9
 
 conda activate videx_py39
 
-pip install -e . -r requirements.txt
+python3.9 -m pip install -e . --use-pep517
 ```
 
 Specify the port for Videx-Stats-Server and start the service.

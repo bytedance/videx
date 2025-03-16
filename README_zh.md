@@ -100,7 +100,7 @@ conda create -n videx_py39 python=3.9
 
 conda activate videx_py39
 
-pip install -e . -r requirements.txt
+python3.9 -m pip install -e . --use-pep517
 ```
 
 设置 Videx-Stats-Server 的端口并启动服务。
