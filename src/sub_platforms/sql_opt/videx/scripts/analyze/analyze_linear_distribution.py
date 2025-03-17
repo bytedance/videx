@@ -2,9 +2,6 @@
 Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 
-@ author: kangrong
-@ date: 2025-03-13
-
 Function description:
 1. Obtain the event_time data from the stream_event table.
 2. Analyze the distribution of event_time:

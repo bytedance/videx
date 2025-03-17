@@ -1,3 +1,8 @@
+# -*- coding: utf-8 -*-
+"""
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
+"""
 import logging
 from abc import ABC, abstractmethod
 from typing import Dict, List, Optional, Set

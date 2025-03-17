@@ -3,9 +3,6 @@
 Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 
-@ author: kangrong.cn
-@ date: 2025-03-06
-
 CREATE TABLE `request_info` (
     `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
   `query` text COMMENT '请求query信息',

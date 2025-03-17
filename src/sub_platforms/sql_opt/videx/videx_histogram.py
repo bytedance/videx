@@ -2,9 +2,6 @@
 """
 Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
-
-@ author: kangrong
-@ date: 2023/11/16
 """
 import base64
 import json

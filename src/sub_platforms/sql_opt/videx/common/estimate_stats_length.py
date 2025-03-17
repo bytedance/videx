@@ -4,9 +4,6 @@ Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 
 Estimate data_length, avg_row_length, index_length .etc. according to table_rows and table schema (columns typs, index definitions)
-
-@ author: kangrong.cn
-@ date: 2025-03-05
 """
 import math
 import re

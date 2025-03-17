@@ -4,9 +4,6 @@ Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 
 本测试是初始化 singleton，然后测试 ask 函数。除了 flask 网络层，其他都测试到了
-
-@ author: kangrong
-@ date: 2023/11/17
 """
 import json
 import logging
