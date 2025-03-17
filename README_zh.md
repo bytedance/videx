@@ -14,7 +14,6 @@
 - **解耦**：VIDEX 支持在单独的实例上部署，而不必须在原始库 MySQL 上安装；
 - **可拓展**：VIDEX提供了便捷的接口，用户可以将 基数估计（Cardinality）、独立值估计（NDV） 等算法模型应用于 MySQL 的下游任务中（例如索引推荐）；
 
-
 “虚拟索引” 旨在模拟 SQL 查询计划中使用索引的代价（cost）， 从而向用户展示索引对 SQL 计划的影响，而无需在原始实例上创建实际索引。
 这项技术广泛应用于各种 SQL 优化任务，包括索引推荐和表连接顺序优化。
 业界许多数据库已经以官方或第三方的方式提供了虚拟索引功能，
@@ -60,7 +59,7 @@ VIDEX 包含两部分：
 
 VIDEX 根据原始实例中指定的目标数据库（`target_db`）创建一个虚拟数据库，并创建相同结构的关系表（具有相同的 DDL，但将引擎从 `InnoDB` 更换为 `VIDEX`）。
 
-## Quick Start
+## 2. Quick Start
 
 ### 2.1 安装 Python 环境
 
@@ -86,12 +85,12 @@ python3.9 -m pip install -e . --use-pep517
 - VIDEX-MySQL: 基于 [Percona-MySQL 8.0.34-26](https://github.com/percona/percona-server/tree/release-8.0.34-26)，并集成了 VIDEX 插件
 - VIDEX-Server: ndv 和 cardinality 算法服务
 
-#### 安装 Docker
+#### 2.2.1 安装 Docker
 如果您尚未安装 Docker:
 - [Docker Desktop for Windows/Mac](https://www.docker.com/products/docker-desktop/)
 - Linux: 参考[官方安装指南](https://docs.docker.com/engine/install/)
 
-#### 启动 VIDEX 容器
+#### 2.2.2 启动 VIDEX 容器
 ```bash
 docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:0.0.2
 ```
@@ -103,9 +102,9 @@ docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:0.0.2
 > - 仅编译 VIDEX 插件并安装到现有 MySQL
 > - 独立部署 VIDEX-Server (支持自定义优化算法)
 
-## 示例
+## 3. 示例
 
-### TPCH-Tiny 示例
+### 3.1 TPCH-Tiny 示例
 
 本示例使用 `TPC-H Tiny` 数据集(从 TPC-H sf1 随机采样 1% 数据)演示 VIDEX 的完整使用流程。
 
@@ -132,7 +131,7 @@ tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```
 
-### Step 2: VIDEX 采集并导入 VIDEX 元数据
+#### Step 2: VIDEX 采集并导入 VIDEX 元数据
 
 请确保 VIDEX 环境已经安装好。若尚未安装，请参考 [2.1 安装 Python 环境](#21-安装-python-环境)。
 
@@ -160,7 +159,7 @@ SET @VIDEX_SERVER='127.0.0.1:5001';
 
 如果用户预先准备了元数据文件，则可以指定 `--meta_path` ，跳过采集阶段，直接导入。
 
-### Step 3: EXPLAIN SQL
+#### Step 3: EXPLAIN SQL
 
 连接到 `VIDEX-MySQL` 上，执行 EXPLAIN。
 
@@ -231,7 +230,7 @@ ALTER TABLE tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 ```
 
-## Example 3.2 TPCH sf1 (1g)
+### 3.2 TPCH sf1 (1g) Example 
 
 我们额外为 TPC-H sf1 准备了元数据文件：`data/videx_metadata_tpch_sf1.json`，无需采集，直接导入即可体验 VIDEX。
 
@@ -267,7 +266,7 @@ python videx_build_env.py --target 127.0.0.1:13308:tpch_tiny:videx:password \
 
 ```
 
-## 🚀 5. 集成自定义模型
+## 5. 🚀集成自定义模型🚀
 
 ### Method 1：在 VIDEX-Statistic-Server 中添加一种新方法
 

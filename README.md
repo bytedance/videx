@@ -63,7 +63,7 @@ containing a series of tables with the same DDL, but replacing the engine from `
 
 Here's the English translation of the documentation for GitHub:
 
-## Quick Start
+## 2 Quick Start
 
 ### 2.1 Install Python Environment
 
@@ -106,9 +106,9 @@ docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:0.0.2
 > - Build VIDEX plugin only and install on existing MySQL
 > - Deploy VIDEX-Server independently (supports custom optimization algorithms)
 
-## Examples
+## 3 Examples
 
-### TPCH-Tiny Example
+### 3.1 TPCH-Tiny Example
 
 This example demonstrates the complete VIDEX workflow using the `TPC-H Tiny` dataset (1% random sample from TPC-H sf1).
 
@@ -135,7 +135,7 @@ tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```
 
-### Step 2: Collect and Import VIDEX Metadata
+#### Step 2: Collect and Import VIDEX Metadata
 
 Ensure VIDEX environment is installed. If not, refer to [2.1 Install Python Environment](#21-install-python-environment).
 
@@ -162,7 +162,7 @@ Metadata is now collected and imported to VIDEX-Server. The JSON file is written
 
 If users have prepared metadata files, they can specify `--meta_path` to skip collection and import directly.
 
-### Step 3: EXPLAIN SQL
+#### Step 3: EXPLAIN SQL
 
 Connect to `VIDEX-MySQL` and execute EXPLAIN.
 
@@ -221,6 +221,7 @@ ALTER TABLE videx_tpch_tiny.orders ADD INDEX idx_o_orderstatus (o_orderstatus);
 
 Re-running EXPLAIN shows MySQL-InnoDB and VIDEX query plans changed identically, both adopting the new index.
 
+[//]: # (![explain_tpch_tiny_compare_alter_index.png]&#40;doc/explain_tpch_tiny_compare_alter_index.png&#41;)
 ![explain_tpch_tiny_compare_alter_index.png](doc/explain_tpch_tiny_compare_alter_index.png)
 
 > VIDEX's row estimate (7404) differs from MySQL-InnoDB (7362) by ~0.56%, due to cardinality estimation algorithm error.
@@ -232,7 +233,7 @@ ALTER TABLE tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 ```
 
-## Example 3.2 TPCH sf1 (1g)
+### 3.2 TPCH sf1 (1g) Example
 
 We provide metadata file for TPC-H sf1: `data/videx_metadata_tpch_sf1.json`, allowing direct import without collection.
 
@@ -265,7 +266,7 @@ python videx_build_env.py --target 127.0.0.1:13308:tpch_tiny:videx:password \
 [--meta_path /path/to/file]
 ```
 
-## 🚀 5. Integrate Your Custom Model
+## 5. 🚀Integrate Your Custom Model🚀
 
 ### Method 1: Add into VIDEX-Statistic-Server
 
