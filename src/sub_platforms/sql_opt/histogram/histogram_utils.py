@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-histogram_utils.py
-
-@ author: kangrong.cn
-@ date: 2025-03-14
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
 """
 from sub_platforms.sql_opt.videx.videx_metadata import VidexTableStats
 

@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-TODO: add file description.
-
-@ author: kangrong
-@ date: 2023/12/21 
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
 """
 import os.path
 import unittest
@@ -12,6 +10,7 @@ from datetime import datetime
 from sub_platforms.sql_opt.meta import TableId
 from sub_platforms.sql_opt.videx.videx_utils import compare_explain, load_json_from_file, search_videx_http_dict, \
     construct_involved_db_tables, parse_datetime, reformat_datetime_str
+
 
 class Test(unittest.TestCase):
     def test_compare_explain_same(self):

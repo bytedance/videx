@@ -340,4 +340,4 @@ See the [LICENSE](./LICENSES) directory for details.
 SQLBrain Group, ByteBrain, Bytedance
 
 ## Contact
-If you have any questions, feel free to contact ours through email (kangrong.cn@bytedance.com, kr11thss@gmail.com).
+If you have any questions, feel free to contact ours through email (kangrong.cn@bytedance.com, kr11thss@gmail.com, tieying.zhang@bytedance.com).
