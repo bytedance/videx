@@ -205,7 +205,7 @@ We compare not only table join order and index selection but every detail of que
 As shown below, VIDEX (left) generates a query plan almost 100% identical to InnoDB (right).
 Complete EXPLAIN results are in `data/tpch_tiny`.
 
-[explain_tpch_tiny_compare.png](doc/explain_tpch_tiny_compare.png)
+![explain_tpch_tiny_compare.png](doc/explain_tpch_tiny_compare.png)
 
 Note that VIDEX accuracy depends on three key algorithm interfaces:
 - `ndv`
@@ -221,7 +221,7 @@ ALTER TABLE videx_tpch_tiny.orders ADD INDEX idx_o_orderstatus (o_orderstatus);
 
 Re-running EXPLAIN shows MySQL-InnoDB and VIDEX query plans changed identically, both adopting the new index.
 
-[explain_tpch_tiny_compare_alter_index.png](doc/explain_tpch_tiny_compare_alter_index.png)
+![explain_tpch_tiny_compare_alter_index.png](doc/explain_tpch_tiny_compare_alter_index.png)
 
 > VIDEX's row estimate (7404) differs from MySQL-InnoDB (7362) by ~0.56%, due to cardinality estimation algorithm error.
 
@@ -245,7 +245,7 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
 
 Like TPCH-tiny, VIDEX generates nearly identical query plans to InnoDB for `TPCH-sf1 Q21`, see `data/tpch_sf1`.
 
-[explain_tpch_sf1_compare.png](doc/explain_tpch_sf1_compare.png)
+![explain_tpch_sf1_compare.png](doc/explain_tpch_sf1_compare.png)
 
 ## 4. API
 
