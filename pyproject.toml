@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "videx"
-version = "0.0.1"
+version = "0.0.2"
 description = "videx, the Disaggregated, Extensible Virtual Index Engine for What-If Analysis"
 readme = "README.md"
 requires-python = ">=3.9"
