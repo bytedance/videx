@@ -61,8 +61,6 @@ VIDEX consists of two parts:
 VIDEX creates an individual virtual database according to the specified target database in the raw instance,
 containing a series of tables with the same DDL, but replacing the engine from `InnoDB` to `VIDEX`.
 
-Here's the English translation of the documentation for GitHub:
-
 ## 2 Quick Start
 
 ### 2.1 Install Python Environment
