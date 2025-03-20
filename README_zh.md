@@ -341,4 +341,6 @@ VIDEX-MySQL 将基于用户指定的地址，通过 `HTTP` 请求索引元数据
 ByteBrain团队, 字节跳动
 
 ## Contact
-如果您有任何疑问，请随时通过电子邮件联系我们（kangrong.cn@bytedance.com, kr11thss@gmail.com, tieying.zhang@bytedance.com）。
+如果您有任何疑问，请随时通过电子邮件联系我们:
+Rong Kang: kangrong.cn@bytedance.com, kr11thss@gmail.com
+Tieying Zhang: tieying.zhang@bytedance.com
