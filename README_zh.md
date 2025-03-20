@@ -41,7 +41,7 @@ VIDEX 提供两种启动模式：
 <font color="red">给定准确的 ndv 和 cardinality 信息，**VIDEX 可以 100% 模拟 MySQL InnoDB 的查询计划**。</font>
 （更多详细信息请参考 [3. Example: TPCH Tiny](#3-example-tpch-tiny) 章节）。
 
-我们期望 VIDEX 能为用户提供一个更好的平台，以便更轻松地测试基数和 NDV 算法的有效性，并将其应用于 SQL 优化任务。
+我们期望 VIDEX 能为用户提供一个更好的平台，以便更轻松地测试基数和 NDV 算法的有效性，并将其应用于 SQL 优化任务。VIDEX已经部署在了字节跳动大规模生产系统中，为日常慢SQL优化提供服务。
 
 
 ---
