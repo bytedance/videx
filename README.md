@@ -9,7 +9,7 @@
 
 
 **VIDEX**: The Disaggregated, Extensible **\[VI\]**rtual in**\[DEX\]** Engine for What-If Analysis in MySQL 🚀
-- **Virtual Index**: Does not require real data, relies only on statistical information and algorithm models to accurately simulate query plans, table join orders, and index selections;
+- **Virtual Index**: Does not require real data, relies only on statistical information and algorithm models to accurately simulate MySQL query plans, table join orders, and index selections;
 - **Decoupled**: VIDEX can be deployed on a separate instance with no impact on the production MySQL environment.
 - **Scalable**: VIDEX offers convenient interfaces allowing users to apply models like `cardinality` and `ndv` to downstream MySQL tasks (e.g., index recommendation);
 
@@ -42,7 +42,7 @@ However, it currently does not support functional indexes, FULL-Text, and Spatia
 In terms of **accuracy**, we have tested VIDEX on complex analytical benchmarks such as `TPC-H`, `TPC-H-Skew`, and `JOB`.
 <font color="red">Given only the oracle NDV and cardinality, **the VIDEX query plan is 100% identical to InnoDB**.</font> 
 (Refer to [Example: TPC-H](#example-tpch) for additional details). 
-We expect that VIDEX can provide users with a better platform to more easily test the effectiveness of cardinality and NDV algorithms, and apply them on SQL optimization tasks.
+We expect that VIDEX can provide users with a better platform to more easily test the effectiveness of cardinality and NDV algorithms, and apply them on SQL optimization tasks. VIDEX has been deployed in Bytedance production environment, serving large-scale slow SQL optimizations. 
 
 ---
 
@@ -125,7 +125,7 @@ VIDEX-Server | 127.0.0.1:5001
 ```bash 
 cd $VIDEX_HOME
 
-# Create database
+# Create database (If you don't have the MySQL client installed on your machine, you need to download and install MySQL. After installation, do not start the MySQL server, as VIDEX will use the IP and port.)
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
 
 # Import data
@@ -335,7 +335,9 @@ This project is dual-licensed:
 See the [LICENSE](./LICENSES) directory for details.
 
 ## Authors
-SQLBrain Group, ByteBrain, Bytedance
+ByteBrain Team, Bytedance
 
 ## Contact
-If you have any questions, feel free to contact ours through email (kangrong.cn@bytedance.com, kr11thss@gmail.com, tieying.zhang@bytedance.com).
+If you have any questions, feel free to contact us:
+Rong Kang: kangrong.cn@bytedance.com, kr11thss@gmail.com, 
+Tieying Zhang: tieying.zhang@bytedance.com

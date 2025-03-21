@@ -10,7 +10,7 @@
 
 **VIDEX** 为 MySQL 提供了一个解耦的、可扩展的开源虚拟索引引擎 (**\[VI\]**rtual in**\[DEX\]**)。🚀
 
-- **虚拟索引**：不需要真实数据、仅基于统计信息和算法模型，即可高精度地模拟 VIDEX 产生的查询计划、模拟表连接顺序、模拟索引选择；
+- **虚拟索引**：不需要真实数据、仅基于统计信息和算法模型，即可高精度地模拟 MySQL 产生的查询计划、模拟表连接顺序、模拟索引选择；
 - **解耦**：VIDEX 支持在单独的实例上部署，而不必须在原始库 MySQL 上安装；
 - **可拓展**：VIDEX提供了便捷的接口，用户可以将 基数估计（Cardinality）、独立值估计（NDV） 等算法模型应用于 MySQL 的下游任务中（例如索引推荐）；
 
@@ -41,7 +41,7 @@ VIDEX 提供两种启动模式：
 <font color="red">给定准确的 ndv 和 cardinality 信息，**VIDEX 可以 100% 模拟 MySQL InnoDB 的查询计划**。</font>
 （更多详细信息请参考 [3. Example: TPCH Tiny](#3-example-tpch-tiny) 章节）。
 
-我们期望 VIDEX 能为用户提供一个更好的平台，以便更轻松地测试基数和 NDV 算法的有效性，并将其应用于 SQL 优化任务。
+我们期望 VIDEX 能为用户提供一个更好的平台，以便更轻松地测试基数和 NDV 算法的有效性，并将其应用于 SQL 优化任务。VIDEX已经部署在了字节跳动大规模生产系统中，为日常慢SQL优化提供服务。
 
 
 ---
@@ -338,7 +338,9 @@ VIDEX-MySQL 将基于用户指定的地址，通过 `HTTP` 请求索引元数据
 详情请参阅 [LICENSE](./LICENSES) 目录。
 
 ## Authors
-SQLBrain Group, ByteBrain, 字节跳动
+ByteBrain团队, 字节跳动
 
 ## Contact
-如果您有任何疑问，请随时通过电子邮件联系我们（kangrong.cn@bytedance.com, kr11thss@gmail.com, tieying.zhang@bytedance.com）。
+如果您有任何疑问，请随时通过电子邮件联系我们:
+Rong Kang: kangrong.cn@bytedance.com, kr11thss@gmail.com
+Tieying Zhang: tieying.zhang@bytedance.com
