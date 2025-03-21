@@ -125,7 +125,7 @@ VIDEX-Server | 127.0.0.1:5001
 ```bash 
 cd $VIDEX_HOME
 
-# Create database
+# Create database (If you don't have the MySQL client installed on your machine, you need to download and install MySQL. After installation, do not start the MySQL server, as VIDEX will use the IP and port.)
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
 
 # Import data
