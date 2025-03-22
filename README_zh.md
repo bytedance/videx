@@ -54,8 +54,8 @@ VIDEX 提供两种启动模式：
 
 VIDEX 包含两部分：
 
-- **VIDEX-MySQL**：全面梳理了 MySQL handler 的超过90个接口函数，并实现与索引（Index）相关的部分。
-- **VIDEX-Statistic-Server**（简称 **VIDEX-Server**）：根据收集的统计信息和估算算法计算独立值（NDV） 和基数（Cardinality），并将结果返回给 VIDEX-MySQL 实例。
+- **VIDEX-Optimizer-Plugin** （简称为 **VIDEX-Optimizer**）：全面梳理了 MySQL handler 的超过90个接口函数，并实现与索引（Index）相关的部分。
+- **VIDEX-Statistic-Server**（简称 **VIDEX-Server**）：根据收集的统计信息和估算算法计算独立值（NDV） 和基数（Cardinality），并将结果返回给 VIDEX-Optimizer 实例。
 
 VIDEX 根据原始实例中指定的目标数据库（`target_db`）创建一个虚拟数据库，并创建相同结构的关系表（具有相同的 DDL，但将引擎从 `InnoDB` 更换为 `VIDEX`）。
 
@@ -82,7 +82,7 @@ python3.9 -m pip install -e . --use-pep517
 ### 2.2 启动 VIDEX (Docker方式)
 
 为简化部署，我们提供了预编译的 Docker 镜像，包含:
-- VIDEX-MySQL: 基于 [Percona-MySQL 8.0.34-26](https://github.com/percona/percona-server/tree/release-8.0.34-26)，并集成了 VIDEX 插件
+- VIDEX-Optimizer: 基于 [Percona-MySQL 8.0.34-26](https://github.com/percona/percona-server/tree/release-8.0.34-26)，并集成了 VIDEX 插件
 - VIDEX-Server: ndv 和 cardinality 算法服务
 
 #### 2.2.1 安装 Docker
@@ -115,7 +115,7 @@ docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:0.0.2
 组件 | 连接信息
 ---|---
 Target-MySQL (生产库) | 127.0.0.1:13308, 用户名:videx, 密码:password
-VIDEX-MySQL (插件) | 同 Target-MySQL
+VIDEX-Optimizer-Plugin (插件) | 同 Target-MySQL
 VIDEX-Server | 127.0.0.1:5001
 
 #### Step 1: 导入测试数据
@@ -149,7 +149,7 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
 You are running in non-task mode.
 To use VIDEX, please set the following variable before explaining your SQL:
 --------------------
--- Connect VIDEX-MySQL: mysql -h127.0.0.1 -P13308 -uvidex -ppassowrd -Dvidex_tpch_tiny
+-- Connect VIDEX-Optimizer-Plugin: mysql -h127.0.0.1 -P13308 -uvidex -ppassowrd -Dvidex_tpch_tiny
 USE videx_tpch_tiny;
 SET @VIDEX_SERVER='127.0.0.1:5001';
 -- EXPLAIN YOUR_SQL;
@@ -161,12 +161,12 @@ SET @VIDEX_SERVER='127.0.0.1:5001';
 
 #### Step 3: EXPLAIN SQL
 
-连接到 `VIDEX-MySQL` 上，执行 EXPLAIN。
+连接到 VIDEX 实例，或者 VIDEX-Optimizer-Plugin 所在的实例上，执行 EXPLAIN。
 
 为了展示 VIDEX 的有效性，我们对比了 TPC-H Q21 的 EXPLAIN 细节，这是一个包含四表连接的复杂查询，涉及 `WHERE`、`聚合`、`ORDER BY`、
 `GROUP BY`、`EXISTS` 和 `自连接` 等多种部分。MySQL 可以选择的索引有 11 个，分布在 4 个表上。
 
-由于 VIDEX-Server 部署在 VIDEX-MySQL 所在节点、并且开启了默认端口（5001），因此我们不需要额外设置 `VIDEX_SERVER`。
+由于 VIDEX-Server 部署在 VIDEX-Optimizer-Plugin 所在节点、并且开启了默认端口（5001），因此我们不需要额外设置 `VIDEX_SERVER`。
 如果 VIDEX-Server 部署在其他节点，则需要先执行 `SET @VIDEX_SERVER`。
 
 ```sql
@@ -251,8 +251,8 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
 
 指定原始数据库和 videx-stats-server 的连接方式。 从原始数据库收集统计信息，保存到一个中间文件中， 然后将它们导入到 VIDEX 数据库。
 
-> - 如果 VIDEX-MySQL 是单独启动、而非在原库（target-MySQL）上安装插件，用户可以通过 `--videx` 参数单独指定 `VIDEX-MySQL` 地址。
-> - 如果 VIDEX-Server 是单独启动、而非部署在 VIDEX-MySQL 所在机器上，用户可以通过 `--videx_server` 参数单独指定 `VIDEX-Server` 地址。
+> - 如果 VIDEX-Optimizer 是单独启动、而非在原库（target-MySQL）上安装插件，用户可以通过 `--videx` 参数单独指定 `VIDEX-Optimizer` 地址。
+> - 如果 VIDEX-Server 是单独启动、而非部署在 VIDEX-Optimizer-Plugin 所在机器上，用户可以通过 `--videx_server` 参数单独指定 `VIDEX-Server` 地址。
 > - 如果用户已经生成了元数据文件、可以指定 `--meta_path` 参数，跳过采集过程。
 
 命令样例如下：
@@ -281,7 +281,7 @@ python videx_build_env.py --target 127.0.0.1:13308:tpch_tiny:videx:password \
 ```python
 class VidexModelBase(ABC):
     """
-    Abstract cost model class. VIDEX-Statistic-Server receives requests from VIDEX-MySQL for Cardinality
+    Abstract cost model class. VIDEX-Statistic-Server receives requests from VIDEX-Optimizer for Cardinality
     and NDV estimates, parses them into structured data for ease use of developers.
 
     Implement these methods to inject Cardinality and NDV algorithms into MySQL.
@@ -324,7 +324,7 @@ class VidexModelBase(ABC):
 
 ### Method 2: 全新实现 VIDEX-Statistic-Server
 
-VIDEX-MySQL 将基于用户指定的地址，通过 `HTTP` 请求索引元数据、 NDV 和基数估计结果。
+VIDEX-Optimizer 将基于用户指定的地址，通过 `HTTP` 请求索引元数据、 NDV 和基数估计结果。
 因此，用户可以用任何编程语言实现 HTTP 响应、并在任意位置启动 VIDEX-Server。
 
 

@@ -55,8 +55,8 @@ We expect that VIDEX can provide users with a better platform to more easily tes
 
 VIDEX consists of two parts:
 
-- **VIDEX-MySQL**: Conducted a thorough review of over 90 interface functions in the MySQL handler, and implement the index-related parts.
-- **VIDEX-Statistic-Server**: The cost estimation service calculates NDV and Cardinality based on collected statistical information and estimation algorithms, and returns the results to the VIDEX-MySQL instance. 
+- **VIDEX-Optimizer-Plugin** (abbr. **VIDEX-Optimizer**): Conducted a thorough review of over 90 interface functions in the MySQL handler, and implement the index-related parts.
+- **VIDEX-Statistic-Server** (abbr. **VIDEX-Statistic**): The cost estimation service calculates NDV and Cardinality based on collected statistical information and estimation algorithms, and returns the results to the VIDEX-Optimizer instance. 
 
 VIDEX creates an individual virtual database according to the specified target database in the raw instance,
 containing a series of tables with the same DDL, but replacing the engine from `InnoDB` to `VIDEX`.
@@ -84,7 +84,7 @@ python3.9 -m pip install -e . --use-pep517
 ### 2.2 Launch VIDEX (Docker Mode)
 
 For simplified deployment, we provide pre-built Docker images containing:
-- VIDEX-MySQL: Based on [Percona-MySQL 8.0.34-26](https://github.com/percona/percona-server/tree/release-8.0.34-26) with integrated VIDEX plugin
+- VIDEX-Optimizer: Based on [Percona-MySQL 8.0.34-26](https://github.com/percona/percona-server/tree/release-8.0.34-26) with integrated VIDEX plugin
 - VIDEX-Server: NDV and cardinality algorithm service
 
 #### Install Docker
@@ -117,7 +117,7 @@ The example assumes all components are deployed locally via Docker:
 Component | Connection Info
 ---|---
 Target-MySQL (Production DB) | 127.0.0.1:13308, username:videx, password:password  
-VIDEX-MySQL (Plugin) | Same as Target-MySQL
+VIDEX-Optimizer (Plugin) | Same as Target-MySQL
 VIDEX-Server | 127.0.0.1:5001
 
 #### Step 1: Import Test Data
@@ -150,7 +150,7 @@ Output:
 You are running in non-task mode.
 To use VIDEX, please set the following variable before explaining your SQL:
 --------------------
--- Connect VIDEX-MySQL: mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dvidex_tpch_tiny
+-- Connect VIDEX-Optimizer: mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dvidex_tpch_tiny
 USE videx_tpch_tiny;
 SET @VIDEX_SERVER='127.0.0.1:5001';
 -- EXPLAIN YOUR_SQL;
@@ -162,11 +162,11 @@ If users have prepared metadata files, they can specify `--meta_path` to skip co
 
 #### Step 3: EXPLAIN SQL
 
-Connect to `VIDEX-MySQL` and execute EXPLAIN.
+Connect to `VIDEX-Optimizer` and execute EXPLAIN.
 
 To demonstrate VIDEX's effectiveness, we compare EXPLAIN details for TPC-H Q21, a complex query with four-table joins involving `WHERE`, `aggregation`, `ORDER BY`, `GROUP BY`, `EXISTS` and `self-joins`. MySQL can choose from 11 indexes across 4 tables.
 
-Since VIDEX-Server is deployed on the VIDEX-MySQL node with default port (5001), we don't need to set `VIDEX_SERVER` additionally.
+Since VIDEX-Server is deployed on the VIDEX-Optimizer node with default port (5001), we don't need to set `VIDEX_SERVER` additionally.
 If VIDEX-Server is deployed elsewhere, execute `SET @VIDEX_SERVER` first.
 
 ```sql
@@ -250,8 +250,8 @@ Like TPCH-tiny, VIDEX generates nearly identical query plans to InnoDB for `TPCH
 
 Specify connection methods for original database and videx-stats-server. Collect statistics from original database, save to intermediate file, then import to VIDEX database.
 
-> - If VIDEX-MySQL starts separately rather than installing plugin on target-MySQL, users can specify `VIDEX-MySQL` address via `--videx`
-> - If VIDEX-Server starts separately rather than deploying on VIDEX-MySQL machine, users can specify `VIDEX-Server` address via `--videx_server`
+> - If VIDEX-Optimizer starts separately rather than installing plugin on target-MySQL, users can specify `VIDEX-Optimizer` address via `--videx`
+> - If VIDEX-Server starts separately rather than deploying on VIDEX-Optimizer machine, users can specify `VIDEX-Server` address via `--videx_server`
 > - If users have generated metadata file, specify `--meta_path` to skip collection
 
 Command example:
@@ -278,7 +278,7 @@ and index metadata formats, providing a basic (heuristic) algorithm for ndv and 
 ```python
 class VidexModelBase(ABC):
     """
-    Abstract cost model class. VIDEX-Statistic-Server receives requests from VIDEX-MySQL for Cardinality
+    Abstract cost model class. VIDEX-Statistic-Server receives requests from VIDEX-Optimizer for Cardinality
     and NDV estimates, parses them into structured data for ease use of developers.
 
     Implement these methods to inject Cardinality and NDV algorithms into MySQL.
@@ -321,7 +321,7 @@ class VidexModelBase(ABC):
 
 ### Method 2: Implement a New VIDEX-Statistic-Server
 
-VIDEX-MySQL will request NDV and cardinality results via HTTP based on the user-specified address. Therefore, users can implement the HTTP response in any programming language.
+VIDEX-Optimizer will request NDV and cardinality results via HTTP based on the user-specified address. Therefore, users can implement the HTTP response in any programming language.
 
 
 
