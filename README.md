@@ -334,6 +334,22 @@ This project is dual-licensed:
 
 See the [LICENSE](./LICENSES) directory for details.
 
+## Paper Citation
+
+If you find this code useful, we would appreciate citations to our paper:
+
+```
+@misc{kang2025videx,
+      title={VIDEX: A Disaggregated and Extensible Virtual Index for the Cloud and AI Era}, 
+      author={Rong Kang and Shuai Wang and Tieying Zhang and Xianghong Xu and Linhui Xu and Zhimin Liang and Lei Zhang and Rui Shi and Jianjun Chen},
+      year={2025},
+      eprint={2503.23776},
+      archivePrefix={arXiv},
+      primaryClass={cs.DB},
+      url={https://arxiv.org/abs/2503.23776}, 
+}
+```
+
 ## Authors
 ByteBrain Team, Bytedance
 

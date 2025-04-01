@@ -337,6 +337,22 @@ VIDEX-Optimizer 将基于用户指定的地址，通过 `HTTP` 请求索引元�
 
 详情请参阅 [LICENSE](./LICENSES) 目录。
 
+## Paper Citation
+
+如果您认为代码对您有所帮助，欢迎引用我们的论文：
+
+```
+@misc{kang2025videx,
+      title={VIDEX: A Disaggregated and Extensible Virtual Index for the Cloud and AI Era}, 
+      author={Rong Kang and Shuai Wang and Tieying Zhang and Xianghong Xu and Linhui Xu and Zhimin Liang and Lei Zhang and Rui Shi and Jianjun Chen},
+      year={2025},
+      eprint={2503.23776},
+      archivePrefix={arXiv},
+      primaryClass={cs.DB},
+      url={https://arxiv.org/abs/2503.23776}, 
+}
+```
+
 ## Authors
 ByteBrain团队, 字节跳动
 
