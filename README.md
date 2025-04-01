@@ -7,18 +7,19 @@
   <a href="./README_zh.md">简体中文</a>
 </p>
 
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=Cm5O61kXQ_c">
+    <img src="https://img.shields.io/badge/Watch-Demo-red?style=for-the-badge&logo=youtube" alt="Watch Demo"/>
+  </a>
+  <a href="https://hub.docker.com/repository/docker/kangrongme/videx">
+    <img src="https://img.shields.io/docker/pulls/kangrongme/videx?style=for-the-badge&logo=docker" alt="Docker Pulls"/>
+  </a>
+</p>
 
 **VIDEX**: The Disaggregated, Extensible **\[VI\]**rtual in**\[DEX\]** Engine for What-If Analysis in MySQL 🚀
 - **Virtual Index**: Does not require real data, relies only on statistical information and algorithm models to accurately simulate MySQL query plans, table join orders, and index selections;
 - **Disaggregated**: VIDEX runs on a standalone instance without affecting production MySQL. Furthermore, the Statistic Server (optionally AI-enhanced to provide cardinality and ndv) can be deployed separately, enabling GPU-heterogeneous computing and seamless hot-updates.
 - **Extensible**: VIDEX offers convenient interfaces allowing users to apply models like `cardinality` and `ndv` to downstream MySQL tasks (e.g., index recommendation);
-
-> 🎥 See VIDEX introduction on YouTube:
-> <p align="center">
->  <a href="https://www.youtube.com/watch?v=Cm5O61kXQ_c">
->    <img src="https://img.youtube.com/vi/Cm5O61kXQ_c/maxresdefault.jpg" alt="VIDEX Demo" width="600"/>
->  </a>
-> </p>
 
 The `virtual index` (aka `hypothetical index`) aims to simulate the cost of indexes within SQL query plans, 
 thereby demonstrating to users the impact of indexes on SQL plans without the need to create actual indexes on raw instances.
