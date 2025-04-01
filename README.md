@@ -13,6 +13,11 @@
 - **Disaggregated**: VIDEX runs on a standalone instance without affecting production MySQL. Furthermore, the Statistic Server (optionally AI-enhanced to provide cardinality and ndv) can be deployed separately, enabling GPU-heterogeneous computing and seamless hot-updates.
 - **Extensible**: VIDEX offers convenient interfaces allowing users to apply models like `cardinality` and `ndv` to downstream MySQL tasks (e.g., index recommendation);
 
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=Cm5O61kXQ_c">
+    <img src="https://img.youtube.com/vi/Cm5O61kXQ_c/maxresdefault.jpg" alt="VIDEX Demo" width="600"/>
+  </a>
+</p>
 
 The `virtual index` (aka `hypothetical index`) aims to simulate the cost of indexes within SQL query plans, 
 thereby demonstrating to users the impact of indexes on SQL plans without the need to create actual indexes on raw instances.
