@@ -7,21 +7,20 @@
   <a href="./README_zh.md">简体中文</a>
 </p>
 
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=Cm5O61kXQ_c">
+    <img src="https://img.shields.io/badge/Watch-Demo-red?style=for-the-badge&logo=youtube" alt="Watch Demo"/>
+  </a>
+  <a href="https://hub.docker.com/repository/docker/kangrongme/videx">
+    <img src="https://img.shields.io/docker/pulls/kangrongme/videx?style=for-the-badge&logo=docker" alt="Docker Pulls"/>
+  </a>
+</p>
 
 **VIDEX** 为 MySQL 提供了一个解耦的、可扩展的开源虚拟索引引擎 (**\[VI\]**rtual in**\[DEX\]**)。🚀
 
 - **虚拟索引**：不需要真实数据、仅基于统计信息和算法模型，即可高精度地模拟 MySQL 产生的查询计划、模拟表连接顺序、模拟索引选择；
 - **分离式架构** (Disaggregated)：VIDEX 支持在单独的实例上部署，而不必须在原始库 MySQL 上安装；VIDEX 支持独立启动算法服务，而不必嵌入 MySQL 中；
 - **可拓展** (Extensible)：VIDEX提供了便捷的接口，用户可以将 基数估计（Cardinality）、独立值估计（NDV） 等算法模型应用于 MySQL 的下游任务中（例如索引推荐）；
-
-> 🎥 See VIDEX introduction on YouTube:
-> <p align="center">
->  <a href="https://www.youtube.com/watch?v=Cm5O61kXQ_c">
->    <img src="https://img.youtube.com/vi/Cm5O61kXQ_c/maxresdefault.jpg" alt="VIDEX Demo" width="600"/>
->  </a>
-> </p>
-
-
 
 “虚拟索引” 旨在模拟 SQL 查询计划中使用索引的代价（cost）， 从而向用户展示索引对 SQL 计划的影响，而无需在原始实例上创建实际索引。
 这项技术广泛应用于各种 SQL 优化任务，包括索引推荐和表连接顺序优化。
