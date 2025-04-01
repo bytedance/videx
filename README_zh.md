@@ -14,11 +14,14 @@
 - **分离式架构** (Disaggregated)：VIDEX 支持在单独的实例上部署，而不必须在原始库 MySQL 上安装；VIDEX 支持独立启动算法服务，而不必嵌入 MySQL 中；
 - **可拓展** (Extensible)：VIDEX提供了便捷的接口，用户可以将 基数估计（Cardinality）、独立值估计（NDV） 等算法模型应用于 MySQL 的下游任务中（例如索引推荐）；
 
-<p align="center">
-  <a href="https://www.youtube.com/watch?v=Cm5O61kXQ_c">
-    <img src="https://img.youtube.com/vi/Cm5O61kXQ_c/maxresdefault.jpg" alt="VIDEX Demo" width="600"/>
-  </a>
-</p>
+> 🎥 See VIDEX introduction on YouTube:
+> <p align="center">
+>  <a href="https://www.youtube.com/watch?v=Cm5O61kXQ_c">
+>    <img src="https://img.youtube.com/vi/Cm5O61kXQ_c/maxresdefault.jpg" alt="VIDEX Demo" width="600"/>
+>  </a>
+> </p>
+
+
 
 “虚拟索引” 旨在模拟 SQL 查询计划中使用索引的代价（cost）， 从而向用户展示索引对 SQL 计划的影响，而无需在原始实例上创建实际索引。
 这项技术广泛应用于各种 SQL 优化任务，包括索引推荐和表连接顺序优化。
