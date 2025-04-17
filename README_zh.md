@@ -281,6 +281,7 @@ ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 
 我们额外为 TPC-H sf1 准备了元数据文件：`data/videx_metadata_tpch_sf1.json`，无需采集，直接导入即可体验 VIDEX。
 
+#### 对于 Linux/macOS 用户：
 ```shell
 cd $VIDEX_HOME
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
