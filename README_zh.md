@@ -73,6 +73,7 @@ VIDEX 根据原始实例中指定的目标数据库（`target_db`）创建一个
 
 VIDEX 需要 Python 3.9 环境，执行元数据采集等任务。推荐使用 Anaconda/Miniconda 创建独立的 Python 环境：
 
+#### 对于 Linux/macOS 用户：
 ```bash
 # 克隆代码
 VIDEX_HOME=videx_server
@@ -87,6 +88,20 @@ conda activate videx_py39
 python3.9 -m pip install -e . --use-pep517
 ```
 
+#### 对于 Windows 用户：
+```cmd
+# 克隆代码（需提前安装 Git）
+set VIDEX_HOME=videx_server
+git clone git@github.com:bytedance/videx.git %VIDEX_HOME%
+cd %VIDEX_HOME%
+
+# 创建并激活 Python 环境
+conda create -n videx_py39 python=3.9
+conda activate videx_py39
+
+# 安装 VIDEX（根据实际 Python 路径调整）
+python -m pip install -e . --use-pep517 
+```
 ### 2.2 启动 VIDEX (Docker方式)
 
 为简化部署，我们提供了预编译的 Docker 镜像，包含:
@@ -99,7 +114,7 @@ python3.9 -m pip install -e . --use-pep517
 - Linux: 参考[官方安装指南](https://docs.docker.com/engine/install/)
 
 #### 2.2.2 启动 VIDEX 容器
-```bash
+```cmd
 docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:0.0.2
 ```
 
@@ -127,9 +142,25 @@ VIDEX-Optimizer-Plugin (插件) | 同 Target-MySQL
 VIDEX-Server | 127.0.0.1:5001
 
 #### Step 1: 导入测试数据
-
+#### 对于 Linux/macOS 用户：
 ```bash
-cd $VIDEX_HOME
+# 切换到项目目录（假设已设置 VIDEX_HOME 环境变量）
+cd %VIDEX_HOME%
+# 下载测试数据
+
+# 创建数据库
+mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
+
+# 导入数据
+tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
+mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
+```
+
+#### 对于 Windows 用户：
+```cmd
+# 切换到项目目录（假设已设置 VIDEX_HOME 环境变量）
+cd %VIDEX_HOME%
+# 下载测试数据
 
 # 创建数据库
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
@@ -142,13 +173,19 @@ mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 #### Step 2: VIDEX 采集并导入 VIDEX 元数据
 
 请确保 VIDEX 环境已经安装好。若尚未安装，请参考 [2.1 安装 Python 环境](#21-安装-python-环境)。
-
+#### 对于 Linux/macOS 用户：
 ```shell
 cd $VIDEX_HOME
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
  --target 127.0.0.1:13308:tpch_tiny:videx:password \
  --videx 127.0.0.1:13308:videx_tpch_tiny:videx:password
+```
 
+#### 对于 Windows 用户：
+```cmd
+cd %VIDEX_HOME%
+# Windows CMD 不支持 \ 作为续行符，需在同一行内输入所有参数
+python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py --target "127.0.0.1:13308:tpch_tiny:videx:password" --videx "127.0.0.1:13308:videx_tpch_tiny:videx:password"
 ```
 
 输出如下：
@@ -179,6 +216,8 @@ SET @VIDEX_SERVER='127.0.0.1:5001';
 
 ```sql
 -- SET @VIDEX_SERVER='127.0.0.1:5001'; -- 以 Docker 启动，则不需要额外设置 
+-- Connect VIDEX-Optimizer: mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dvidex_tpch_tiny
+-- USE videx_tpch_tiny;
 EXPLAIN
 FORMAT = JSON
 SELECT s_name, count(*) AS numwait
@@ -248,6 +287,12 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
  --target 127.0.0.1:13308:tpch_sf1:user:password \
  --meta_path data/tpch_sf1/videx_metadata_tpch_sf1.json
 
+```
+
+#### 对于 Windows 用户：
+```cmd
+cd %VIDEX_HOME%
+python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py --target 127.0.0.1:13308:tpch_sf1:user:password --meta_path data/tpch_sf1/videx_metadata_tpch_sf1.json
 ```
 
 与 TPCH-tiny 一致，VIDEX 可以为 `TPCH-sf1 Q21` 产生与 InnoDB 几乎完全一致的查询计划，详见 `data/tpch_sf1`。
