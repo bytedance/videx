@@ -217,7 +217,6 @@ If VIDEX-Server is deployed elsewhere, execute `SET @VIDEX_SERVER` first.
 
 ```sql
 -- SET @VIDEX_SERVER='127.0.0.1:5001'; -- Not needed for Docker deployment
--- SET @VIDEX_SERVER='127.0.0.1:5001'; -- 以 Docker 启动，则不需要额外设置 
 -- Connect VIDEX-Optimizer: mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dvidex_tpch_tiny
 -- USE videx_tpch_tiny;
 EXPLAIN 
