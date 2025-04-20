@@ -74,7 +74,7 @@ containing a series of tables with the same DDL, but replacing the engine from `
 
 VIDEX requires Python 3.9 for metadata collection tasks. We recommend using Anaconda/Miniconda to create an isolated Python environment:
 
-#### For Linux/macOS Users：
+**For Linux/macOS Users：**
 ```bash
 # Clone repository
 VIDEX_HOME=videx_server
@@ -145,7 +145,7 @@ VIDEX-Server | 127.0.0.1:5001
 
 #### Step 1: Import Test Data
 
-#### For Linux/macOS Users：
+**For Linux/macOS Users：**
 ```bash
 cd $VIDEX_HOME
 
@@ -157,7 +157,7 @@ tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```
 
-#### For Windows Uesrs：
+**For Windows Uesrs：**
 ```cmd
 # Change to project directory (assuming VIDEX_HOME environment variable is set)
 cd %VIDEX_HOME%

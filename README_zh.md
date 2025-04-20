@@ -73,7 +73,7 @@ VIDEX 根据原始实例中指定的目标数据库（`target_db`）创建一个
 
 VIDEX 需要 Python 3.9 环境，执行元数据采集等任务。推荐使用 Anaconda/Miniconda 创建独立的 Python 环境：
 
-#### 对于 Linux/macOS 用户：
+**对于 Linux/macOS 用户：**
 ```bash
 # 克隆代码
 VIDEX_HOME=videx_server
@@ -88,7 +88,7 @@ conda activate videx_py39
 python3.9 -m pip install -e . --use-pep517
 ```
 
-#### 对于 Windows 用户：
+**对于 Windows 用户：**
 ```cmd
 # 克隆代码（需提前安装 Git）
 set VIDEX_HOME=videx_server
@@ -142,7 +142,8 @@ VIDEX-Optimizer-Plugin (插件) | 同 Target-MySQL
 VIDEX-Server | 127.0.0.1:5001
 
 #### Step 1: 导入测试数据
-#### 对于 Linux/macOS 用户：
+
+**对于 Linux/macOS 用户：**
 ```bash
 # 切换到项目目录（假设已设置 VIDEX_HOME 环境变量）
 cd %VIDEX_HOME%
@@ -156,7 +157,7 @@ tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```
 
-#### 对于 Windows 用户：
+**对于 Windows 用户：**
 ```cmd
 # 切换到项目目录（假设已设置 VIDEX_HOME 环境变量）
 cd %VIDEX_HOME%
@@ -173,7 +174,8 @@ mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 #### Step 2: VIDEX 采集并导入 VIDEX 元数据
 
 请确保 VIDEX 环境已经安装好。若尚未安装，请参考 [2.1 安装 Python 环境](#21-安装-python-环境)。
-#### 对于 Linux/macOS 用户：
+
+**对于 Linux/macOS 用户：**
 ```shell
 cd $VIDEX_HOME
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
@@ -181,7 +183,7 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
  --videx 127.0.0.1:13308:videx_tpch_tiny:videx:password
 ```
 
-#### 对于 Windows 用户：
+**对于 Windows 用户：**
 ```cmd
 cd %VIDEX_HOME%
 # Windows CMD 不支持 \ 作为续行符，需在同一行内输入所有参数
@@ -281,7 +283,7 @@ ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 
 我们额外为 TPC-H sf1 准备了元数据文件：`data/videx_metadata_tpch_sf1.json`，无需采集，直接导入即可体验 VIDEX。
 
-#### 对于 Linux/macOS 用户：
+**对于 Linux/macOS 用户：**
 ```shell
 cd $VIDEX_HOME
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
@@ -290,7 +292,7 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
 
 ```
 
-#### 对于 Windows 用户：
+**对于 Windows 用户：**
 ```cmd
 cd %VIDEX_HOME%
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py --target 127.0.0.1:13308:tpch_sf1:user:password --meta_path data/tpch_sf1/videx_metadata_tpch_sf1.json
