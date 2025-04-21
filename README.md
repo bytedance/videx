@@ -89,7 +89,7 @@ conda activate videx_py39
 python3.9 -m pip install -e . --use-pep517
 ```
 
-#### For Windows Users：
+**For Windows Users：**
 ```cmd
 # Clone repository, Git must be pre-installed
 set VIDEX_HOME=videx_server
@@ -175,7 +175,7 @@ mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 
 Ensure VIDEX environment is installed. If not, refer to [2.1 Install Python Environment](#21-install-python-environment).
 
-#### For Linux/macOS Users:
+**For Linux/macOS Users:**
 ```shell
 cd $VIDEX_HOME
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
@@ -183,7 +183,7 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
  --videx 127.0.0.1:13308:videx_tpch_tiny:videx:password
 ```
 
-#### For Windows Users:
+**For Windows Users:**
 ```cmd
 cd %VIDEX_HOME%
 # Windows CMD doesn't support \ as line continuation, parameters must be in the same line
@@ -283,7 +283,7 @@ ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 
 We provide metadata file for TPC-H sf1: `data/videx_metadata_tpch_sf1.json`, allowing direct import without collection.
 
-#### For Linux/macOS Users:
+**For Linux/macOS Users:**
 ```shell
 cd $VIDEX_HOME
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
@@ -292,7 +292,7 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
 
 ```
 
-#### For Windows Users:
+**For Windows Users:**
 ```cmd
 cd %VIDEX_HOME%
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py --target 127.0.0.1:13308:tpch_sf1:user:password --meta_path data/tpch_sf1/videx_metadata_tpch_sf1.json
