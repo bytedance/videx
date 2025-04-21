@@ -74,6 +74,7 @@ containing a series of tables with the same DDL, but replacing the engine from `
 
 VIDEX requires Python 3.9 for metadata collection tasks. We recommend using Anaconda/Miniconda to create an isolated Python environment:
 
+**For Linux/macOS Users：**
 ```bash
 # Clone repository
 VIDEX_HOME=videx_server
@@ -86,6 +87,21 @@ conda activate videx_py39
 
 # Install VIDEX
 python3.9 -m pip install -e . --use-pep517
+```
+
+**For Windows Users：**
+```cmd
+# Clone repository, Git must be pre-installed
+set VIDEX_HOME=videx_server
+git clone git@github.com:bytedance/videx.git %VIDEX_HOME%
+cd %VIDEX_HOME%
+
+# Create and activate Python environment
+conda create -n videx_py39 python=3.9
+conda activate videx_py39
+
+# Install VIDEX
+python -m pip install -e . --use-pep517 
 ```
 
 ### 2.2 Launch VIDEX (Docker Mode)
@@ -129,10 +145,25 @@ VIDEX-Server | 127.0.0.1:5001
 
 #### Step 1: Import Test Data
 
-```bash 
+**For Linux/macOS Users：**
+```bash
 cd $VIDEX_HOME
 
 # Create database (If you don't have the MySQL client installed on your machine, you need to download and install MySQL. After installation, do not start the MySQL server, as VIDEX will use the IP and port.)
+mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
+
+# Import data
+tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
+mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
+```
+
+**For Windows Uesrs：**
+```cmd
+# Change to project directory (assuming VIDEX_HOME environment variable is set)
+cd %VIDEX_HOME%
+# Download test data
+
+# Create database
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
 
 # Import data
@@ -144,11 +175,19 @@ mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 
 Ensure VIDEX environment is installed. If not, refer to [2.1 Install Python Environment](#21-install-python-environment).
 
+**For Linux/macOS Users:**
 ```shell
 cd $VIDEX_HOME
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
  --target 127.0.0.1:13308:tpch_tiny:videx:password \
  --videx 127.0.0.1:13308:videx_tpch_tiny:videx:password
+```
+
+**For Windows Users:**
+```cmd
+cd %VIDEX_HOME%
+# Windows CMD doesn't support \ as line continuation, parameters must be in the same line
+python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py --target "127.0.0.1:13308:tpch_tiny:videx:password" --videx "127.0.0.1:13308:videx_tpch_tiny:videx:password"
 ```
 
 Output:
@@ -178,6 +217,8 @@ If VIDEX-Server is deployed elsewhere, execute `SET @VIDEX_SERVER` first.
 
 ```sql
 -- SET @VIDEX_SERVER='127.0.0.1:5001'; -- Not needed for Docker deployment
+-- Connect VIDEX-Optimizer: mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dvidex_tpch_tiny
+-- USE videx_tpch_tiny;
 EXPLAIN 
 FORMAT = JSON
 SELECT s_name, count(*) AS numwait
@@ -242,11 +283,19 @@ ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 
 We provide metadata file for TPC-H sf1: `data/videx_metadata_tpch_sf1.json`, allowing direct import without collection.
 
+**For Linux/macOS Users:**
 ```shell
 cd $VIDEX_HOME
 python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
  --target 127.0.0.1:13308:tpch_sf1:user:password \
  --meta_path data/tpch_sf1/videx_metadata_tpch_sf1.json
+
+```
+
+**For Windows Users:**
+```cmd
+cd %VIDEX_HOME%
+python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py --target 127.0.0.1:13308:tpch_sf1:user:password --meta_path data/tpch_sf1/videx_metadata_tpch_sf1.json
 ```
 
 Like TPCH-tiny, VIDEX generates nearly identical query plans to InnoDB for `TPCH-sf1 Q21`, see `data/tpch_sf1`.
