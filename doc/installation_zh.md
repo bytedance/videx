@@ -1,6 +1,13 @@
 # Installation Guide
 
+<p align="center">
+  <a href="./installation.md">English</a> |
+  <a href="./installation_zh.md">简体中文</a>
+</p>
+
+
 VIDEX 支持以下安装方式：
+
 1. 编译完整的 MySQL Server (包含 VIDEX 引擎)
 2. 编译 VIDEX 插件并安装到现有 MySQL Server
 

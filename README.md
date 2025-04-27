@@ -14,6 +14,7 @@
   <a href="https://hub.docker.com/repository/docker/kangrongme/videx">
     <img src="https://img.shields.io/docker/pulls/kangrongme/videx?style=for-the-badge&logo=docker" alt="Docker Pulls"/>
   </a>
+  <img src="https://img.shields.io/badge/MySQL|Percona-8.0|_5.7-FF9800?style=for-the-badge&logo=mysql" alt="MySQL Support"/>
 </p>
 
 **VIDEX**: The Disaggregated, Extensible **\[VI\]**rtual in**\[DEX\]** Engine for What-If Analysis in MySQL 🚀
@@ -40,8 +41,8 @@ By default, VIDEX includes implementations based on histograms and NDV collected
 
 VIDEX offers two startup modes:
 
-1. **Plugin to production database**: Install VIDEX as a plugin to the production database instance.
-2. **Individual instance**: This mode can completely avoid impacting the stability of online running instances, making it practical for industrial environments.
+1. **Plugin to production database** (Plugin-Mode): Install VIDEX as a plugin to the production database instance.
+2. **Individual instance** (Standalone-Mode): This mode can completely avoid impacting the stability of online running instances, making it practical for industrial environments.
 
 Functionally, VIDEX supports creating and deleting indexes (single-column indexes, composite indexes, EXTENDED_KEYS indexes). 
 However, it currently does not support functional indexes, FULL-Text, and Spatial Indexes. 
@@ -117,7 +118,7 @@ If you haven't installed Docker yet:
 
 #### Launch VIDEX Container
 ```bash
-docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:0.0.2
+docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:latest
 ```
 
 > **Alternative Deployment Options**
@@ -129,7 +130,7 @@ docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:0.0.2
 
 ## 3 Examples
 
-### 3.1 TPCH-Tiny Example
+### 3.1 TPCH-Tiny 示例 (MySQL 8.0)
 
 This example demonstrates the complete VIDEX workflow using the `TPC-H Tiny` dataset (1% random sample from TPC-H sf1).
 
@@ -279,7 +280,63 @@ ALTER TABLE tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 ```
 
-### 3.2 TPCH sf1 (1g) Example
+### 3.2 TPCH-Tiny Example (MySQL 5.7)
+
+VIDEX now supports high-precision simulation for MySQL 5.7 in the standalone mode.
+
+#### Step 1: Import Test Data into MySQL 5.7 Instance
+
+Import data into a MySQL 5.7 instance.
+
+```bash
+mysql -h${HOST_MYSQL57} -P13308 -uvidex -ppassword -e "create database tpch_tiny_57;"
+mysql -h${HOST_MYSQL57} -P13308 -uvidex -ppassword -Dtpch_tiny_57 < tpch_tiny.sql
+```
+
+#### Step 2: VIDEX Collection and Import of VIDEX Metadata
+
+VIDEX employs a different data collection method for MySQL 5.7 compared to MySQL 8.0,
+while maintaining the same command parameters.
+
+```bash
+cd $VIDEX_HOME
+python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
+ --target ${HOST_MYSQL57}:13308:tpch_tiny_57:videx:password \
+ --videx 127.0.0.1:13308:videx_tpch_tiny_57:videx:password
+```
+
+#### Step 2.5: ✴️ Setting Parameters Adapted for MySQL 5.7
+
+VIDEX can simulate MySQL 5.7 in standalone mode. Due to the differences between MySQL 5.7 and MySQL 8.0, we
+need to set the `optimizer-switch` variables and `server_cost` tables for VIDEX-optimizer.
+
+Since setting the environment does not take effect in the current connection, please run the following script first,
+then log into MySQL.
+
+```bash
+mysql -h ${HOST_MYSQL57} -P13308 -uvidex -ppassword < src/sub_platforms/sql_opt/videx/scripts/setup_mysql57_env.sql
+```
+
+#### Step 3: EXPLAIN SQL
+
+We will use TPC-H Q21 as an example. The EXPLAIN result is as follows. We can see that the query plan for MySQL 5.7
+differs significantly from MySQL 8.0, yet VIDEX can still simulate it accurately:
+
+[explain_tpch_tiny_table_for_mysql57.png](doc/explain_tpch_tiny_table_for_mysql57.png)
+
+Below is a comparison of EXPLAIN cost details between MySQL 5.7 and VIDEX.
+
+[explain_tpch_tiny_mysql57_compare.png](doc/explain_tpch_tiny_mysql57_compare.png)
+
+#### Step 4: ✴️ Clear MySQL 5.7 Environment Variables
+
+If you wish to revert the MySQL-optimizer to MySQL 8.0, please run the following script.
+
+```bash
+mysql -h ${HOST_MYSQL57} -P13308 -uvidex -ppassword < src/sub_platforms/sql_opt/videx/scripts/clear_mysql57_env.sql
+```
+
+### 3.3 TPCH sf1 (1g) Example (MySQL 8.0)
 
 We provide metadata file for TPC-H sf1: `data/videx_metadata_tpch_sf1.json`, allowing direct import without collection.
 

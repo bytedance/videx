@@ -1,6 +1,13 @@
 # Installation Guide
 
+<p align="center">
+  <a href="./installation.md">English</a> |
+  <a href="./installation_zh.md">简体中文</a>
+</p>
+
+
 VIDEX supports the following installation methods:
+
 1. Compile a complete MySQL Server (including VIDEX engine)
 2. Compile VIDEX plugin and install it on an existing MySQL Server
 
