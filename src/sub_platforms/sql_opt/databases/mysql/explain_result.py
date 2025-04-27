@@ -2,40 +2,35 @@
 Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
-
-from dataclasses import dataclass, field
-from typing import List, Optional
-
 import pandas as pd
-from dataclasses_json import dataclass_json, config
+from typing import List, Optional, Union
+from pydantic import BaseModel, Field
+
+from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 
 
-@dataclass_json
-@dataclass
-class MySQLExplainItem:
-    id: int = None
-    select_type: str = None
-    table: str = None
-    partitions: str = None
-    type: str = None
-    possible_keys: str = None
-    key: str = None
-    key_len: int = None
-    ref: str = None
-    rows: int = None
-    filtered: int = None
-    extra: str = None
+class MySQLExplainItem(BaseModel, PydanticDataClassJsonMixin):
+    id: Optional[int] = None
+    select_type: Optional[str] = None
+    table: Optional[str] = None
+    partitions: Optional[str] = None
+    type: Optional[str] = None
+    possible_keys: Optional[str] = None
+    key: Optional[str] = None
+    key_len: Optional[int] = None
+    ref: Optional[str] = None
+    rows: Optional[int] = None
+    filtered: Optional[Union[int, float]] = None
+    extra: Optional[str] = None
 
-@dataclass_json
-@dataclass
-class MySQLExplainResult:
-    format: str = None  # json or None
+
+class MySQLExplainResult(BaseModel, PydanticDataClassJsonMixin):
+    format: Optional[str] = None  # json or None
     # if format is None, result fill in explain_items
     explain_items: List[MySQLExplainItem] = None
     # if format is json, fill the explain_json
-    explain_json: dict = None
-    trace_dict: Optional[dict] = field(default=None,
-                                       metadata=config(exclude=lambda x: True, metadata={'skip_dumps': True}))
+    explain_json: Optional[dict] = None
+    trace_dict: Optional[dict] = Field(default=None, exclude=True, skip_dumps=True)
 
     @staticmethod
     def from_df(explain_df: pd.DataFrame) -> 'MySQLExplainResult':

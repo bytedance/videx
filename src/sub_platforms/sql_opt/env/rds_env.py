@@ -1,16 +1,22 @@
-# -*- coding: utf-8 -*-
 """
 Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
+
+import json
 import logging
+import re
+import os
+import traceback
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Set
-
 import pandas as pd
+from typing import Dict, List, Optional, Set
+from pymysql import InternalError
 
-from sub_platforms.sql_opt.common.db_variable import VariablesAboutIndex
+from sub_platforms.sql_opt.common.db_variable import VariablesAboutIndex, MysqlVariable
+from sub_platforms.sql_opt.common.exceptions import UnsupportedSamplingException
 from sub_platforms.sql_opt.common.sample_info import SampleColumnInfo
+from sub_platforms.sql_opt.meta import Table, Column, Index, IndexColumn, IndexType
 from sub_platforms.sql_opt.databases.mysql.mysql_command import MySQLCommand, get_mysql_version, MySQLVersion
 from sub_platforms.sql_opt.meta import Table, Column, IndexColumn, IndexType
 from sub_platforms.sql_opt.videx.videx_mysql_utils import get_mysql_utils, MySQLConnectionConfig, DBTYPE
@@ -50,10 +56,11 @@ class Env(ABC):
         self.default_db = default_db
         # meta_info : {db: {table: Table:class } }
         self.meta_info: Dict[str, Dict[str, Table]] = {}
-        self.config_info = {}  # 相关配置
+        self.config_info = {}
         self.mysql_variables: VariablesAboutIndex = VariablesAboutIndex()
         self.mysql_util = None
         self.worker_id = None
+        self.mysql_command = None
 
     def get_default_db(self):
         return self.default_db
@@ -210,18 +217,12 @@ class Env(ABC):
         raise NotImplementedError
 
     def get_version(self) -> MySQLVersion:
-        return MySQLVersion.MySQL_8
-
-
-def support_sampling(pk_cols: List[IndexColumn]) -> bool:
-    # if pk_cols is None:
-    #     return False
-    #
-    # from sub_platforms.sql_opt.histogram.histogram_utils import get_column_data_type
-    # return all([get_column_data_type(pk_col.column_ref.data_type) in ['int', 'float', 'string'] for pk_col in pk_cols])
-    # Note: 所有类型均可采样，只区分是否支持随机采样
-    # 不支持的随机采样，则进行顺序采样；否则进行随机采样
-    return True
+        mysql_version = self.mysql_variables.version.get_value()
+        if mysql_version is None or mysql_version == '' and self.mysql_command is not None:
+            if self.mysql_command.version != '' and self.mysql_command.version is not None:
+                return self.mysql_command.version
+        version_enum = MySQLVersion.get_version_enum(mysql_version)
+        return version_enum
 
 
 class DirectConnectMySQLEnv(Env, ABC):
@@ -240,9 +241,9 @@ class DirectConnectMySQLEnv(Env, ABC):
                         min_id: List[Dict], max_id: List[Dict], limit: int = 10, random=False,
                         orderby='desc', shard_no: int = 0):
         """
-        获取采样信息
+        sampling data from mysql instance with specified conditions, e.g. min_id, max_id, limit, random, orderby
         """
-        # Note: 保证列名是关键字的列，可以不影响SQL正确性
+        # Ensure the SQL remains executable when the column names are keywords.
         pk_names = [add_backquote(pk_name) for pk_name in pk_names]
         projections = []
         for col in sample_cols:
@@ -250,13 +251,13 @@ class DirectConnectMySQLEnv(Env, ABC):
                 projections.append(f'LEFT({add_backquote(col.column_name)}, {col.sample_length}) as {add_backquote(col.column_name)}')
             else:
                 projections.append(add_backquote(col.column_name))
-        # Note: 保证列名是关键字的列，可以不影响SQL正确性
+        # Ensure the SQL remains executable when the column names are keywords.
         pk_names = [add_backquote(pk_name) for pk_name in pk_names]
 
         pk_cols = self.get_pk_columns(db_name, table_name)
 
         def handle_pk_condition(boundary):
-            # Note: 保证列名是关键字的列，可以不影响SQL正确性
+            # Ensure the SQL remains executable when the column names are keywords.
             names = [add_backquote(str(b["ColumnName"])) for b in boundary]
             values = [str(b["Value"]) for b in boundary]
             params_placeholders = ["%s"] * len(names)
@@ -266,7 +267,7 @@ class DirectConnectMySQLEnv(Env, ABC):
         max_names, max_placeholders, max_values = handle_pk_condition(max_id)
         orderby_str = f"{','.join([f'{pk_name} {orderby}' for pk_name in pk_names])}"
 
-        # Note: 使用占位符的方式避免，特殊字符 (", ') 导致语法错误
+        # Note: Use placeholders to avoid syntax errors caused by special characters (", ').
         sql = f"""
             select {",".join(projections)} from `{db_name}`.`{table_name}` 
             where {min_names} >= {min_placeholders} and {max_names} <= {max_placeholders} order by {orderby_str} limit {limit}
@@ -340,18 +341,44 @@ class DirectConnectMySQLEnv(Env, ABC):
 
 
 class OpenMySQLEnv(DirectConnectMySQLEnv):
-    def __init__(self, ip, port, usr, pwd, db_name, read_timeout=30, write_timeout=30, connect_timeout=10):
-        config = MySQLConnectionConfig(
-            DBTYPE.OPEN_MYSQL,
-            host=ip, port=port,
+    def __init__(self, ip, port, usr, pwd, db_name, read_timeout=30, write_timeout=30, connect_timeout=10,
+                 max_connections=None,
+                 ):
+        self.config = MySQLConnectionConfig(
+            dbtype=DBTYPE.OPEN_MYSQL,
+            host=ip, port=int(port),
             user=usr, pwd=pwd,
             schema=db_name,
             read_timeout=read_timeout,
             write_timeout=write_timeout,
-            connect_timeout=connect_timeout)
-        self.mysql_util = get_mysql_utils(config)
+            connect_timeout=connect_timeout,
+            max_connections=max_connections,
+        )
+        self.mysql_util = get_mysql_utils(self.config)
         super(OpenMySQLEnv, self).__init__(default_db=db_name, mysql_util=self.mysql_util)
         self.mysql_command = MySQLCommand(mysql_util=self.mysql_util, version=get_mysql_version(self.mysql_util))
+
+    @staticmethod
+    def from_mysql_connection_config(config: MySQLConnectionConfig) -> "OpenMySQLEnv":
+        """
+        pass into MySQLConnectionConfig，then return OpenMySQLEnv
+        Args:
+            config:
+
+        Returns:
+
+        """
+        assert config.dbtype == DBTYPE.OPEN_MYSQL, f"required DBTYPE.OPEN_MYSQL, given {config.dbtype}"
+        return OpenMySQLEnv(
+            ip=config.host,
+            port=config.port,
+            usr=config.user,
+            pwd=config.pwd,
+            db_name=config.schema,
+            read_timeout=config.read_timeout,
+            write_timeout=config.write_timeout,
+            connect_timeout=config.connect_timeout,
+        )
 
     def __repr__(self):
         return str(self.mysql_util)

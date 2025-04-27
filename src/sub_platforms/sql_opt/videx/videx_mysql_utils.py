@@ -7,15 +7,16 @@ DB connection pool DBUtils https://webwareforpython.github.io/DBUtils/main.html
 import logging
 import traceback
 import urllib.parse
-from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
 import pandas as pd
-from dataclasses_json import dataclass_json
 from dbutils.persistent_db import PersistentDB
 from dbutils.pooled_db import PooledDB
+from pydantic import BaseModel
 from sqlalchemy import create_engine
+
+from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 
 
 class DBTYPE(Enum):
@@ -23,9 +24,7 @@ class DBTYPE(Enum):
     SQLITE = "SQLITE"
 
 
-@dataclass_json
-@dataclass
-class MySQLConnectionConfig:
+class MySQLConnectionConfig(BaseModel, PydanticDataClassJsonMixin):
     dbtype: DBTYPE
     host: Optional[str] = "127.0.0.1"
     port: Optional[int] = 3306

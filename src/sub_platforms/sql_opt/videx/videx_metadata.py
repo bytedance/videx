@@ -6,24 +6,26 @@ SPDX-License-Identifier: MIT
 import copy
 import json
 import logging
+import math
 import os
 import shutil
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import List, Dict, Tuple, Optional, Union
+from typing import List, Dict, Tuple, Optional, Union, Any
 
 import numpy as np
 import pandas as pd
-from dataclasses_json import DataClassJsonMixin
+from pydantic import BaseModel, Field
 
 from sub_platforms.sql_opt.column_statastics.statistics_info import TableStatisticsInfo
 from sub_platforms.sql_opt.common.db_variable import VariablesAboutIndex, DEFAULT_INNODB_PAGE_SIZE
 from sub_platforms.sql_opt.common.exceptions import TraceLoadException
+from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 from sub_platforms.sql_opt.common.sample_file_info import SampleFileInfo
+from sub_platforms.sql_opt.databases.mysql.mysql_command import MySQLVersion
 from sub_platforms.sql_opt.env.rds_env import Env
-from sub_platforms.sql_opt.meta import Table, Column
+from sub_platforms.sql_opt.meta import Table, Column, Index
 from sub_platforms.sql_opt.videx.common.estimate_stats_length import estimate_data_length
 from sub_platforms.sql_opt.videx.videx_histogram import HistogramStats, generate_fetch_histogram
 from sub_platforms.sql_opt.videx.videx_mysql_utils import _parse_col_names
@@ -58,18 +60,17 @@ IO_SIZE = 4096
 INVALID_VALUE = -1234
 
 
-@dataclass
-class VidexDBTaskStats(DataClassJsonMixin):
-    task_id: str
+class VidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
+    task_id: Optional[str]
     meta_dict: Dict[str, Dict[str, Table]]
     stats_dict: Dict[str, Dict[str, TableStatisticsInfo]]
     db_config: VariablesAboutIndex
     # use_gt: Optional[bool] = field(default=True)
     # gt_rec_in_ranges: Optional[List[Any]] = field(default_factory=list)
     # gt_req_resp: Optional[List[Any]] = field(default_factory=list)
-    sample_file_info: Optional[SampleFileInfo] = field(default=None)
+    sample_file_info: Optional[SampleFileInfo] = Field(default=None)
 
-    def __post_init__(self):
+    def model_post_init(self, __context: Any) -> None:
         self.meta_dict = {k.lower(): {k1.lower(): v1 for k1, v1 in v.items()} for k, v in self.meta_dict.items()}
         self.stats_dict = {k.lower(): {k1.lower(): v1 for k1, v1 in v.items()} for k, v in self.stats_dict.items()}
 
@@ -120,7 +121,7 @@ class VidexDBTaskStats(DataClassJsonMixin):
 
     def merge_with(self, other: 'VidexDBTaskStats', inplace: bool = False) -> Optional['VidexDBTaskStats']:
         # Check for essential matches
-        if self.task_id != other.task_id or self.db_config != other.db_config or (
+        if self.task_id != other.task_id or (
                 self.sample_file_info and other.sample_file_info and (
                 self.sample_file_info.local_path_prefix != other.sample_file_info.local_path_prefix or
                 self.sample_file_info.tos_path_prefix != other.sample_file_info.tos_path_prefix
@@ -166,8 +167,7 @@ class VidexDBTaskStats(DataClassJsonMixin):
         return target
 
 
-@dataclass
-class VidexTableStats:
+class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
     """
     Represents the statistics of a HA table.
     """
@@ -197,7 +197,7 @@ class VidexTableStats:
 
     # Estimate for how much of the index is available in memory buffer
     # index_name -> {'page_type', 'pct_cached', 'pool_rows'}
-    pct_cached: Dict[str, dict] = field(default_factory=dict)
+    pct_cached: Dict[str, dict] = Field(default_factory=dict)
     # SHOW VARIABLES LIKE 'innodb_buffer_pool_size';
     innodb_buffer_pool_size: int = INVALID_VALUE
 
@@ -209,13 +209,13 @@ class VidexTableStats:
     # innodb part, god view
     UNIV_PAGE_SIZE: int = INVALID_VALUE
 
-    hist_columns: Dict[str, HistogramStats] = field(default_factory=dict)
+    hist_columns: Dict[str, HistogramStats] = Field(default_factory=dict)
     # Refer to VidexDBTaskStats.sample_file_info, calculate ndv based on sampling data
-    sample_file_info: Optional[SampleFileInfo] = field(default=None)
+    sample_file_info: Optional[SampleFileInfo] = Field(default=None)
     """
     column->ndv
     """
-    ndvs_single: Dict[str, int] = field(default_factory=dict)
+    ndvs_single: Dict[str, int] = Field(default_factory=dict)
     """
     index_name -> field -> {}
     Note that in real scenarios, the following multi-column ndvs needs to be predicted, not directly obtained.
@@ -237,7 +237,7 @@ class VidexTableStats:
                 }
             }
     """
-    ndvs_multi_col_gt: Dict[str, Dict[str, dict]] = field(default_factory=dict)
+    ndvs_multi_col_gt: Dict[str, Dict[str, dict]] = Field(default_factory=dict)
     # index_name -> range_str -> rows
     gt_return: GT_Table_Return = None
 
