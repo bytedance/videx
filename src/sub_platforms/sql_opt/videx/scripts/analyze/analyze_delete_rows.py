@@ -12,17 +12,19 @@ CREATE TABLE `request_info` (
 ) ENGINE=InnoDB
 """
 import logging
+import random
+import string
 import time
 from datetime import datetime, timedelta
+
 import pandas as pd
-import string
-import random
+
 from sub_platforms.sql_opt.env.rds_env import OpenMySQLEnv
 from sub_platforms.sql_opt.videx import videx_logging
 
 
 def generate_random_query(length=200):
-    """生成仅包含小写字母a-z的随机字符串"""
+    """generate random query only contains lowercase letters a-z"""
     return ''.join(random.choice(string.ascii_lowercase) for _ in range(length))
 
 
@@ -44,22 +46,18 @@ def get_system_info(parse_env):
 
     res2 = parse_env.query_for_dataframe(query)
     res2 = res2.iloc[0].to_dict()
-    # 合并字典 res, res2
     res.update(res2)
     return res
 
 
 def insert_batch_data(parse_env, current_time, batch_size):
-    # 生成批量数据
     queries = [generate_random_query() for _ in range(batch_size)]
 
-    # 构建插入数据的DataFrame
     df = pd.DataFrame({
         'created_at': current_time,
         'query': queries
     })
 
-    # 构建插入SQL
     insert_sql = "INSERT INTO request_info (created_at, query) VALUES "
     values = []
     for _, row in df.iterrows():
@@ -67,7 +65,6 @@ def insert_batch_data(parse_env, current_time, batch_size):
 
     insert_sql += ",".join(values)
 
-    # 执行插入
     parse_env.execute(insert_sql)
     return len(df)
 
@@ -76,7 +73,6 @@ def delete_old_data(parse_env, current_time, days):
     delete_time = current_time - timedelta(days=days)
     delete_sql = f"DELETE FROM request_info WHERE created_at < '{delete_time}'"
 
-    # 记录删除操作的开始时间
     start_time = time.time()
     result = parse_env.execute(delete_sql)
     delete_duration = time.time() - start_time
@@ -86,7 +82,6 @@ def delete_old_data(parse_env, current_time, days):
 
 def main():
     videx_logging.initial_config()
-    # 配置参数
     scale_factor = 10000
     start_time = datetime(2022, 1, 1)  # 从2024年1月1日开始
     end_time = start_time + timedelta(days=300)
@@ -102,8 +97,8 @@ def main():
     if has_create_index:
         create_ddl = """
         CREATE TABLE `request_info` (
-          `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
-          `query` text COMMENT '请求query信息',
+          `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'pk ID',
+          `query` text COMMENT 'request query',
           `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '创建时间',
           PRIMARY KEY (`id`),
           KEY `idx_created_at` (`created_at`)
@@ -112,8 +107,8 @@ def main():
     else:
         create_ddl = """
         CREATE TABLE `request_info` (
-          `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键 ID',
-          `query` text COMMENT '请求query信息',
+          `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'pk ID',
+          `query` text COMMENT 'request query',
           `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '创建时间',
           PRIMARY KEY (`id`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
@@ -126,18 +121,17 @@ def main():
 
     try:
         while current_time < end_time:
-            # 每分钟插入数据
+            # insert data each minute
             inserted = insert_batch_data(parse_env, current_time, batch_size)
             total_inserted += inserted
             logging.info(f"Time: {current_time}, Inserted {inserted} records, total: {total_inserted}")
 
-            # 每两天检查一次系统信息
+            # Check the system information every two days.
             if (current_time - last_check_time).days >= 2:
                 logging.info(f"\n=== System Info Before Deletion at {current_time} ===")
                 system_info = get_system_info(parse_env)
                 logging.info(system_info)
 
-                # 删除旧数据
                 deleted, delete_duration = delete_old_data(parse_env, current_time, 2)
                 logging.info(f"\nDeleted {deleted} records in {delete_duration:.2f} seconds")
 
@@ -147,7 +141,6 @@ def main():
 
                 last_check_time = current_time
 
-            # 时间前进一分钟
             current_time += timedelta(days=1)
 
     except KeyboardInterrupt:

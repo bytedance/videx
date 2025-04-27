@@ -442,7 +442,7 @@ def ask_videx():
     videx_meta_singleton.logging_package.set_thread_trace_id(f"<<{task_id}#{req_idx}>>")
     videx_meta_singleton.request_count += 1
     logging.info(f"[{req_idx}] ==== receive data, {json.dumps(req_json_item)}")
-        
+
     st = time.perf_counter()
     code, message, response_data = videx_meta_singleton.ask(req_json_item)
     elapsed_time = time.perf_counter() - st
@@ -451,6 +451,19 @@ def ask_videx():
     else:
         logging.error(f"[{req_idx}] == [{code=}] use {elapsed_time:.2f}s {message=} "
                       f"response data: ={json.dumps(response_data)}")
+    return jsonify(code=code, message=message, data=response_data)
+
+
+@app.route('/videx/visualization/get_stats', methods=['GET'])
+def get_stats():
+    """
+    返回 videx_meta_singleton 当前的缓存大小。
+    """
+    non_task_cache: VidexTaskCache = videx_meta_singleton.non_task_cache
+    data_dict = {}
+    if non_task_cache is not None and non_task_cache.db_tasks_stats is not None:
+        data_dict = json.loads(non_task_cache.db_tasks_stats.to_json())
+    code, message, response_data = 200, "OK", {'stats': data_dict}
     return jsonify(code=code, message=message, data=response_data)
 
 
@@ -587,6 +600,8 @@ def startup_videx_server(
 
     # Start the service.
     logging.info(f"\n{'- ' * 30}\n"
+                 f"VIDEX statistic server has been started.\n"
+                 f"Current ModelClass: {videx_meta_singleton.VidexModelClass.__name__}\n"
                  f"To use VIDEX, please set the following variables before explaining your SQL:\n"
                  f"SET @VIDEX_SERVER='{get_local_ip()}:{port}';\n"
                  f"{'- ' * 30}\n"

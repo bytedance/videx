@@ -170,61 +170,101 @@ def estimate_total_index_length(table_rows, indexes: List[Index], table_metadata
 def estimate_data_length(table: Table,
                          fix_row_overhead=10,
                          consider_delete=False, data_free_coefficient=0.1,
+                         raise_error=False
                          ):
     """
-    Estimates the data_length, index_length, avg_row_length.
+    Estimates MySQL table statistics including data_length, index_length and row length based on table size.
+    When values are invalid, it will either raise error or correct them to reasonable values.
 
     Parameters:
-      - table_metadata: Table metadata as a list of dictionaries, each containing at least "name" and "type" fields.
-      - table_size: Total table size in bytes (data_length + index_length + [data_free_length]).
-      - table_rows: Number of rows in the table (positive integer).
-      - indexes: List of indexes on the table, each index is a dictionary that must contain a "columns" key (list of column names).
-      - fix_row_overhead: Fixed overhead per row in clustered index (in bytes), default 10 bytes.
-      - consider_delete: If True, assumes existence of deleted but unreleased space, to be subtracted from data_length.
-      - data_free_coefficient: When consider_delete is True, data_free_length = data_free_coefficient * table_size;
-                              default 0.1 (i.e., 10%).
+        table: Table metadata including size, rows, columns and indexes
+        fix_row_overhead: Fixed overhead bytes for each row in clustered index
+        consider_delete: Whether to consider deleted but not purged space
+        data_free_coefficient: Ratio of free space to total size when consider_delete is True
+        raise_error: If True, will raise AssertionError for invalid values; if False, will correct them
 
-    Returns a dictionary containing the following estimates:
-      - avg_row_length: Estimated average length per row (including fix_row_overhead).
-      - estimated_data_length_by_rows: Estimate obtained from table_rows * avg_row_length.
-      - total_estimated_index_length: Estimated space occupied by all indexes in the table.
-      - estimated_data_length_by_table_size: data_length estimate obtained by subtracting index space (and deleted space if applicable) from table_size.
-      - combined_estimate: Simple average of the above two methods.
-"""
+    Returns:
+        Dictionary containing estimated statistics:
+        - avg_row_length: Average bytes per row
+        - total_estimated_index_length: Total bytes used by all indexes
+        - estimated_data_length_by_rows: Data length estimated by row count and avg row length
+        - estimated_data_length_by_table_size: Data length estimated by subtracting index and free space from total size
+        - combined_estimate: Weighted average of the two estimation methods
+        - data_free: Estimated free space in bytes
+    - data_length: Estimated data length in bytes
+    """
     table_size = table.table_size
     table_rows = table.rows
     columns: List[Column] = table.columns
     indexes: List[Index] = table.indexes
-    # 1. Calculate average row length, including estimated values for all columns plus fix_row_overhead (fixed overhead for clustered rows)
-    base_row_length = 0
 
+    # Calculate base row length by summing up all column sizes
+    base_row_length = 0
     for col in columns:
         c_len = estimate_column_length(col.column_type)
-        # print(f"estimate column: {col.name}, {c_len}")
         base_row_length += c_len
+
+    # Add fixed overhead to get total row length
     avg_row_length = base_row_length + fix_row_overhead
+    if avg_row_length <= 0:
+        if raise_error:
+            assert avg_row_length > 0, f"avg_row_length must be greater than 0, got {avg_row_length}"
+        # Ensure minimum 1 byte per row as invalid row length makes no sense
+        avg_row_length = 1
+
+    # First estimation method: multiply row count by average row length
     estimated_data_length_by_rows = table_rows * avg_row_length
 
-    # 2. Estimate the size occupied by all indexes
+    # Calculate total index size based on index definitions
     total_estimated_index_length = estimate_total_index_length(table_rows, indexes, columns)
 
-    # 3. Another estimation method for data_length derived from table_size = data_length + index_length
-    # If considering deleted space, then data_free_length = data_free_coefficient * table_size
-    data_free_length = data_free_coefficient * table_size if consider_delete else 0
-    estimated_data_length_by_table_size = table_size - total_estimated_index_length - data_free_length
+    if total_estimated_index_length <= 0:
+        if raise_error:
+            assert total_estimated_index_length > 0, f"total_estimated_index_length must be greater than 0, got {total_estimated_index_length}"
+        # Index should take reasonable space, assume minimum 10% of total size
+        # This is because MySQL always has at least a clustered index
+        total_estimated_index_length = max(1, int(table_size * 0.1))
 
-    # 4. weighted sum
-    # avg_row_length may be very inaccurate due to complex data case, like overflow page.
-    # overflow page: for text/blob types, if the line format is COMPACT or DYNAMIC,
-    #   it will be stored as an overflow page if it exceeds a certain length.
-    weight_row_avg = 0.1
+    # Calculate free space if considering deleted rows
+    data_free_length = data_free_coefficient * table_size if consider_delete else 0
+    if data_free_length < 0:
+        if raise_error:
+            assert data_free_length >= 0, f"data_free_length must be greater than 0, got {data_free_length}"
+        # Free space cannot be negative
+        data_free_length = 0
+
+    # Second estimation method: subtract index and free space from total size
+    # Ensure the three parts (data, index, free) sum up to total size
+    remaining_size = table_size - total_estimated_index_length - data_free_length
+    if remaining_size <= 0:
+        if raise_error:
+            assert remaining_size > 0, f"estimated_data_length_by_table_size must be greater than 0, got {remaining_size}"
+        # If remaining size for data is invalid, redistribute space in reasonable proportions:
+        # - 20% for indexes (as they usually take significant space)
+        # - data_free_coefficient ratio for free space
+        # - rest for data
+        total_estimated_index_length = int(table_size * 0.2)
+        data_free_length = int(table_size * data_free_coefficient)
+        remaining_size = table_size - total_estimated_index_length - data_free_length
+
+    estimated_data_length_by_table_size = remaining_size
+
+    # Combine both estimation methods with weights
+    # We give lower weight to row-based estimation as it may be inaccurate due to:
+    # 1. Variable length fields
+    # 2. Overflow pages for BLOB/TEXT
+    # 3. Page fill factor variations
+    weight_row_avg = 0.1  # 10% weight for row-based estimation
     combined_estimate = (weight_row_avg * estimated_data_length_by_rows
                          + (1 - weight_row_avg) * estimated_data_length_by_table_size)
-    assert avg_row_length > 0, f"avg_row_length must be greater than 0, got {avg_row_length}"
-    assert total_estimated_index_length > 0, f"total_estimated_index_length must be greater than 0, got {total_estimated_index_length}"
-    assert estimated_data_length_by_table_size > 0, f"estimated_data_length_by_table_size must be greater than 0, got {estimated_data_length_by_table_size}"
-    assert combined_estimate > 0, f"combined_estimate must be greater than 0, got {combined_estimate}"
-    assert data_free_length >= 0, f"data_free_length must be greater than 0, got {data_free_length}"
+
+    if combined_estimate <= 0:
+        if raise_error:
+            assert combined_estimate > 0, f"combined_estimate must be greater than 0, got {combined_estimate}"
+        # If weighted average fails, fall back to table size based estimation
+        # as it's usually more reliable
+        combined_estimate = estimated_data_length_by_table_size
+
     return {
         "avg_row_length": avg_row_length,
         "total_estimated_index_length": int(total_estimated_index_length),
