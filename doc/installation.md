@@ -23,7 +23,7 @@ VIDEX_HOME=$(pwd)/videx_server
 MySQL8_HOME=$(pwd)/mysql_server
 
 # Clone repositories
-git clone git@code.byted.org:bytebrain/videx.git $VIDEX_HOME
+git clone git@github.com:bytedance/videx.git $VIDEX_HOME
 git clone --depth=1 --recursive -b release-8.0.34-26 https://github.com/percona/percona-server.git $MySQL8_HOME
 
 # Download Boost library to speed up installation
@@ -128,4 +128,16 @@ python3.9 -m pip install -e . --use-pep517
 ```bash
 cd $VIDEX_HOME/src/sub_platforms/sql_opt/videx/scripts
 python start_videx_server.py --port 5001
+```
+
+## 5. Installation Method 3: Compile Docker Image
+
+First, complete step 1: download the VIDEX and MySQL code.  
+Ensure that the VIDEX and MySQL code are in the same directory, named `videx_server` and `mysql_server` respectively. 
+You may use symbolic links.
+
+Then, execute the following command:
+```bash
+cd videx_server
+docker build -t videx:latest -f build/Dockerfile.videx ..
 ```
