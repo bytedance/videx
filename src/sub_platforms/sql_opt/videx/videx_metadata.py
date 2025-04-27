@@ -241,6 +241,9 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
     # index_name -> range_str -> rows
     gt_return: GT_Table_Return = None
 
+    # records metadata about table schema
+    table_meta: Optional[Table] = None
+
     def get_col_hist(self, col: str) -> Optional[HistogramStats]:
         return self.hist_columns.get(col)
 
@@ -288,7 +291,7 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
                         hist_columns.items()}
         ideal_ndvs = {index_name.lower(): {col: gt_rec for col, gt_rec in ideal_ndvs[index_name].items()} for
                       index_name in (ideal_ndvs or {})}
-        single_ndvs = {col: ndv for col, ndv in single_ndvs.items()}
+        single_ndvs = {col: int(math.ceil(ndv)) for col, ndv in single_ndvs.items()}
         innodb_page_size = int(
             db_config.innodb_page_size.value) if db_config.innodb_page_size.value is not None else DEFAULT_INNODB_PAGE_SIZE
 
@@ -340,11 +343,12 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
             sample_file_info=sample_file_info,
             ndvs_single=single_ndvs,
             ndvs_multi_col_gt=ideal_ndvs,
-            gt_return=gt_rec_in_ranges
+            gt_return=gt_rec_in_ranges,
+            table_meta=raw_meta_dict,
         )
-        for k, v in res.hist_columns.items():
-            if v is not None:
-                v.table_rows = int(raw_meta_dict.rows)
+        # for k, v in res.hist_columns.items():
+        #     if v is not None:
+        #         v.table_rows = int(raw_meta_dict.rows)
         return res
 
 
@@ -455,6 +459,10 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
         row.update(global_var_dict)
         table_name = str(row["TABLE_NAME"]).lower()
         res_dict[table_name] = row
+
+        table_obj: Table = env.get_table_meta(target_dbname, row["TABLE_NAME"])
+        res_dict[table_name]['columns'] = [json.loads(c.to_json()) for c in table_obj.columns]
+        res_dict[table_name]['indexes'] = [json.loads(i.to_json()) for i in table_obj.indexes]
     # print(json.dumps(res_dict, indent=4))
 
     # part 2: innodb_table_stats
@@ -528,7 +536,7 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
     for (db_name, table_name,), df_table in data_table_in_mem.groupby(['db_name', 'table_name']):
         table_name = str(table_name).lower()
         if table_name not in res_dict:
-            print(table_name, 'not found in data_table_in_mem')
+            logging.warning(table_name, 'not found in data_table_in_mem')
         else:
             _dict = {}
             for idx, row in df_table.iterrows():
@@ -599,6 +607,20 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
     if all_table_names is None:
         all_table_names = list(stats_dict.keys())
 
+    # >>>>>>>>>>>>>>>> ndv_single_dict >>>>>>>>>>>>>
+    if result_dir is not None and os.path.exists(os.path.join(result_dir, ndv_single_file)):
+        ndv_single_dict = load_json_from_file(os.path.join(result_dir, ndv_single_file))
+    else:
+        ndv_single_dict = {}
+    miss_ndv_tables = sorted(t for t in all_table_names if t.lower() not in set(s.lower() for s in ndv_single_dict))
+    if len(miss_ndv_tables) > 0:
+        logging.info(f"fetch meta for videx: {ndv_single_file = } not found in {result_dir = }, or exist ndv single "
+                     f"is not enough.fetch it: {sorted(ndv_single_dict.keys()) = } {miss_ndv_tables=}")
+        tmp_ndv_single_dict = fetch_ndv_single(env, target_db, miss_ndv_tables)
+        ndv_single_dict.update(tmp_ndv_single_dict)
+
+    # <<<<<<<<<<<<<<< ndv_single_dict end <<<<<<<<<<<<<<<<
+
     # >>>>>>>>>>>>>>>> his_dict >>>>>>>>>>>>>
     if histogram_data:
         hist_dict = histogram_data.get(target_db)
@@ -622,24 +644,11 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
                                                  drop_hist_after_fetch=drop_hist_after_fetch,
                                                  ret_json=True,
                                                  hist_mem_size=hist_mem_size,
+                                                 ndv_single_dict=ndv_single_dict,
                                                  )
         hist_dict.update(tmp_hist_dict)
 
     # <<<<<<<<<<<<<<< hist dict end <<<<<<<<<<<<<<<<
-
-    # >>>>>>>>>>>>>>>> ndv_single_dict >>>>>>>>>>>>>
-    if result_dir is not None and os.path.exists(os.path.join(result_dir, ndv_single_file)):
-        ndv_single_dict = load_json_from_file(os.path.join(result_dir, ndv_single_file))
-    else:
-        ndv_single_dict = {}
-    miss_ndv_tables = sorted(t for t in all_table_names if t.lower() not in set(s.lower() for s in ndv_single_dict))
-    if len(miss_ndv_tables) > 0:
-        logging.info(f"fetch meta for videx: {ndv_single_file = } not found in {result_dir = }, or exist ndv single "
-                     f"is not enough.fetch it: {sorted(ndv_single_dict.keys()) = } {miss_ndv_tables=}")
-        tmp_ndv_single_dict = fetch_ndv_single(env, target_db, miss_ndv_tables)
-        ndv_single_dict.update(tmp_ndv_single_dict)
-
-    # <<<<<<<<<<<<<<< ndv_single_dict end <<<<<<<<<<<<<<<<
 
     # >>>>>>>>>>>>>>>> ndv_mulcol_dict >>>>>>>>>>>>>
     if result_dir is not None and os.path.exists(os.path.join(result_dir, ndv_mulcol_file)):
@@ -821,13 +830,15 @@ def execute_sql_to_videx(sql: str, env: Env, videx_py_ip_port: str, videx_option
             data = list(map(list, data))
             df_res = pd.DataFrame(data, columns=col_names)
         except Exception as e:
-            print(f"execute explain meet error : {e}")
+            logging.error(f"execute explain meet error {sql=} : err={e}")
             df_res = None
 
     return df_res
 
 
-def extract_rec_in_range_gt_from_explain(env: Env, sql: str, videx_py_ip_port: str = None, videx_options: dict = None,
+def extract_rec_in_range_gt_from_explain(env: Env, sql: str,
+                                         target_version: MySQLVersion=MySQLVersion.MySQL_8,
+                                         videx_py_ip_port: str = None, videx_options: dict = None,
                                          ret_trace: bool = True,
                                          verbose: bool = True,
                                          need_set_trace: bool = True,
@@ -858,6 +869,10 @@ def extract_rec_in_range_gt_from_explain(env: Env, sql: str, videx_py_ip_port: s
             cursor.execute(f"SET @VIDEX_OPTIONS='{videx_options}';")
             if verbose:
                 logging.info(f"SET @VIDEX_OPTIONS='{videx_options}';")
+        if target_version == MySQLVersion.MySQL_57:
+            optimizer_switch = ("SESSION optimizer_switch='subquery_to_derived=off,block_nested_loop=on,hash_join=off,"
+                                "semijoin=off,firstmatch=off,loosescan=off,duplicateweedout=off,materialization=off';")
+            cursor.execute(f"SET {optimizer_switch}")
         try:
             if verbose:
                 logging.info(f"videx explain: {sql=}")
@@ -870,7 +885,7 @@ def extract_rec_in_range_gt_from_explain(env: Env, sql: str, videx_py_ip_port: s
             if verbose:
                 logging.info(f"videx explain use {time.perf_counter() - st:.3f} s")
         except Exception as e:
-            print(f"execute explain meet error : {e}")
+            logging.error(f"execute explain meet error {sql=}: err={e}")
             df_explain = pd.DataFrame({
                 "code": [e.args[0]],
                 "message": [str(e.args[1])],
@@ -1077,8 +1092,8 @@ def construct_videx_task_meta_from_local_files(task_id, videx_db,
             table_size=None,
             table_type=table_dict['TABLE_TYPE'],
             create_options=None,
-            columns=None,  # videx server may not need this column
-            indexes=None,  # videx server may not need this indexes
+            columns=[Column.from_dict(col_meta_dict) for col_meta_dict in table_dict.get('columns', [])],
+            indexes=[Index.from_dict(index_meta_dict) for index_meta_dict in table_dict.get('indexes', [])],
             cluster_index_size=table_dict['CLUSTERED_INDEX_SIZE'],
             other_index_sizes=table_dict['SUM_OF_OTHER_INDEX_SIZES'],
         )
