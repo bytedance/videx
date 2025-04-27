@@ -1,0 +1,216 @@
+{
+  "query_block": {
+    "select_id": 1,
+    "cost_info": {
+      "query_cost": "5859.31"
+    },
+    "ordering_operation": {
+      "using_filesort": true,
+      "grouping_operation": {
+        "using_temporary_table": true,
+        "using_filesort": false,
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "orders",
+              "access_type": "ALL",
+              "possible_keys": [
+                "PRIMARY"
+              ],
+              "rows_examined_per_scan": 15066,
+              "rows_produced_per_join": 1506,
+              "filtered": "10.00",
+              "cost_info": {
+                "read_cost": "2872.88",
+                "eval_cost": "301.32",
+                "prefix_cost": "3174.20",
+                "data_read_per_join": "694K"
+              },
+              "used_columns": [
+                "O_ORDERKEY",
+                "O_ORDERSTATUS"
+              ],
+              "attached_condition": "(`tpch_tiny_57`.`orders`.`O_ORDERSTATUS` = 'F')"
+            }
+          },
+          {
+            "table": {
+              "table_name": "l1",
+              "access_type": "ref",
+              "possible_keys": [
+                "LINEITEM_UK1",
+                "LINEITEM_FK1"
+              ],
+              "key": "LINEITEM_FK1",
+              "used_key_parts": [
+                "L_ORDERKEY"
+              ],
+              "key_length": "4",
+              "ref": [
+                "tpch_tiny_57.orders.O_ORDERKEY"
+              ],
+              "rows_examined_per_scan": 1,
+              "rows_produced_per_join": 505,
+              "filtered": "33.33",
+              "cost_info": {
+                "read_cost": "1516.78",
+                "eval_cost": "101.11",
+                "prefix_cost": "4994.34",
+                "data_read_per_join": "189K"
+              },
+              "used_columns": [
+                "L_ORDERKEY",
+                "L_SUPPKEY",
+                "L_COMMITDATE",
+                "L_RECEIPTDATE",
+                "L_ID"
+              ],
+              "attached_condition": "((`tpch_tiny_57`.`l1`.`L_RECEIPTDATE` > `tpch_tiny_57`.`l1`.`L_COMMITDATE`) and exists(/* select#2 */ select 1 from `tpch_tiny_57`.`lineitem` `l2` where ((`tpch_tiny_57`.`l2`.`L_ORDERKEY` = `tpch_tiny_57`.`l1`.`L_ORDERKEY`) and (`tpch_tiny_57`.`l2`.`L_SUPPKEY` <> `tpch_tiny_57`.`l1`.`L_SUPPKEY`))) and (not(exists(/* select#3 */ select 1 from `tpch_tiny_57`.`lineitem` `l3` where ((`tpch_tiny_57`.`l3`.`L_ORDERKEY` = `tpch_tiny_57`.`l1`.`L_ORDERKEY`) and (`tpch_tiny_57`.`l3`.`L_SUPPKEY` <> `tpch_tiny_57`.`l1`.`L_SUPPKEY`) and (`tpch_tiny_57`.`l3`.`L_RECEIPTDATE` > `tpch_tiny_57`.`l3`.`L_COMMITDATE`))))))",
+              "attached_subqueries": [
+                {
+                  "dependent": true,
+                  "cacheable": false,
+                  "query_block": {
+                    "select_id": 3,
+                    "cost_info": {
+                      "query_cost": "1.21"
+                    },
+                    "table": {
+                      "table_name": "l3",
+                      "access_type": "ref",
+                      "possible_keys": [
+                        "LINEITEM_UK1",
+                        "LINEITEM_FK1"
+                      ],
+                      "key": "LINEITEM_FK1",
+                      "used_key_parts": [
+                        "L_ORDERKEY"
+                      ],
+                      "key_length": "4",
+                      "ref": [
+                        "tpch_tiny_57.l1.L_ORDERKEY"
+                      ],
+                      "rows_examined_per_scan": 1,
+                      "rows_produced_per_join": 0,
+                      "filtered": "30.00",
+                      "cost_info": {
+                        "read_cost": "1.01",
+                        "eval_cost": "0.06",
+                        "prefix_cost": "1.21",
+                        "data_read_per_join": "115"
+                      },
+                      "used_columns": [
+                        "L_ORDERKEY",
+                        "L_SUPPKEY",
+                        "L_COMMITDATE",
+                        "L_RECEIPTDATE"
+                      ],
+                      "attached_condition": "((`tpch_tiny_57`.`l3`.`L_SUPPKEY` <> `tpch_tiny_57`.`l1`.`L_SUPPKEY`) and (`tpch_tiny_57`.`l3`.`L_RECEIPTDATE` > `tpch_tiny_57`.`l3`.`L_COMMITDATE`))"
+                    }
+                  }
+                },
+                {
+                  "dependent": true,
+                  "cacheable": false,
+                  "query_block": {
+                    "select_id": 2,
+                    "cost_info": {
+                      "query_cost": "1.21"
+                    },
+                    "table": {
+                      "table_name": "l2",
+                      "access_type": "ref",
+                      "possible_keys": [
+                        "LINEITEM_UK1",
+                        "LINEITEM_FK1"
+                      ],
+                      "key": "LINEITEM_FK1",
+                      "used_key_parts": [
+                        "L_ORDERKEY"
+                      ],
+                      "key_length": "4",
+                      "ref": [
+                        "tpch_tiny_57.l1.L_ORDERKEY"
+                      ],
+                      "rows_examined_per_scan": 1,
+                      "rows_produced_per_join": 0,
+                      "filtered": "90.00",
+                      "cost_info": {
+                        "read_cost": "1.01",
+                        "eval_cost": "0.18",
+                        "prefix_cost": "1.21",
+                        "data_read_per_join": "347"
+                      },
+                      "used_columns": [
+                        "L_ORDERKEY",
+                        "L_SUPPKEY"
+                      ],
+                      "attached_condition": "(`tpch_tiny_57`.`l2`.`L_SUPPKEY` <> `tpch_tiny_57`.`l1`.`L_SUPPKEY`)"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "table": {
+              "table_name": "supplier",
+              "access_type": "eq_ref",
+              "possible_keys": [
+                "PRIMARY",
+                "SUPPLIER_FK1",
+                "idx_S_NATIONKEY_S_SUPPKEY_S_NAME"
+              ],
+              "key": "PRIMARY",
+              "used_key_parts": [
+                "S_SUPPKEY"
+              ],
+              "key_length": "4",
+              "ref": [
+                "tpch_tiny_57.l1.L_SUPPKEY"
+              ],
+              "rows_examined_per_scan": 1,
+              "rows_produced_per_join": 505,
+              "filtered": "100.00",
+              "cost_info": {
+                "read_cost": "505.54",
+                "eval_cost": "101.11",
+                "prefix_cost": "5600.99",
+                "data_read_per_join": "367K"
+              },
+              "used_columns": [
+                "S_SUPPKEY",
+                "S_NAME",
+                "S_NATIONKEY"
+              ]
+            }
+          },
+          {
+            "table": {
+              "table_name": "nation",
+              "access_type": "ALL",
+              "possible_keys": [
+                "PRIMARY"
+              ],
+              "rows_examined_per_scan": 25,
+              "rows_produced_per_join": 505,
+              "filtered": "4.00",
+              "using_join_buffer": "Block Nested Loop",
+              "cost_info": {
+                "read_cost": "5.54",
+                "eval_cost": "101.11",
+                "prefix_cost": "5859.31",
+                "data_read_per_join": "355K"
+              },
+              "used_columns": [
+                "N_NATIONKEY",
+                "N_NAME"
+              ],
+              "attached_condition": "((`tpch_tiny_57`.`nation`.`N_NATIONKEY` = `tpch_tiny_57`.`supplier`.`S_NATIONKEY`) and (`tpch_tiny_57`.`nation`.`N_NAME` = 'IRAQ'))"
+            }
+          }
+        ]
+      }
+    }
+  }
+}
