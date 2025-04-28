@@ -171,10 +171,13 @@ class ha_videx : public handler {
   /** Initialize multi range read and get information.
   @see ha_myisam::multi_range_read_info_const
   @see DsMrr_impl::dsmrr_info_const */
-  ha_rows multi_range_read_info_const(uint keyno, RANGE_SEQ_IF *seq,
-                                      void *seq_init_param, uint n_ranges,
-                                      uint *bufsz, uint *flags,
-                                      Cost_estimate *cost) override;
+//  ha_rows multi_range_read_info_const(uint keyno, RANGE_SEQ_IF *seq,
+//                                      void *seq_init_param, uint n_ranges,
+//                                      uint *bufsz, uint *flags,
+//                                      Cost_estimate *cost) override;
+  virtual ha_rows multi_range_read_info_const(
+      uint keyno, RANGE_SEQ_IF *seq, void *seq_init_param, uint n_ranges,
+      uint *bufsz, uint *flags, bool *force_default_mrr, Cost_estimate *cost) override;
 
   /** Initialize multi range read and get information.
   @see DsMrr_impl::dsmrr_info */
@@ -345,9 +348,9 @@ uint max_supported_key_part_length(
   */
   int index_last(uchar *buf) override;
 
-  bool has_gap_locks() const noexcept override {
-    videx_log_ins.markPassbyUnexpected(FUNC_FILE_LINE);
-    return true; }
+//  bool has_gap_locks() const noexcept override {
+//    videx_log_ins.markPassbyUnexpected(FUNC_FILE_LINE);
+//    return true; }
 
   /** @brief
     Unlike index_init(), rnd_init() can be called two consecutive times
