@@ -13,14 +13,14 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import List, Dict, Union, Tuple, Set
+from typing import List, Dict, Union, Tuple, Set, Optional
 
 import msgpack
 import numpy as np
 import pandas as pd
 
 from sub_platforms.sql_opt.env.rds_env import Env, OpenMySQLEnv
-from sub_platforms.sql_opt.meta import TableId
+from sub_platforms.sql_opt.meta import TableId, Index, IndexColumn
 
 # VIDEX obtains four statistical information through fetch_all_meta_for_videx.
 # All four functions will directly access the original database.
@@ -241,6 +241,12 @@ class RangeCond:
             return "None"
         return res[0]
 
+    def to_print_full(self) -> str:
+        res = (f"{self.__repr__()}; "
+               f"min_side: {self.min_key_pos_side.value if self.min_key_pos_side else 'None'}, "
+               f"max_side: {self.max_key_pos_side.value if self.max_key_pos_side else 'None'}")
+        return res
+
     @staticmethod
     def construct_eq(col: str, data_type: str, value: str) -> 'RangeCond':
         return RangeCond(col=col, data_type=data_type,
@@ -267,13 +273,18 @@ class IndexRangeCond:
     def __repr__(self):
         return f"{self.index_name}: {self.ranges_to_str()}"
 
+    def to_print_full(self) -> str:
+        return f"{self.index_name}: " + " AND ".join(map(lambda k: k.to_print_full(), self.ranges))
+
     def __eq__(self, other):
         if not isinstance(other, IndexRangeCond):
             return False
         return self.index_name == other.index_name and self.ranges == other.ranges
 
     @staticmethod
-    def from_dict(min_key: dict, max_key: dict, get_data_type: callable = None) -> 'IndexRangeCond':
+    def from_dict(min_key: dict, max_key: dict, get_data_type: callable = None,
+                  index_meta: Index = None,
+                  ) -> 'IndexRangeCond':
         """
         Examples:
 
@@ -302,6 +313,7 @@ class IndexRangeCond:
 
         Returns: List[RangeCond]
         """
+        # TODO consider desc index when generating IndexRangeCond
         if get_data_type is None:
             get_data_type = lambda x: "Unknown"
         if 'index_name' in min_key['properties']:
@@ -320,6 +332,12 @@ class IndexRangeCond:
             return res
 
         for c in range(n_col):
+            is_desc_idx_col = False
+            if index_meta and len(index_meta.columns) > c:
+                index_col_meta = index_meta.columns[c]
+                if index_col_meta.is_desc:
+                    is_desc_idx_col = True
+
             # col = min_key['data'][c]["properties"]['column']
             # value = min_key['data'][c]["properties"]['value']
             # res.ranges.append(RangeCond.construct_eq(col, get_data_type(col), value))
@@ -346,19 +364,33 @@ class IndexRangeCond:
                 # add min bound
                 if has_min:
                     if min_op == "=":
-                        # >= min_value
-                        last_range.add_min(">=", min_value, BTreeKeySide.left)
+                        if not is_desc_idx_col:
+                            # >= min_value.
+                            last_range.add_min(">=", min_value, BTreeKeySide.left)
+                        else:
+                            # c >= v -> c <= v
+                            last_range.add_max("<=", min_value, BTreeKeySide.right)
                     elif min_op == ">":
-                        last_range.add_min(">", min_value, BTreeKeySide.right)
+                        if not is_desc_idx_col:
+                            last_range.add_min(">", min_value, BTreeKeySide.right)
+                        else:
+                            # c > v -> c < v
+                            last_range.add_max("<", min_value, BTreeKeySide.left)
                     else:
                         pass
                 # add max bound
                 if has_max:
                     if max_op == ">":
-                        # <= max_value
-                        last_range.add_max("<=", max_value, BTreeKeySide.right)
+                        if not is_desc_idx_col:
+                            # <= max_value
+                            last_range.add_max("<=", max_value, BTreeKeySide.right)
+                        else:
+                            last_range.add_min(">=", max_value, BTreeKeySide.left)
                     elif max_op == "<":
-                        last_range.add_max("<", max_value, BTreeKeySide.left)
+                        if not is_desc_idx_col:
+                            last_range.add_max("<", max_value, BTreeKeySide.left)
+                        else:
+                            last_range.add_min(">", max_value, BTreeKeySide.right)
                     else:
                         pass
                 res.ranges.append(last_range)
@@ -902,6 +934,26 @@ def get_func_with_parent(func):
     return f"{module}.{func.__name__}"
 
 
+def is_datetime_like(series):
+    """
+    check whether series is a datetime like
+    including：pandas/numpy datetime64、pandas Period、Python datetime/date
+    Note: for data like pd.Series([date(2023, 1, 1), date(2023, 1, 2)]), its dtype is object,
+    so we need to check the first non-empty value to determine whether it is a datetime like.
+    """
+    if pd.api.types.is_datetime64_any_dtype(series) or pd.api.types.is_period_dtype(series):
+        return True
+
+    if series.dtype == 'object' and len(series) > 0:
+        # get the first non-empty value
+        sample = next((x for x in series if x is not None and pd.notna(x)), None)
+        if sample is not None:
+            from datetime import datetime, date
+            return isinstance(sample, (datetime, date))
+
+    return False
+
+
 def safe_tolist(series: pd.Series) -> list:
     """
     Safely convert a pandas Series to a Python list, with optimized performance.
@@ -921,7 +973,7 @@ def safe_tolist(series: pd.Series) -> list:
         [datetime.datetime(2000, 1, 1, 0, 0), 1, 'string']
     """
     # Fast path for safe types
-    if not np.issubdtype(series.dtype, np.datetime64):
+    if not is_datetime_like(series):
         return series.values.tolist()
 
     # Safe conversion for datetime64
@@ -931,11 +983,6 @@ def safe_tolist(series: pd.Series) -> list:
         return val
 
     return [safe_convert(x) for x in series.values]
-
-
-if __name__ == '__main__':
-    pass
-
 
 def get_column_data_type(column_type: str):
     """
@@ -960,3 +1007,7 @@ def get_column_data_type(column_type: str):
     elif column_type == 'json':
         data_type = 'json'
     return data_type
+
+
+if __name__ == '__main__':
+    pass

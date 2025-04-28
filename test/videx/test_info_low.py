@@ -63,13 +63,11 @@ class Test_info_low(unittest.TestCase):
                 "data_file_length": 936378368,
                 'index_file_length': 1146257408,
                 "data_free_length": 2097152,
-                # 注意，pct_cached 是否使用 gt、默认值取 0 或者 1 ，是根据策略而定的。当策略更新后，直接把 expect 改掉即可
-                # 修改后
+                # note, you can specify pct_cached to use gt, 0, or 1 as default
                 'pct_cached #@# LINEITEM_FK1': 1,
                 'pct_cached #@# LINEITEM_FK2': 1,
                 'pct_cached #@# LINEITEM_UK1': 1,
                 'pct_cached #@# PRIMARY': 1,
-                # 修改前
                 # 'pct_cached #@# LINEITEM_FK1': 0.0,
                 # 'pct_cached #@# LINEITEM_FK2': 1.0,
                 # 'pct_cached #@# LINEITEM_UK1': 1.0,

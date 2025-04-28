@@ -2,23 +2,16 @@
 Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
-
-import enum
-import json
-from dataclasses import dataclass, field
 from enum import Enum
-from typing import List, Optional
+from pydantic import BaseModel, Field
+from typing import List, Optional, Any, Union
 
-from dataclasses_json import config
-from dataclasses_json import dataclass_json
-from datetime import datetime
+from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 
 
-@dataclass_json
-@dataclass
-class TableId:
-    db_name: str
-    table_name: str
+class TableId(BaseModel, PydanticDataClassJsonMixin):
+    db_name: Optional[str]
+    table_name: Optional[str]
 
     def __hash__(self):
         return f'{self.db_name}.{self.table_name}'.__hash__()
@@ -37,14 +30,12 @@ class TableId:
             return False
 
 
-@dataclass_json
-@dataclass
-class Column:
-    name: str = None
+class Column(BaseModel, PydanticDataClassJsonMixin):
+    name: Optional[str] = None  # it may be None when column is an expression
     table: str = None
     db: Optional[str] = None
     ordinal_position: int = None
-    is_nullable: Optional[str] = None
+    is_nullable: Optional[Union[str, bool]] = None
     data_type: Optional[str] = None
     character_maximum_length: Optional[int] = None
     character_octet_length: Optional[int] = None
@@ -68,7 +59,7 @@ class Column:
 
     def __eq__(self, other):
         """
-        判断Column是否相等，以db、table、name均相等作为判断依据
+        Two Columns are equal if they have the same db, table and name.
         """
         return self.db == other.db and self.table == other.table and self.name == other.name
 
@@ -84,9 +75,7 @@ class Column:
         return f"{self.db}.{self.table}.{self.name}"
 
 
-@dataclass_json
-@dataclass
-class OrderColumn(Column):
+class OrderColumn(Column, BaseModel, PydanticDataClassJsonMixin):
     asc: bool = True
 
     @classmethod
@@ -105,30 +94,32 @@ class IndexType(Enum):
     FOREIGN_KEY = 'FOREIGN_KEY'
 
 
-@dataclass_json
-@dataclass
-class IndexColumn:
+class IndexColumn(BaseModel, PydanticDataClassJsonMixin):
     """
-        索引中的column，和Column区分开，是因为：
-        1. 从索引中不方便补全更多列的信息，后面需要再关联
-        2. cardinality是索引中组合前缀的值，在不同索引中会不同
+        It's the column class in index. We distinct it from Column class because:
+        1. The information obtained from Index Column is limited, we will complement more information later.
+        2. Cardinality is the value of prefix in index, it's different in different index.
     """
-    name: str = None
+    name: Optional[str] = None  # 可能是表达式，所以可以为空
     cardinality: Optional[int] = None
     sub_part: Optional[int] = 0
     expression: Optional[str] = None
     collation: Optional[str] = 'asc'
-    column_ref: Optional[Column] = field(default=None, metadata=config(exclude=lambda x: True))
-    table_id: Optional[TableId] = field(default=None)
+    column_ref: Optional[Column] = Field(default=None, exclude=True)
+    table_id: Optional[TableId] = Field(default=None)
+
+    @property
+    def is_desc(self):
+        return self.collation == 'desc'
 
     @classmethod
     def from_column(cls, column: Column, collation: str = 'asc', sub_part: int = 0, expression: str = None):
         if column is None:
             return None
-        index_column = IndexColumn(column.name)
+        index_column = IndexColumn(name=column.name)
         index_column.column_ref = column
         index_column.table_id = TableId(db_name=column.db, table_name=column.table)
-        # TODO temp fix, 临时把大字段设置为255
+        # TODO a temp fix, set the large column to 255
         if sub_part == 0 and column.data_type.upper() in ['TEXT', 'LONGTEXT']:
             index_column.sub_part = 255
         else:
@@ -160,30 +151,26 @@ class IndexColumn:
 
     def __eq__(self, other):
         """
-        判断Column是否相等，以db、table、name均相等作为判断依据
+        Two columns are equal only if they are equal in name, table, db, sub_part, collation, and expression.
         """
         return self.db_name == other.db_name and self.table_name == other.table_name \
-               and self.name == other.name and self.expression == other.expression \
-               and self.sub_part == other.sub_part and self.collation == other.collation
+            and self.name == other.name and self.expression == other.expression \
+            and self.sub_part == other.sub_part and self.collation == other.collation
 
 
-@dataclass_json
-@dataclass
-class IndexBasicInfo:
-    db_name: Optional[str] = field(default=None)
-    table_name: Optional[str] = field(default=None)
-    columns: Optional[List[IndexColumn]] = field(default_factory=list)
+class IndexBasicInfo(BaseModel, PydanticDataClassJsonMixin):
+    db_name: Optional[str] = Field(default=None)
+    table_name: Optional[str] = Field(default=None)
+    columns: Optional[List[IndexColumn]] = Field(default_factory=list)
 
     def get_column_names(self):
         return [column.name for column in self.columns]
 
 
-@dataclass_json
-@dataclass
-class Index(IndexBasicInfo):
-    type: Optional[IndexType] = field(default=None)
-    name: Optional[str] = field(default=None)
-    is_unique: Optional[bool] = field(default=False)
+class Index(IndexBasicInfo, BaseModel, PydanticDataClassJsonMixin):
+    type: Optional[IndexType] = Field(default=None)
+    name: Optional[str] = Field(default=None)
+    is_unique: Optional[bool] = Field(default=False)
     is_visible: Optional[bool] = True
     index_type: Optional[str] = None
 
@@ -196,17 +183,7 @@ class Index(IndexBasicInfo):
         return self.table_name
 
 
-
-
-    # def to_json(self) -> str:
-    #     data_dict = self.__dict__.copy()
-    #     data_dict['columns'] = [column.to_json for column in self.columns]
-    #     return json.dumps(data_dict)
-
-
-@dataclass_json
-@dataclass
-class Table:
+class Table(BaseModel, PydanticDataClassJsonMixin):
     name: str = None
     db: str = None
     engine: Optional[str] = None
@@ -229,12 +206,12 @@ class Table:
     table_size: Optional[int] = None
     table_type: Optional[str] = None
     create_options: Optional[str] = None
-    columns: Optional[List[Column]] = field(default_factory=list)
-    indexes: Optional[List[Index]] = field(default_factory=list)
+    columns: Optional[List[Column]] = Field(default_factory=list)
+    indexes: Optional[List[Index]] = Field(default_factory=list)
     cluster_index_size: Optional[int] = None
     other_index_sizes: Optional[int] = None
 
-    def __post_init__(self):
+    def model_post_init(self, __context: Any) -> None:
         # fill index meta info (db_name, table_name)
         if self.indexes is None:
             return
@@ -246,10 +223,10 @@ class Table:
 
     @property
     def table_id(self):
-        return TableId(self.db, self.name)
+        return TableId(db_name=self.db, table_name=self.name)
 
     def support_optimize(self):
-        """返回当前 Table 是否支持进行优化及其原因"""
+        """return whether the table can be optimized and the reason"""
         if str(self.engine).lower() != "innodb":
             return False, f"table engine is {self.engine}"
 
@@ -288,10 +265,14 @@ class OpTypeName(Enum):
     def build_from_name(cls, name: str):
         return cls.__members__.get(name)
 
+    @classmethod
+    def build_from_values(cls, values: List[str]):
+        for member in cls:
+            if values[0][0] in member.value[0]:
+                return member
 
-@dataclass_json
-@dataclass
-class JoinItem:
+
+class JoinItem(BaseModel, PydanticDataClassJsonMixin):
     operation: str = None
     op_type: OpTypeName = None
     left: Column = None
@@ -301,11 +282,10 @@ class JoinItem:
         return f"{self.left} {self.operation} {self.right}"
 
 
-# json multi array 是一种更为复杂的函数索引，未来可以自然地拓展到支持函数索引
-@dataclass_json
-@dataclass
-class JsonMultiValueItem:
-    # 例如 custinfo->'$.zipcode'
+# json multi array is a special and more complex function index,
+# we will extend it to support general function index in the future
+class JsonMultiValueItem(BaseModel, PydanticDataClassJsonMixin):
+    # e.g. custinfo->'$.zipcode'
     column_func_str: str = None
     # (empty), SIGNED, UNSIGNED, CHAR(N)
     array_type: str = None
@@ -314,17 +294,17 @@ class JsonMultiValueItem:
     @property
     def index_expression(self) -> str:
         """
-        创建索引时，应该填入什么字段。
-        ALTER TABLE customers ADD INDEX idx_age_zips(age, (CAST(custinfo->'$.zipcode' AS UNSIGNED ARRAY)) );
-        如上，则填入 (CAST(custinfo->'$.zipcode' AS UNSIGNED ARRAY))
+        The field string to be filled into CREATE INDEX ddls.
+        e.g. ALTER TABLE customers ADD INDEX idx_age_zips(age, (CAST(custinfo->'$.zipcode' AS UNSIGNED ARRAY)) );
+        In the above example, the field string should be (CAST(custinfo->'$.zipcode' AS UNSIGNED ARRAY))
         """
         return f"(CAST({self.column_func_str} AS {self.array_type} ARRAY))"
 
 
 def get_table_uk(table_meta: Table) -> List[List[str]]:
     """
-    传入table meta，返回该表所有的UK
-    例如：
+    return all unique keys of the given table
+    e.g.：
     [
         ['a', 'b'],
         ['c']
@@ -342,7 +322,7 @@ def get_table_uk(table_meta: Table) -> List[List[str]]:
 
 def mysql_to_pandas_type(mysql_type: str):
     """
-    将 MySQL datatype 转化为 pandas type
+    convert MySQL datatype to pandas type
     """
     mysql_type = mysql_type.lower()
     if 'bigint' in mysql_type and 'unsigned' in mysql_type:
@@ -360,6 +340,6 @@ def mysql_to_pandas_type(mysql_type: str):
     elif 'float' in mysql_type:
         return 'float32'
     elif 'date' in mysql_type or 'datetime' in mysql_type:
-        return 'datetime64[ns]'  # 指定具体的时间精度为纳秒
+        return 'datetime64[ns]'  # specify the time precision to nanoseconds
     else:
         return 'object'  # Default type if not matched

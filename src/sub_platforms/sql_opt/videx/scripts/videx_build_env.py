@@ -22,6 +22,11 @@ from sub_platforms.sql_opt.videx.videx_utils import VIDEX_IP_WHITE_LIST
 def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port):
     base_msg = f"Build env finished. Your VIDEX server is {videx_server_ip_port}."
 
+    mysql57_msg = ("-- Note, if your MySQL version is 5.x, please setup/clear the environment "
+                   "before and after your connecting as follows:\n"
+                   f"mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} < setup_mysql57_env.sql\n"
+                   f"mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} < clear_mysql57_env.sql\n")
+
     if args.task_id:
         videx_options = json.dumps({"task_id": args.task_id})
         return (f"{base_msg}\n"
@@ -31,7 +36,8 @@ def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pw
                 f"USE {videx_db};\n"
                 f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
                 f"SET @VIDEX_OPTIONS='{videx_options}';\n"
-                f"-- EXPLAIN YOUR_SQL;")
+                f"-- EXPLAIN YOUR_SQL;\n"
+                f"{mysql57_msg}")
     else:
         return (f"{base_msg}\n"
                 f"You are running in non-task mode.\n"
@@ -40,7 +46,8 @@ def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pw
                 f"-- Connect VIDEX-MySQL: mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} -D{videx_db}\n"
                 f"USE {videx_db};\n"
                 f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
-                f"-- EXPLAIN YOUR_SQL;")
+                f"-- EXPLAIN YOUR_SQL;\n"
+                f"{mysql57_msg}")
 
 
 def parse_connection_info(info):

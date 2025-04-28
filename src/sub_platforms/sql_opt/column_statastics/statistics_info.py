@@ -2,48 +2,58 @@
 Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
-from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional
+from pydantic import BaseModel, Field, PrivateAttr, PlainSerializer, BeforeValidator
+from typing_extensions import Annotated
 
-from dataclasses_json import DataClassJsonMixin
-
+from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 from sub_platforms.sql_opt.videx.videx_histogram import HistogramStats
 
 
-@dataclass
-class TableStatisticsInfo(DataClassJsonMixin):
+def large_number_decoder(y):
+    if isinstance(y, list):
+        for item in y:
+            if isinstance(item, dict) and "Value" in item:
+                item['Value'] = str(item['Value'])
+        return y
+    else:
+        res = [{"ColumnName": "id", "Value": str(y)}]
+        return res
+
+
+class TableStatisticsInfo(BaseModel, PydanticDataClassJsonMixin):
     db_name: str
     table_name: str
     # {col_name: col ndv}
-    ndv_dict: Optional[Dict[str, float]] = field(default_factory=dict)
+    ndv_dict: Optional[Dict[str, float]] = Field(default_factory=dict)
     # {col_name: histogram}
-    histogram_dict: Optional[Dict[str, HistogramStats]] = field(default_factory=dict)
+    histogram_dict: Optional[Dict[str, HistogramStats]] = Field(default_factory=dict)
     # {col_name: not null ratio}
-    not_null_ratio_dict:  Optional[Dict[str, float]] = field(default_factory=dict)
+    not_null_ratio_dict:  Optional[Dict[str, float]] = Field(default_factory=dict)
 
-    # 表总行数
-    num_of_rows: Optional[int] = field(default=0)
-    max_pk: Optional[Any] = field(default=None)
-    min_pk: Optional[Any] = field(default=None)
+    # table rows
+    num_of_rows: Optional[int] = Field(default=0)
+    max_pk: Annotated[Optional[List[Dict[str, str]]], BeforeValidator(large_number_decoder)] = Field(default=None)
+    min_pk: Annotated[Optional[List[Dict[str, str]]], BeforeValidator(large_number_decoder)] = Field(default=None)
 
     # sample related info
-    is_sample_success: Optional[bool] = field(default=True)
-    is_sample_supported: Optional[bool] = field(default=True)
-    unsupported_reason: Optional[str] = field(default=None)
-    sample_rows: Optional[int] = field(default=0)
-    local_path_prefix: Optional[str] = field(default=None)
-    tos_path_prefix: Optional[str] = field(default=None)
-    sample_file_list: Optional[List[str]] = field(default_factory=list)
-    block_size_list: Optional[List[int]] = field(default_factory=list)
-    shard_no: Optional[int] = field(default=0)
+    is_sample_success: Optional[bool] = Field(default=True)
+    is_sample_supported: Optional[bool] = Field(default=True)
+    unsupported_reason: Optional[str] = Field(default=None)
+    sample_rows: Optional[int] = Field(default=0)
+    local_path_prefix: Optional[str] = Field(default=None)
+    tos_path_prefix: Optional[str] = Field(default=None)
+    sample_file_list: Optional[List[str]] = Field(default_factory=list)
+    block_size_list: Optional[List[int]] = Field(default_factory=list)
+    shard_no: Optional[int] = Field(default=0)
     # {col_name: sample error}
-    sample_error_dict: Optional[Dict[str, str]] = field(default_factory=dict)
+    sample_error_dict: Optional[Dict[str, str]] = Field(default_factory=dict)
     # {col_name: histogram error}
-    histogram_error_dict: Optional[Dict[str, float]] = field(default_factory=dict)
+    histogram_error_dict: Optional[Dict[str, float]] = Field(default_factory=dict)
     msg: Optional[str] = None
-    extra_info: Optional[Dict[str, Any]] = field(default_factory=dict)
+    extra_info: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
-    _version: Optional[str] = field(default='1.0.0')
+    _version: Optional[str] = PrivateAttr(default='1.0.0')
 
 
 def trans_dict_to_statistics(numerical_info: Dict[str, Any]) -> TableStatisticsInfo:

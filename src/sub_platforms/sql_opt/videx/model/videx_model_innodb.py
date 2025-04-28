@@ -49,7 +49,7 @@ class VidexModelInnoDB(VidexModelBase):
         self.loading_ndv_model()
 
     def loading_ndv_model(self):
-        if self.table_stats.sample_file_info is not None:
+        if self.table_stats and self.table_stats.sample_file_info is not None:
             logging.info(f"loading ndv model: NDVEstimator, table_name={self.table_name}")
             st = time.perf_counter()
             table_rows = self.table_stats.records

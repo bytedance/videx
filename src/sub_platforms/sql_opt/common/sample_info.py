@@ -30,7 +30,7 @@ class SampleColumnInfo:
 
     @classmethod
     def from_column(cls, column: Column, sample_length: int = 0):
-        table_id = TableId(column.db, column.table)
+        table_id = TableId(db_name=column.db, table_name=column.table)
         column_info = SampleColumnInfo(table_id, column.name)
         column_info.data_type = column.data_type
         column_info.sample_length = sample_length
@@ -38,7 +38,7 @@ class SampleColumnInfo:
 
     @classmethod
     def new_ins(cls, db_name, table_name, column_name: str, sample_length: int = 0, data_type: str = None):
-        table_id = TableId(db_name, table_name)
+        table_id = TableId(db_name=db_name, table_name=table_name)
         column_info = SampleColumnInfo(table_id, column_name)
         column_info.data_type = data_type
         column_info.sample_length = sample_length

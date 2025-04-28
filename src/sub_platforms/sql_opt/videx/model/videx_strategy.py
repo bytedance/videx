@@ -6,8 +6,9 @@ SPDX-License-Identifier: MIT
 import enum
 import logging
 from abc import abstractmethod, ABC
-from typing import List, Dict
+from typing import List, Dict, Optional
 
+from sub_platforms.sql_opt.meta import Index
 from sub_platforms.sql_opt.videx.videx_metadata import VidexTableStats
 from sub_platforms.sql_opt.videx.videx_utils import str_lower_eq, IndexRangeCond
 
@@ -93,6 +94,11 @@ class VidexModelBase(ABC):
         """
         raise NotImplementedError()
 
+    def get_index_schema(self, index_name: str) -> Optional[Index]:
+        if self.table_stats.table_meta and self.table_stats.table_meta.indexes:
+            return next((idx for idx in self.table_stats.table_meta.indexes if idx.name == index_name), None)
+        return None
+
     def records_in_range(self, req_json_item: dict) -> int:
         """
         virtual ull records_in_range();
@@ -105,8 +111,12 @@ class VidexModelBase(ABC):
         max_key = req_json_item['data'][1]
         assert min_key['item_type'] == 'min_key'
         assert max_key['item_type'] == 'max_key'
+        index_name = min_key['properties'].get('index_name', max_key['properties'].get('index_name'))
+        assert index_name is not None, f"both min and max key has no index_name, {req_json_item=}"
 
-        idx_range_cond = IndexRangeCond.from_dict(min_key, max_key)
+        idx_range_cond = IndexRangeCond.from_dict(min_key, max_key,
+                                                  index_meta=self.get_index_schema(index_name),
+                                                  )
 
         """
         有 key 的格式如下：

@@ -1,0 +1,896 @@
+{
+    "stats_dict": {
+        "simple_message": {
+            "TABLE_CATALOG": "def",
+            "TABLE_SCHEMA": "desc_index",
+            "TABLE_NAME": "simple_message",
+            "TABLE_TYPE": "BASE TABLE",
+            "ENGINE": "InnoDB",
+            "VERSION": 10,
+            "ROW_FORMAT": "Dynamic",
+            "TABLE_ROWS": 20,
+            "AVG_ROW_LENGTH": 819,
+            "DATA_LENGTH": 16384,
+            "MAX_DATA_LENGTH": 0,
+            "INDEX_LENGTH": 81920,
+            "DATA_FREE": 0,
+            "AUTO_INCREMENT": 21,
+            "CREATE_TIME": 1744051488,
+            "UPDATE_TIME": 1744051498,
+            "CHECK_TIME": null,
+            "TABLE_COLLATION": "utf8mb4_general_ci",
+            "CHECKSUM": null,
+            "CREATE_OPTIONS": "",
+            "TABLE_COMMENT": "\u7b80\u5316\u7248\u6d88\u606f\u8868",
+            "innodb_page_size": 16384,
+            "myisam_max_sort_file_size": 9223372036853727232,
+            "innodb_buffer_pool_size": 8589934592,
+            "columns": [
+                {
+                    "name": "id",
+                    "table": "simple_message",
+                    "db": "desc_index",
+                    "ordinal_position": 1,
+                    "is_nullable": "NO",
+                    "data_type": "bigint",
+                    "character_maximum_length": null,
+                    "character_octet_length": null,
+                    "numeric_precision": 20,
+                    "numeric_scale": 0,
+                    "datetime_precision": null,
+                    "character_set_name": null,
+                    "collation_name": null,
+                    "column_type": "bigint unsigned",
+                    "column_key": "PRI",
+                    "default": null,
+                    "unsigned": null,
+                    "is_pk": null,
+                    "is_sharding_key": null,
+                    "auto_increment": true,
+                    "invisible": false,
+                    "alias": null,
+                    "enum_candidates": null
+                },
+                {
+                    "name": "msg_code",
+                    "table": "simple_message",
+                    "db": "desc_index",
+                    "ordinal_position": 2,
+                    "is_nullable": "NO",
+                    "data_type": "varchar",
+                    "character_maximum_length": 20,
+                    "character_octet_length": 80,
+                    "numeric_precision": null,
+                    "numeric_scale": null,
+                    "datetime_precision": null,
+                    "character_set_name": "utf8mb4",
+                    "collation_name": "utf8mb4_general_ci",
+                    "column_type": "varchar(20)",
+                    "column_key": "MUL",
+                    "default": null,
+                    "unsigned": null,
+                    "is_pk": null,
+                    "is_sharding_key": null,
+                    "auto_increment": false,
+                    "invisible": false,
+                    "alias": null,
+                    "enum_candidates": null
+                },
+                {
+                    "name": "msg_seq",
+                    "table": "simple_message",
+                    "db": "desc_index",
+                    "ordinal_position": 3,
+                    "is_nullable": "NO",
+                    "data_type": "int",
+                    "character_maximum_length": null,
+                    "character_octet_length": null,
+                    "numeric_precision": 10,
+                    "numeric_scale": 0,
+                    "datetime_precision": null,
+                    "character_set_name": null,
+                    "collation_name": null,
+                    "column_type": "int",
+                    "column_key": "MUL",
+                    "default": null,
+                    "unsigned": null,
+                    "is_pk": null,
+                    "is_sharding_key": null,
+                    "auto_increment": false,
+                    "invisible": false,
+                    "alias": null,
+                    "enum_candidates": null
+                },
+                {
+                    "name": "seq_nullable",
+                    "table": "simple_message",
+                    "db": "desc_index",
+                    "ordinal_position": 4,
+                    "is_nullable": "YES",
+                    "data_type": "int",
+                    "character_maximum_length": null,
+                    "character_octet_length": null,
+                    "numeric_precision": 10,
+                    "numeric_scale": 0,
+                    "datetime_precision": null,
+                    "character_set_name": null,
+                    "collation_name": null,
+                    "column_type": "int",
+                    "column_key": "MUL",
+                    "default": null,
+                    "unsigned": null,
+                    "is_pk": null,
+                    "is_sharding_key": null,
+                    "auto_increment": false,
+                    "invisible": false,
+                    "alias": null,
+                    "enum_candidates": null
+                }
+            ],
+            "indexes": [
+                {
+                    "db_name": "desc_index",
+                    "table_name": "simple_message",
+                    "columns": [
+                        {
+                            "name": "id",
+                            "cardinality": 20,
+                            "sub_part": 0,
+                            "expression": null,
+                            "collation": "asc",
+                            "table_id": {
+                                "db_name": "desc_index",
+                                "table_name": "simple_message"
+                            }
+                        }
+                    ],
+                    "type": "PRIMARY",
+                    "name": "PRIMARY",
+                    "is_unique": true,
+                    "is_visible": true,
+                    "index_type": "BTREE"
+                },
+                {
+                    "db_name": "desc_index",
+                    "table_name": "simple_message",
+                    "columns": [
+                        {
+                            "name": "msg_seq",
+                            "cardinality": 20,
+                            "sub_part": 0,
+                            "expression": null,
+                            "collation": "asc",
+                            "table_id": {
+                                "db_name": "desc_index",
+                                "table_name": "simple_message"
+                            }
+                        }
+                    ],
+                    "type": "NORMAL",
+                    "name": "idx_asc_seq",
+                    "is_unique": false,
+                    "is_visible": true,
+                    "index_type": "BTREE"
+                },
+                {
+                    "db_name": "desc_index",
+                    "table_name": "simple_message",
+                    "columns": [
+                        {
+                            "name": "msg_code",
+                            "cardinality": 20,
+                            "sub_part": 0,
+                            "expression": null,
+                            "collation": "asc",
+                            "table_id": {
+                                "db_name": "desc_index",
+                                "table_name": "simple_message"
+                            }
+                        },
+                        {
+                            "name": "msg_seq",
+                            "cardinality": 20,
+                            "sub_part": 0,
+                            "expression": null,
+                            "collation": "desc",
+                            "table_id": {
+                                "db_name": "desc_index",
+                                "table_name": "simple_message"
+                            }
+                        }
+                    ],
+                    "type": "NORMAL",
+                    "name": "idx_code_seq",
+                    "is_unique": false,
+                    "is_visible": true,
+                    "index_type": "BTREE"
+                },
+                {
+                    "db_name": "desc_index",
+                    "table_name": "simple_message",
+                    "columns": [
+                        {
+                            "name": "msg_seq",
+                            "cardinality": 20,
+                            "sub_part": 0,
+                            "expression": null,
+                            "collation": "desc",
+                            "table_id": {
+                                "db_name": "desc_index",
+                                "table_name": "simple_message"
+                            }
+                        }
+                    ],
+                    "type": "NORMAL",
+                    "name": "idx_desc_seq",
+                    "is_unique": false,
+                    "is_visible": true,
+                    "index_type": "BTREE"
+                },
+                {
+                    "db_name": "desc_index",
+                    "table_name": "simple_message",
+                    "columns": [
+                        {
+                            "name": "seq_nullable",
+                            "cardinality": 14,
+                            "sub_part": 0,
+                            "expression": null,
+                            "collation": "asc",
+                            "table_id": {
+                                "db_name": "desc_index",
+                                "table_name": "simple_message"
+                            }
+                        }
+                    ],
+                    "type": "NORMAL",
+                    "name": "idx_nullable_asc",
+                    "is_unique": false,
+                    "is_visible": true,
+                    "index_type": "BTREE"
+                },
+                {
+                    "db_name": "desc_index",
+                    "table_name": "simple_message",
+                    "columns": [
+                        {
+                            "name": "seq_nullable",
+                            "cardinality": 14,
+                            "sub_part": 0,
+                            "expression": null,
+                            "collation": "desc",
+                            "table_id": {
+                                "db_name": "desc_index",
+                                "table_name": "simple_message"
+                            }
+                        }
+                    ],
+                    "type": "NORMAL",
+                    "name": "idx_nullable_desc",
+                    "is_unique": false,
+                    "is_visible": true,
+                    "index_type": "BTREE"
+                }
+            ],
+            "N_ROWS": 20,
+            "CLUSTERED_INDEX_SIZE": 1,
+            "SUM_OF_OTHER_INDEX_SIZES": 5,
+            "pct_cached": {
+                "PRIMARY": {
+                    "page_type": "INDEX",
+                    "pct_cached": 1.0,
+                    "pool_rows": 20.0
+                },
+                "idx_asc_seq": {
+                    "page_type": "INDEX",
+                    "pct_cached": 1.0,
+                    "pool_rows": 20.0
+                },
+                "idx_code_seq": {
+                    "page_type": "INDEX",
+                    "pct_cached": 1.0,
+                    "pool_rows": 20.0
+                },
+                "idx_desc_seq": {
+                    "page_type": "INDEX",
+                    "pct_cached": 1.0,
+                    "pool_rows": 20.0
+                },
+                "idx_nullable_asc": {
+                    "page_type": "INDEX",
+                    "pct_cached": 1.0,
+                    "pool_rows": 20.0
+                },
+                "idx_nullable_desc": {
+                    "page_type": "INDEX",
+                    "pct_cached": 1.0,
+                    "pool_rows": 20.0
+                }
+            },
+            "DDL": "CREATE TABLE `simple_message` (\n  `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '\u4e3b\u952eID',\n  `msg_code` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL DEFAULT '' COMMENT '\u6d88\u606f\u4ee3\u7801',\n  `msg_seq` int NOT NULL DEFAULT '0' COMMENT '\u6d88\u606f\u5e8f\u53f7',\n  `seq_nullable` int DEFAULT NULL COMMENT '\u53ef\u4e3a\u7a7a\u7684\u5e8f\u53f7',\n  PRIMARY KEY (`id`),\n  KEY `idx_code_seq` (`msg_code`,`msg_seq` DESC),\n  KEY `idx_desc_seq` (`msg_seq` DESC),\n  KEY `idx_nullable_desc` (`seq_nullable` DESC),\n  KEY `idx_asc_seq` (`msg_seq`),\n  KEY `idx_nullable_asc` (`seq_nullable`)\n) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='\u7b80\u5316\u7248\u6d88\u606f\u8868'"
+        }
+    },
+    "hist_dict": {
+        "simple_message": {
+            "id": {
+                "buckets": [
+                    {
+                        "min_value": 1,
+                        "max_value": 1,
+                        "cum_freq": 0.05,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 2,
+                        "max_value": 2,
+                        "cum_freq": 0.1,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 3,
+                        "max_value": 3,
+                        "cum_freq": 0.15000000000000002,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 4,
+                        "max_value": 4,
+                        "cum_freq": 0.2,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 5,
+                        "max_value": 5,
+                        "cum_freq": 0.25,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 6,
+                        "max_value": 7,
+                        "cum_freq": 0.35,
+                        "row_count": 2,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 8,
+                        "max_value": 8,
+                        "cum_freq": 0.39999999999999997,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 9,
+                        "max_value": 9,
+                        "cum_freq": 0.44999999999999996,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 10,
+                        "max_value": 10,
+                        "cum_freq": 0.49999999999999994,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 11,
+                        "max_value": 11,
+                        "cum_freq": 0.5499999999999999,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 12,
+                        "max_value": 13,
+                        "cum_freq": 0.6499999999999999,
+                        "row_count": 2,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 14,
+                        "max_value": 14,
+                        "cum_freq": 0.7,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 15,
+                        "max_value": 15,
+                        "cum_freq": 0.75,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 16,
+                        "max_value": 16,
+                        "cum_freq": 0.8,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 17,
+                        "max_value": 17,
+                        "cum_freq": 0.8500000000000001,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 18,
+                        "max_value": 20,
+                        "cum_freq": 1.0,
+                        "row_count": 3,
+                        "size": 0
+                    }
+                ],
+                "data_type": "bigint",
+                "histogram_type": "brute_force_equi_width",
+                "null_values": 0,
+                "collation_id": -1357,
+                "last_updated": null,
+                "sampling_rate": 1.0,
+                "number_of_buckets_specified": 16
+            },
+            "msg_code": {
+                "buckets": [
+                    {
+                        "min_value": "MSG001",
+                        "max_value": "MSG002",
+                        "cum_freq": 0.1,
+                        "row_count": 2,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG003",
+                        "max_value": "MSG004",
+                        "cum_freq": 0.2,
+                        "row_count": 2,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG005",
+                        "max_value": "MSG006",
+                        "cum_freq": 0.3,
+                        "row_count": 2,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG007",
+                        "max_value": "MSG008",
+                        "cum_freq": 0.4,
+                        "row_count": 2,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG009",
+                        "max_value": "MSG009",
+                        "cum_freq": 0.45,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG010",
+                        "max_value": "MSG010",
+                        "cum_freq": 0.5,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG011",
+                        "max_value": "MSG011",
+                        "cum_freq": 0.55,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG012",
+                        "max_value": "MSG012",
+                        "cum_freq": 0.6,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG013",
+                        "max_value": "MSG013",
+                        "cum_freq": 0.65,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG014",
+                        "max_value": "MSG014",
+                        "cum_freq": 0.7,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG015",
+                        "max_value": "MSG015",
+                        "cum_freq": 0.75,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG016",
+                        "max_value": "MSG016",
+                        "cum_freq": 0.8,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG017",
+                        "max_value": "MSG017",
+                        "cum_freq": 0.85,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG018",
+                        "max_value": "MSG018",
+                        "cum_freq": 0.9,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG019",
+                        "max_value": "MSG019",
+                        "cum_freq": 0.95,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": "MSG020",
+                        "max_value": "MSG020",
+                        "cum_freq": 1.0,
+                        "row_count": 1,
+                        "size": 0
+                    }
+                ],
+                "data_type": "string",
+                "histogram_type": "equi-height",
+                "null_values": 0.0,
+                "collation_id": 45,
+                "last_updated": "2025-04-07 11:22:14.231574",
+                "sampling_rate": 1.0,
+                "number_of_buckets_specified": 16
+            },
+            "msg_seq": {
+                "buckets": [
+                    {
+                        "min_value": 201,
+                        "max_value": 210,
+                        "cum_freq": 0.1,
+                        "row_count": 2,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 225,
+                        "max_value": 240,
+                        "cum_freq": 0.2,
+                        "row_count": 2,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 255,
+                        "max_value": 270,
+                        "cum_freq": 0.3,
+                        "row_count": 2,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 285,
+                        "max_value": 300,
+                        "cum_freq": 0.4,
+                        "row_count": 2,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 315,
+                        "max_value": 315,
+                        "cum_freq": 0.45,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 330,
+                        "max_value": 330,
+                        "cum_freq": 0.5,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 340,
+                        "max_value": 340,
+                        "cum_freq": 0.55,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 345,
+                        "max_value": 345,
+                        "cum_freq": 0.6,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 355,
+                        "max_value": 355,
+                        "cum_freq": 0.65,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 360,
+                        "max_value": 360,
+                        "cum_freq": 0.7,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 370,
+                        "max_value": 370,
+                        "cum_freq": 0.75,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 375,
+                        "max_value": 375,
+                        "cum_freq": 0.8,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 385,
+                        "max_value": 385,
+                        "cum_freq": 0.85,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 390,
+                        "max_value": 390,
+                        "cum_freq": 0.9,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 398,
+                        "max_value": 398,
+                        "cum_freq": 0.95,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 400,
+                        "max_value": 400,
+                        "cum_freq": 1.0,
+                        "row_count": 1,
+                        "size": 0
+                    }
+                ],
+                "data_type": "int",
+                "histogram_type": "equi-height",
+                "null_values": 0.0,
+                "collation_id": 8,
+                "last_updated": "2025-04-07 11:22:14.490113",
+                "sampling_rate": 1.0,
+                "number_of_buckets_specified": 16
+            },
+            "seq_nullable": {
+                "buckets": [
+                    {
+                        "min_value": 100,
+                        "max_value": 100,
+                        "cum_freq": 0.05,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 110,
+                        "max_value": 110,
+                        "cum_freq": 0.1,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 120,
+                        "max_value": 120,
+                        "cum_freq": 0.15,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 130,
+                        "max_value": 130,
+                        "cum_freq": 0.2,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 150,
+                        "max_value": 150,
+                        "cum_freq": 0.25,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 180,
+                        "max_value": 180,
+                        "cum_freq": 0.3,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 200,
+                        "max_value": 200,
+                        "cum_freq": 0.35,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 420,
+                        "max_value": 420,
+                        "cum_freq": 0.4,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 450,
+                        "max_value": 450,
+                        "cum_freq": 0.45,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 470,
+                        "max_value": 470,
+                        "cum_freq": 0.5,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 480,
+                        "max_value": 480,
+                        "cum_freq": 0.55,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 490,
+                        "max_value": 490,
+                        "cum_freq": 0.6,
+                        "row_count": 1,
+                        "size": 0
+                    },
+                    {
+                        "min_value": 500,
+                        "max_value": 500,
+                        "cum_freq": 0.65,
+                        "row_count": 1,
+                        "size": 0
+                    }
+                ],
+                "data_type": "int",
+                "histogram_type": "singleton",
+                "null_values": 0.35,
+                "collation_id": 8,
+                "last_updated": "2025-04-07 11:22:14.746669",
+                "sampling_rate": 1.0,
+                "number_of_buckets_specified": 16
+            }
+        }
+    },
+    "ndv_single_dict": {
+        "simple_message": {
+            "id": 20,
+            "msg_code": 20,
+            "msg_seq": 20,
+            "seq_nullable": 13
+        }
+    },
+    "ndv_mulcol_dict": {
+        "simple_message": {
+            "PRIMARY": {
+                "id": {
+                    "stat_name": "n_diff_pfx01",
+                    "stat_value": 20,
+                    "sample_size": 1,
+                    "stat_description": "id",
+                    "n_field": 1
+                }
+            },
+            "idx_asc_seq": {
+                "msg_seq": {
+                    "stat_name": "n_diff_pfx01",
+                    "stat_value": 20,
+                    "sample_size": 1,
+                    "stat_description": "msg_seq",
+                    "n_field": 1
+                },
+                "id": {
+                    "stat_name": "n_diff_pfx02",
+                    "stat_value": 20,
+                    "sample_size": 1,
+                    "stat_description": "msg_seq,id",
+                    "n_field": 2
+                }
+            },
+            "idx_code_seq": {
+                "msg_code": {
+                    "stat_name": "n_diff_pfx01",
+                    "stat_value": 20,
+                    "sample_size": 1,
+                    "stat_description": "msg_code",
+                    "n_field": 1
+                },
+                "msg_seq": {
+                    "stat_name": "n_diff_pfx02",
+                    "stat_value": 20,
+                    "sample_size": 1,
+                    "stat_description": "msg_code,msg_seq",
+                    "n_field": 2
+                },
+                "id": {
+                    "stat_name": "n_diff_pfx03",
+                    "stat_value": 20,
+                    "sample_size": 1,
+                    "stat_description": "msg_code,msg_seq,id",
+                    "n_field": 3
+                }
+            },
+            "idx_desc_seq": {
+                "msg_seq": {
+                    "stat_name": "n_diff_pfx01",
+                    "stat_value": 20,
+                    "sample_size": 1,
+                    "stat_description": "msg_seq",
+                    "n_field": 1
+                },
+                "id": {
+                    "stat_name": "n_diff_pfx02",
+                    "stat_value": 20,
+                    "sample_size": 1,
+                    "stat_description": "msg_seq,id",
+                    "n_field": 2
+                }
+            },
+            "idx_nullable_asc": {
+                "seq_nullable": {
+                    "stat_name": "n_diff_pfx01",
+                    "stat_value": 14,
+                    "sample_size": 1,
+                    "stat_description": "seq_nullable",
+                    "n_field": 1
+                },
+                "id": {
+                    "stat_name": "n_diff_pfx02",
+                    "stat_value": 20,
+                    "sample_size": 1,
+                    "stat_description": "seq_nullable,id",
+                    "n_field": 2
+                }
+            },
+            "idx_nullable_desc": {
+                "seq_nullable": {
+                    "stat_name": "n_diff_pfx01",
+                    "stat_value": 14,
+                    "sample_size": 1,
+                    "stat_description": "seq_nullable",
+                    "n_field": 1
+                },
+                "id": {
+                    "stat_name": "n_diff_pfx02",
+                    "stat_value": 20,
+                    "sample_size": 1,
+                    "stat_description": "seq_nullable,id",
+                    "n_field": 2
+                }
+            }
+        }
+    }
+}

@@ -3,23 +3,22 @@ Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
 
-from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict, List, Optional
+from pydantic import BaseModel
 
-from dataclasses_json import dataclass_json
+from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 
-# 当计算 load_rows 失败时，返回 N_NO_LOAD_ROWS。即不能确定导入行数，全部导入
+# return N_NO_LOAD_ROWS if load_rows is not availabl
 UNKNOWN_LOAD_ROWS: int = -1
 
 
-@dataclass_json
-@dataclass
-class SampleFileInfo:
+class SampleFileInfo(BaseModel, PydanticDataClassJsonMixin):
     local_path_prefix: str
     tos_path_prefix: str
     sample_file_dict: Dict[str, Dict[str, List[str]]]
-    # 为保持 join table 相对大小，在 sampling pq 基础上，只导入 table_load_rows 行数据
-    table_load_rows: Dict[str, Dict[str, int]] = None
+    # to remain the relative table rows between join tables, we only import table data with row of table_load_rows
+    # from the sampling parquet data
+    table_load_rows: Optional[Dict[str, Dict[str, int]]] = None
 
     def get_table_load_row(self, db: str, table: str):
         if self.table_load_rows is None \

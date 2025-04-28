@@ -14,6 +14,7 @@
   <a href="https://hub.docker.com/repository/docker/kangrongme/videx">
     <img src="https://img.shields.io/docker/pulls/kangrongme/videx?style=for-the-badge&logo=docker" alt="Docker Pulls"/>
   </a>
+  <img src="https://img.shields.io/badge/MySQL|Percona-8.0|_5.7-FF9800?style=for-the-badge&logo=mysql" alt="MySQL Support"/>
 </p>
 
 **VIDEX** 为 MySQL 提供了一个解耦的、可扩展的开源虚拟索引引擎 (**\[VI\]**rtual in**\[DEX\]**)。🚀
@@ -39,8 +40,8 @@
 默认情况下，VIDEX 可以以 `ANALYZE TABLE` 的方式收集统计信息，或者基于少量采样数据构建统计信息。
 
 VIDEX 提供两种启动模式：
-1. **作为插件安装到生产数据库**：将 VIDEX 作为插件安装到生产数据库实例。
-2. **独立实例**：此模式可以完全避免影响在线运行实例的稳定性，在工业环境中很实用。
+1. **作为插件安装到生产数据库** (Plugin-Mode)：将 VIDEX 作为插件安装到生产数据库实例。
+2. **独立实例** (Standalone-Mode)：此模式可以完全避免影响在线运行实例的稳定性，在工业环境中很实用。
 
 在功能方面，VIDEX 支持创建和删除索引（单列索引、复合索引、EXTENDED_KEYS 索引、[倒序索引](https://dev.mysql.com/doc/en/descending-indexes.html)）。
 目前暂不支持函数索引（`functional indexes`）、全文索引（`FULL-Text`）和空间索引（`Spatial Indexes`）。
@@ -115,7 +116,7 @@ python -m pip install -e . --use-pep517
 
 #### 2.2.2 启动 VIDEX 容器
 ```cmd
-docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:0.0.2
+docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:latest
 ```
 
 > **其他部署方式**
@@ -127,7 +128,7 @@ docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:0.0.2
 
 ## 3. 示例
 
-### 3.1 TPCH-Tiny 示例
+### 3.1 TPCH-Tiny 示例 (MySQL 8.0)
 
 本示例使用 `TPC-H Tiny` 数据集(从 TPC-H sf1 随机采样 1% 数据)演示 VIDEX 的完整使用流程。
 
@@ -279,7 +280,59 @@ ALTER TABLE tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
 ```
 
-### 3.2 TPCH sf1 (1g) Example 
+### 3.2 TPCH-Tiny 示例 (MySQL 5.7)
+
+VIDEX 的独立实例模式现已支持高精度模拟 MySQL 5.7。
+
+#### Step 1: 在 MySQL 5.7 实例中导入测试数据
+
+在一台 MySQL 5.7 中导入数据。
+
+```bash
+mysql -h${HOST_MYSQL57} -P13308 -uvidex -ppassword -e "create database tpch_tiny_57;"
+mysql -h${HOST_MYSQL57} -P13308 -uvidex -ppassword -Dtpch_tiny_57 < tpch_tiny.sql
+```
+
+#### Step 2: VIDEX 采集并导入 VIDEX 元数据
+
+VIDEX 对 MySQL5.7 会采取相适应的数据收集方式，但命令参数不变。
+
+```bash
+cd $VIDEX_HOME
+python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
+ --target ${HOST_MYSQL57}:13308:tpch_tiny_57:videx:password \
+ --videx 127.0.0.1:13308:videx_tpch_tiny_57:videx:password
+```
+
+#### Step 2.5: ✴️ 设置适配 MySQL5.7 的参数
+
+VIDEX 能够以独立实例模式模拟 MySQL5.7。由于 MySQL5.7 与 MySQL8.0 的差异，我们需要设置 VIDEX-optimizer 的 `优化器参数`
+和 `代价常数表`。
+
+✴️✴️ 请注意：由于**代价参数的变更无法在当前连接中直接生效**，因此，请首先运行如下脚本，再登入 MySQL。
+
+```bash
+mysql -h ${HOST_MYSQL57} -P13308 -uvidex -ppassword < src/sub_platforms/sql_opt/videx/scripts/setup_mysql57_env.sql
+```
+
+#### Step 3: EXPLAIN SQL
+
+我们同样以 TPC-H Q21 作为示例。EXPLAIN 结果如下。可以看到，MySQL 5.7 的查询计划与 MySQL 8.0有显著不同，而 VIDEX 仍然可以准确模拟：
+
+![explain_tpch_tiny_table_for_mysql57.png](doc/explain_tpch_tiny_table_for_mysql57.png)
+
+下面是 MySQL5.7 和 VIDEX 的 EXPLAIN cost 细节对比。
+![explain_tpch_tiny_mysql57_compare.png](doc/explain_tpch_tiny_mysql57_compare.png)
+
+#### Step 4: ✴️ 清除 MySQL5.7 的环境变量
+
+如果想将 MySQL-optimizer 恢复为 8.0 模式，请执行如下脚本。
+
+```bash
+mysql -h ${HOST_MYSQL57} -P13308 -uvidex -ppassword < src/sub_platforms/sql_opt/videx/scripts/clear_mysql57_env.sql
+```
+
+### 3.3 TPCH sf1 (1g) 示例 (MySQL 8.0)
 
 我们额外为 TPC-H sf1 准备了元数据文件：`data/videx_metadata_tpch_sf1.json`，无需采集，直接导入即可体验 VIDEX。
 
@@ -409,7 +462,30 @@ VIDEX-Optimizer 将基于用户指定的地址，通过 `HTTP` 请求索引元�
 }
 ```
 
+## 版本支持
+
+### Plugin-Mode 支持列表
+
+| 数据库系统   | 版本范围      | 支持状态      | 备注                         |  
+|---------|-----------|-----------|----------------------------|  
+| Percona | 8.0.34-26 | ✅ 支持      | 在 全部 `TPC-H`、`JOB`场景下完成测试  |  
+| MySQL   | 8.0.42    | 🔄 即将支持   | 计划在下一版本提供支持                |  
+| MariaDB | —         | ⏳ 正在规划   | 与 MariaDB 社区持续讨论中          |
+| PG      | -         | 🔮 未来工作   | 期待与贡献者进行讨论                 |
+
+### Standalone-Mode 支持列表
+
+| 数据库系统   | 版本范围       | 支持状态     | 备注                         |  
+|---------|------------|----------|----------------------------|  
+| Percona | 8.0.34-26+ | ✅ 支持     | 在 全部 `TPC-H`、`JOB` 下完成测试   |  
+| MySQL   | 8.0.x      | ✅ 支持     | 在 部分 `TPC-H` 下完成测试         |  
+| MySQL   | 5.7.x      | ✅ 支持     | 在 部分 `TPC-H` 下完成测试         |  
+| MariaDB | —          | ⏳ 正在规划  | 与 MariaDB 社区持续讨论中          |  
+| PG      | -          | 🔮 未来工作  | 期待与贡献者进行讨论                 |
+
+
 ## Authors
+
 ByteBrain团队, 字节跳动
 
 ## Contact

@@ -5,11 +5,14 @@ SPDX-License-Identifier: MIT
 """
 import os.path
 import unittest
-from datetime import datetime
+from datetime import datetime, date
+
+import numpy as np
+import pandas as pd
 
 from sub_platforms.sql_opt.meta import TableId
 from sub_platforms.sql_opt.videx.videx_utils import compare_explain, load_json_from_file, search_videx_http_dict, \
-    construct_involved_db_tables, parse_datetime, reformat_datetime_str
+    construct_involved_db_tables, parse_datetime, reformat_datetime_str, is_datetime_like
 
 
 class Test(unittest.TestCase):
@@ -360,35 +363,35 @@ class TestConstructInvolvedDbTables(unittest.TestCase):
         self.assertEqual(result, {})
 
     def test_single_table_id_set(self):
-        table_id_set = {TableId('db1', 'table1')}
+        table_id_set = {TableId(db_name='db1', table_name='table1')}
         expected = {'db1': ['table1']}
         result = construct_involved_db_tables([table_id_set])
         self.assertEqual(result, expected)
 
     def test_multiple_table_id_sets_with_duplicates(self):
-        table_id_set1 = {TableId('db1', 'table1'), TableId('db1', 'table2')}
-        table_id_set2 = {TableId('db1', 'table2'), TableId('db1', 'table3')}
+        table_id_set1 = {TableId(db_name='db1', table_name='table1'), TableId(db_name='db1', table_name='table2')}
+        table_id_set2 = {TableId(db_name='db1', table_name='table2'), TableId(db_name='db1', table_name='table3')}
         expected = {'db1': ['table1', 'table2', 'table3']}
         result = construct_involved_db_tables([table_id_set1, table_id_set2])
         self.assertEqual(result, expected)
 
     def test_multiple_table_id_sets_with_different_databases(self):
-        table_id_set1 = {TableId('db1', 'table1'), TableId('db1', 'table2')}
-        table_id_set2 = {TableId('db2', 'table3'), TableId('db2', 'table4')}
+        table_id_set1 = {TableId(db_name='db1', table_name='table1'), TableId(db_name='db1', table_name='table2')}
+        table_id_set2 = {TableId(db_name='db2', table_name='table3'), TableId(db_name='db2', table_name='table4')}
         expected = {'db1': ['table1', 'table2'], 'db2': ['table3', 'table4']}
         result = construct_involved_db_tables([table_id_set1, table_id_set2])
         self.assertEqual(result, expected)
 
     def test_sorted_output(self):
-        table_id_set1 = {TableId('db1', 'table2'), TableId('db1', 'table1')}
-        table_id_set2 = {TableId('db2', 'table4'), TableId('db2', 'table3')}
+        table_id_set1 = {TableId(db_name='db1', table_name='table2'), TableId(db_name='db1', table_name='table1')}
+        table_id_set2 = {TableId(db_name='db2', table_name='table4'), TableId(db_name='db2', table_name='table3')}
         expected = {'db1': ['table1', 'table2'], 'db2': ['table3', 'table4']}
         result = construct_involved_db_tables([table_id_set1, table_id_set2])
         self.assertEqual(result, expected)
 
     def test_duplicate_elements(self):
-        table_id_set1 = {TableId('db1', 'table2'), TableId('db2', 'table1')}
-        table_id_set2 = {TableId('db2', 'table3'), TableId('db2', 'table1')}
+        table_id_set1 = {TableId(db_name='db1', table_name='table2'), TableId(db_name='db2', table_name='table1')}
+        table_id_set2 = {TableId(db_name='db2', table_name='table3'), TableId(db_name='db2', table_name='table1')}
         expected = {'db1': ['table2'], 'db2': ['table1', 'table3']}
         result = construct_involved_db_tables([table_id_set1, table_id_set2])
         self.assertEqual(expected, result)
@@ -448,6 +451,74 @@ class TestParseDatetime(unittest.TestCase):
         expect_str = datetime.strftime(datetime.fromtimestamp(1104742802).replace(microsecond=851209),
                                        '%Y-%m-%d %H:%M:%S.%f')
         self.assertEqual(reformat_datetime_str("1104742802851209"), expect_str)
+
+    def test_is_datetime_like(self):
+        """Test various datetime types with pandas type checking functions."""
+
+        # Create series with different datetime-related types
+        series_list = [
+            # Standard datetime64 series
+            pd.Series(pd.date_range('2023-01-01', periods=3)),
+
+            # Series created from Python datetime objects
+            pd.Series([datetime(2023, 1, 1), datetime(2023, 1, 2)]),
+
+            # Series created from date objects
+            pd.Series([date(2023, 1, 1), date(2023, 1, 2)]),
+
+            # String dates converted to datetime
+            pd.Series(['2023-01-01', '2023-01-02']).astype('datetime64[ns]'),
+
+            # NumPy datetime64 type
+            pd.Series(np.array(['2023-01-01', '2023-01-02'], dtype='datetime64')),
+
+            # Timezone-aware datetime
+            pd.Series(pd.date_range('2023-01-01', periods=3, tz='UTC')),
+
+            # Period type
+            pd.Series(pd.period_range('2023-01', periods=3, freq='M')),
+        ]
+
+        # Non-datetime types for comparison
+        non_datetime_series = [
+            pd.Series([1, 2, 3]),
+            pd.Series(['a', 'b', 'c']),
+            pd.Series([1, 2, 3], dtype='Int32'),
+        ]
+
+        # Test each datetime series
+        for i, s in enumerate(series_list):
+            print(f"\nTest {i+1}:")
+            print(f"Series: {s}")
+            print(f"Series dtype: {s.dtype}")
+            if str(s.dtype) == 'object':
+                print()
+
+            # Check that is_datetime64_any_dtype correctly identifies datetime types
+            self.assertTrue(is_datetime_like(s), f"Failed to identify datetime type: {s.dtype}")
+
+            # Print results of other datetime type check functions
+            print(f"is_datetime64_any_dtype result: {pd.api.types.is_datetime64_any_dtype(s)}")
+            print(f"is_datetime64_dtype result: {pd.api.types.is_datetime64_dtype(s)}")
+            print(f"is_datetime64_ns_dtype result: {pd.api.types.is_datetime64_ns_dtype(s)}")
+            print(f"is_period_dtype result: {pd.api.types.is_period_dtype(s)}")
+
+        # Test that non-datetime types are correctly identified
+        for i, s in enumerate(non_datetime_series):
+            print(f"\nNon-datetime Test {i+1}:")
+            print(f"Series: {s}")
+            print(f"Series dtype: {s.dtype}")
+
+            # Check that is_datetime64_any_dtype correctly rejects non-datetime types
+            self.assertFalse(is_datetime_like(s),
+                             f"Incorrectly identified non-datetime type as datetime: {s.dtype}"
+                             )
+
+            # Print results of datetime type check functions on non-datetime types
+            print(f"is_datetime64_any_dtype result: {pd.api.types.is_datetime64_any_dtype(s)}")
+            print(f"is_datetime64_dtype result: {pd.api.types.is_datetime64_dtype(s)}")
+            print(f"is_datetime64_ns_dtype result: {pd.api.types.is_datetime64_ns_dtype(s)}")
+            print(f"is_period_dtype result: {pd.api.types.is_period_dtype(s)}")
 
 
 if __name__ == '__main__':

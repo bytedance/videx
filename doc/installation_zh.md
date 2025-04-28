@@ -1,6 +1,13 @@
 # Installation Guide
 
+<p align="center">
+  <a href="./installation.md">English</a> |
+  <a href="./installation_zh.md">简体中文</a>
+</p>
+
+
 VIDEX 支持以下安装方式：
+
 1. 编译完整的 MySQL Server (包含 VIDEX 引擎)
 2. 编译 VIDEX 插件并安装到现有 MySQL Server
 
@@ -16,7 +23,7 @@ VIDEX_HOME=$(pwd)/videx_server
 MySQL8_HOME=$(pwd)/mysql_server
 
 # 克隆代码仓库
-git clone git@code.byted.org:bytebrain/videx.git $VIDEX_HOME
+git clone git@github.com:bytedance/videx.git $VIDEX_HOME
 git clone --depth=1 --recursive -b release-8.0.34-26 https://github.com/percona/percona-server.git $MySQL8_HOME
 
 # 下载 Boost 库，加速安装
@@ -121,4 +128,15 @@ python3.9 -m pip install -e . --use-pep517
 ```bash
 cd $VIDEX_HOME/src/sub_platforms/sql_opt/videx/scripts
 python start_videx_server.py --port 5001
+```
+
+## 5 安装方式三：编译 Docker 镜像
+
+首先完成步骤 1：下载 VIDEX 和 MySQL 的代码。
+请确保 VIDEX 和 MySQL 的代码位于同一目录下。并且目录名分别为 `videx_server` 和 `mysql_server`。你可以使用软链接。
+
+然后执行以下命令：
+```sql
+cd videx_server
+docker build -t videx:latest -f build/Dockerfile.videx ..
 ```
