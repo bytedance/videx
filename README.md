@@ -43,7 +43,7 @@ VIDEX offers two startup modes:
 1. **Plugin to production database**: Install VIDEX as a plugin to the production database instance.
 2. **Individual instance**: This mode can completely avoid impacting the stability of online running instances, making it practical for industrial environments.
 
-Functionally, VIDEX supports creating and deleting indexes (single-column indexes, composite indexes, EXTENDED_KEYS indexes). 
+Functionally, VIDEX supports creating and deleting indexes (single-column indexes, composite indexes, EXTENDED_KEYS indexes, [descending indexes](https://dev.mysql.com/doc/en/descending-indexes.html)). 
 However, it currently does not support functional indexes, FULL-Text, and Spatial Indexes. 
 
 In terms of **accuracy**, we have tested VIDEX on complex analytical benchmarks such as `TPC-H`, `TPC-H-Skew`, and `JOB`.

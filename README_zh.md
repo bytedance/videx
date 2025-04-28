@@ -42,7 +42,7 @@ VIDEX 提供两种启动模式：
 1. **作为插件安装到生产数据库**：将 VIDEX 作为插件安装到生产数据库实例。
 2. **独立实例**：此模式可以完全避免影响在线运行实例的稳定性，在工业环境中很实用。
 
-在功能方面，VIDEX 支持创建和删除索引（单列索引、复合索引、EXTENDED_KEYS 索引）。
+在功能方面，VIDEX 支持创建和删除索引（单列索引、复合索引、EXTENDED_KEYS 索引、[倒序索引](https://dev.mysql.com/doc/en/descending-indexes.html)）。
 目前暂不支持函数索引（`functional indexes`）、全文索引（`FULL-Text`）和空间索引（`Spatial Indexes`）。
 
 在**拟合精度**方面，我们已经在 `TPC-H`、`TPC-H-Skew` 和 `JOB` 等复杂分析基准测试上对 VIDEX 进行了测试。
