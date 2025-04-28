@@ -27,10 +27,10 @@ Resolves: #[Insert issue number(s)]
 <p>Your PR title should start with one of these prefixes to indicate the nature of the change:</p>
 <ul>
     <li><code>[Core]</code>: Changes to core engine functionality</li>
-    <li><code>[Optimizer]</code>: Changes to VIDEX-Optimizer-Plugin</li>
+    <li><code>[Opt]</code>: Changes to VIDEX-Optimizer-Plugin</li>
     <li><code>[Stats]</code>: Changes to VIDEX-Statistic-Server</li>
-    <li><code>[Algorithm]</code>: Implementation of new algorithms for NDV, cardinality estimation, etc.</li>
-    <li><code>[Pipeline]</code>: Enhancements to the pipeline (e.g., data collection, environment setup)</li>
+    <li><code>[Algo]</code>: Implementation of new algorithms for NDV, cardinality estimation, etc.</li>
+    <li><code>[Pipe]</code>: Enhancements to the pipeline (e.g., data collection, environment setup)</li>
     <li><code>[Bug]</code>: Corrections to existing functionality</li>
     <li><code>[CI]</code>: Changes to build process or CI pipeline</li>
     <li><code>[Docs]</code>: Updates or additions to documentation</li>
