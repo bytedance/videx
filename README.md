@@ -310,7 +310,7 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
 VIDEX can simulate MySQL 5.7 in standalone mode. Due to the differences between MySQL 5.7 and MySQL 8.0, we
 need to set the `optimizer-switch` variables and `server_cost` tables for VIDEX-optimizer.
 
-Since setting the environment does not take effect in the current connection, please run the following script first,
+✴️✴️ Note that, Since **setting the environment does not take effect in the current connection**, please run the following script first,
 then log into MySQL.
 
 ```bash
@@ -322,11 +322,11 @@ mysql -h ${HOST_MYSQL57} -P13308 -uvidex -ppassword < src/sub_platforms/sql_opt/
 We will use TPC-H Q21 as an example. The EXPLAIN result is as follows. We can see that the query plan for MySQL 5.7
 differs significantly from MySQL 8.0, yet VIDEX can still simulate it accurately:
 
-[explain_tpch_tiny_table_for_mysql57.png](doc/explain_tpch_tiny_table_for_mysql57.png)
+![explain_tpch_tiny_table_for_mysql57.png](doc/explain_tpch_tiny_table_for_mysql57.png)
 
 Below is a comparison of EXPLAIN cost details between MySQL 5.7 and VIDEX.
 
-[explain_tpch_tiny_mysql57_compare.png](doc/explain_tpch_tiny_mysql57_compare.png)
+![explain_tpch_tiny_mysql57_compare.png](doc/explain_tpch_tiny_mysql57_compare.png)
 
 #### Step 4: ✴️ Clear MySQL 5.7 Environment Variables
 

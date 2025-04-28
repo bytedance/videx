@@ -309,7 +309,7 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
 VIDEX 能够以独立实例模式模拟 MySQL5.7。由于 MySQL5.7 与 MySQL8.0 的差异，我们需要设置 VIDEX-optimizer 的 `优化器参数`
 和 `代价常数表`。
 
-由于代价参数表无法在当前连接中直接生效，因此，请首先运行如下脚本，再登入 MySQL。
+✴️✴️ 请注意：由于**代价参数的变更无法在当前连接中直接生效**，因此，请首先运行如下脚本，再登入 MySQL。
 
 ```bash
 mysql -h ${HOST_MYSQL57} -P13308 -uvidex -ppassword < src/sub_platforms/sql_opt/videx/scripts/setup_mysql57_env.sql
