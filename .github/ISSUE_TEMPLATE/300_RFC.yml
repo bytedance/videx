@@ -1,0 +1,40 @@
+name: "💡 Architecture Proposal"
+description: Propose significant design changes
+labels: ["RFC"]
+body:
+  - type: textarea
+    attributes:
+      label: "Proposal Summary"
+      description: |
+        One-paragraph overview of the proposed change
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Motivation and Impact"
+      description: |
+        Explain why this change is needed and affected components:
+        [ ] Optimizer Plugin 
+        [ ] Statistic Server RESTFul API
+        [ ] Statistic Server
+        [ ] Algorithm Interfaces
+        [ ] Algorithm Implementations
+        [ ] Others
+      placeholder: |
+        This addresses [problem statement] affecting [component].
+        Will impact [specific workflow/scenario].
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Technical Plan"
+      description: |
+        Describe implementation strategy and alternatives
+      placeholder: |
+        Implementation Roadmap:
+        1. Phase 1: [Core changes]
+        2. Phase 2: [Interface updates]
+        
+        Alternative Approaches:
+        - [Option 1] [Pros/Cons]
+        - [Option 2] [Pros/Cons]

@@ -1,0 +1,41 @@
+name: "🐛 Behavior Discrepancy"
+description: Report unexpected behavior in VIDEX
+labels: ["bug"]
+body:
+  - type: textarea
+    attributes:
+      label: "Environment Setup"
+      description: |
+        Required information for reproduction:
+      placeholder: |
+        VIDEX Version: [commit SHA / Release-x.y.z / tag]
+        Database: [MySQL|Percona|Others] / 8.0.xx/5.7.xx 
+        Deployment Mode: Plugin/Standalone
+        OS: Ubuntu xx / Debian xx / macOS xx / Others 
+        Container: Docker 24.0.6 (if applicable)
+        Workload: JOB benchmark / TPC-H / Others
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Observed vs Expected Behavior"
+      description: |
+        Include actual results, expected outcomes, and evidence:
+        - Query plans
+        - Error logs
+        - Performance metrics
+      placeholder: |
+        [Describe test scenario]
+        
+        Actual Behavior:
+        - VIDEX output: [result/plan/trace]
+        - Error message: [if applicable]
+        
+        Expected Behavior:
+        - MySQL output: [baseline result]
+        - Expected plan: [correct behavior]
+        
+        Supporting Evidence:
+        [Attach logs/scripts/screenshots]
+    validations:
+      required: true

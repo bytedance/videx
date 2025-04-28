@@ -1,0 +1,48 @@
+name: "✨ Feature Request"
+description: Suggest new functionality for VIDEX engine
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: "## Feature Proposal Guidelines"
+  - type: textarea
+    attributes:
+      label: "Feature Description and Motivation"
+      description: |
+        Describe what you want to achieve and why this is valuable. 
+        Example: "Add support for virtual indexes on JSON columns"
+      placeholder: |
+        I propose [feature summary] because [motivation]. 
+        This would help with [problem scenario] by [expected outcome].
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "System Version"
+      description: |
+        Specify relevant environment details:
+        - MySQL/Percona versions
+        - Plugin/Standalone mode
+      placeholder: |
+        Target Versions: MySQL 8.0.34
+        Deployment Mode: Standalone
+  - type: textarea
+    attributes:
+      label: "Use Case Scenario"
+      description: |
+        Describe a real-world application or academic scenario
+      placeholder: |
+        In my environment with [dataset characteristics],
+        this feature would enable [specific workflow].
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: "Proposed Implementation (Optional)"
+      description: |
+        Share technical suggestions if available
+      placeholder: |
+        Potential approaches could involve [technical strategy]
+        leveraging [existing interfaces/components].
+    validations:
+      required: false
