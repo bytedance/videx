@@ -463,10 +463,34 @@ If you find this code useful, we would appreciate citations to our paper:
 }
 ```
 
+## Version Support
+
+### Plugin-Mode Support List
+
+| Database System | Version Range | Support Status | Remarks                                        |
+|-----------------|---------------|----------------|------------------------------------------------|
+| Percona         | 8.0.34-26     | ✅ Supported    | Tested in all `TPC-H` and `JOB` scenarios      |
+| MySQL           | 8.0.42        | ✅ Supported    | Branch `compatibility/mysql8.0.42`             |
+| MariaDB         | —             | ⏳ Planning     | Ongoing discussions with the MariaDB community |
+| PG              | -             | 🔮 Future Work | Anticipating discussions with contributors     |
+
+### Standalone-Mode Support List
+
+| Database System | Version Range | Support Status   | Remarks                                        |
+|-----------------|---------------|------------------|------------------------------------------------|
+| Percona         | 8.0.34-26+    | ✅ Supported | Tested in all `TPC-H` and `JOB` scenarios      |
+| MySQL           | 8.0.x         | ✅ Supported      | Tested in some `TPC-H` scenarios               |
+| MySQL           | 5.7.x         | ✅ Supported      | Tested in some `TPC-H` scenarios               |
+| MariaDB         | —             | ⏳ Planning       | Ongoing discussions with the MariaDB community |
+| PG              | -             | 🔮 Future Work   | Anticipating discussions with contributors     |
+
 ## Authors
+
 ByteBrain Team, Bytedance
 
 ## Contact
+
 If you have any questions, feel free to contact us:
-Rong Kang: kangrong.cn@bytedance.com, kr11thss@gmail.com, 
-Tieying Zhang: tieying.zhang@bytedance.com
+
+- Rong Kang: kangrong.cn@bytedance.com, kr11thss@gmail.com, 
+- Tieying Zhang: tieying.zhang@bytedance.com
