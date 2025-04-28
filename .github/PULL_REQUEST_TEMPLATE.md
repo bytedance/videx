@@ -1,8 +1,18 @@
-## Pull Request Description
-[Please provide a clear and concise description of your changes]
+## Pull Request Summary
+
+[Provide a clear and concise summary of your changes (1-3 sentences)]
 
 ## Related Issues
+
 Resolves: #[Insert issue number(s)]
+
+## Detailed Description
+
+[Explain your changes in detail, including:
+
+- What problem does this PR solve?
+- How does your solution work?
+- Any trade-offs or alternative approaches considered?]
 
 **Important: Before submitting, please complete the description above and review the checklist below.**
 
