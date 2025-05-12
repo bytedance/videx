@@ -690,9 +690,9 @@ def force_generate_histogram_by_sdc_for_col(env: Env, db_name: str, table_name: 
     null_values = env.mysql_util.query_for_value(
         f"SELECT COUNT(1) FROM {db_name}.{table_name} WHERE {col_name} IS NULL;")
     total_rows = env.mysql_util.query_for_value(f"SELECT COUNT(1) FROM {db_name}.{table_name}")
-    null_values /= total_rows  # null_values is in [0, 1]
+    null_values = null_values / total_rows if total_rows > 0 else 0  # null_values is in [0, 1]
     n_buckets = min(total_rows, n_buckets)
-    if data_type_is_int(data_type):
+    if total_rows > 0 and data_type_is_int(data_type):
         n_buckets = min(n_buckets, max_val - min_val + 1)
 
     res_dict['data-type'] = data_type
