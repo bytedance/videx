@@ -604,8 +604,10 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
     else:
         stats_dict = fetch_information_schema(env, target_db)
 
-    if all_table_names is None:
+    if all_table_names is None or len(all_table_names) == 0:
         all_table_names = list(stats_dict.keys())
+    else:
+        stats_dict = {k: v for k, v in stats_dict.items() if k.lower() in set(t.lower() for t in all_table_names)}
 
     # >>>>>>>>>>>>>>>> ndv_single_dict >>>>>>>>>>>>>
     if result_dir is not None and os.path.exists(os.path.join(result_dir, ndv_single_file)):

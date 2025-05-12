@@ -84,7 +84,8 @@ if __name__ == "__main__":
                         help='Connection info for videx server, in the format of "[ip:]port". '
                              'If not provided, access "{videx_ip}:5001".')
     parser.add_argument('--tables', type=str, default=None,
-                        help='Comma-separated list of table names to fetch. If not provided, fetching all tables.')
+                        help='Comma-separated list of table names to fetch. If not provided, fetching all tables. '
+                             'e.g. customer,nation')
     parser.add_argument('--meta_path', type=str, default=None,
                         help='meta filepath to save pulled metadata.')
     parser.add_argument('--fetch_method', type=str, default='fetch', help='fetch, partial_fetch, sampling')
