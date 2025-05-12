@@ -727,51 +727,49 @@ def fetch_all_meta_with_one_file(meta_path: Union[str, dict],
         ndv_mulcol_dict = meta_path.get('ndv_mulcol_dict', {})
         return stats_dict, hist_dict, ndv_single_dict, ndv_mulcol_dict
 
-    # Handle string path input
-    if isinstance(meta_path, str):
+    # Reuse exists file only if specifying meta_path and the path exists
+    if meta_path is not None and isinstance(meta_path, str) and os.path.exists(meta_path):
         # Load existing metadata file if it exists
-        if os.path.exists(meta_path):
-            metadata = load_json_from_file(meta_path)
-            # Recursively process the loaded dictionary
-            return fetch_all_meta_with_one_file(metadata, env, target_db, all_table_names,
-                                                n_buckets, hist_force, drop_hist_after_fetch,
-                                                hist_mem_size, histogram_data)
+        metadata = load_json_from_file(meta_path)
+        # Recursively process the loaded dictionary
+        return fetch_all_meta_with_one_file(metadata, env, target_db, all_table_names,
+                                            n_buckets, hist_force, drop_hist_after_fetch,
+                                            hist_mem_size, histogram_data)
 
-        # Generate new metadata if file doesn't exist
-        else:
-            # Create temporary directory with timestamp
-            temp_dir = f"temp_meta_{int(time.time())}"
-            os.makedirs(temp_dir, exist_ok=True)
+    # Generate new metadata if file is None, or file doesn't exist
+    # Create temporary directory with timestamp
+    temp_dir = f"temp_meta_{int(time.time())}"
+    os.makedirs(temp_dir, exist_ok=True)
 
-            try:
-                # Fetch all metadata components using the core function
-                stats_dict, hist_dict, ndv_single_dict, ndv_mulcol_dict = fetch_all_meta_for_videx(
-                    env, target_db, all_table_names,
-                    result_dir=temp_dir,
-                    n_buckets=n_buckets,
-                    hist_force=hist_force,
-                    drop_hist_after_fetch=drop_hist_after_fetch,
-                    hist_mem_size=hist_mem_size,
-                    histogram_data=histogram_data
-                )
+    try:
+        # Fetch all metadata components using the core function
+        stats_dict, hist_dict, ndv_single_dict, ndv_mulcol_dict = fetch_all_meta_for_videx(
+            env, target_db, all_table_names,
+            result_dir=temp_dir,
+            n_buckets=n_buckets,
+            hist_force=hist_force,
+            drop_hist_after_fetch=drop_hist_after_fetch,
+            hist_mem_size=hist_mem_size,
+            histogram_data=histogram_data
+        )
 
-                # Combine all metadata components into a single dictionary
-                metadata = {
-                    'stats_dict': stats_dict,
-                    'hist_dict': hist_dict,
-                    'ndv_single_dict': ndv_single_dict,
-                    'ndv_mulcol_dict': ndv_mulcol_dict
-                }
+        if isinstance(meta_path, str):
+            # If specify meta_path, combine all metadata components into a single dictionary and save to file
+            metadata = {
+                'stats_dict': stats_dict,
+                'hist_dict': hist_dict,
+                'ndv_single_dict': ndv_single_dict,
+                'ndv_mulcol_dict': ndv_mulcol_dict
+            }
 
-                # Save combined metadata to file
-                dump_json_to_file(meta_path, metadata)
-                return stats_dict, hist_dict, ndv_single_dict, ndv_mulcol_dict
+            # Save combined metadata to file
+            dump_json_to_file(meta_path, metadata)
 
-            finally:
-                # Clean up temporary directory regardless of success/failure
-                shutil.rmtree(temp_dir)
+        return stats_dict, hist_dict, ndv_single_dict, ndv_mulcol_dict
 
-    raise ValueError("metadata_file must be either a dict or a string path")
+    finally:
+        # Clean up temporary directory regardless of success/failure
+        shutil.rmtree(temp_dir)
 
 
 def _extract_range_rows_gt_from_trace_dict(join_opt) -> List[dict]:
