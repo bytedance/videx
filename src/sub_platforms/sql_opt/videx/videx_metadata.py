@@ -84,13 +84,13 @@ class VidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
         table_name = table_name.lower()
         return self.meta_dict.get(db_name, {}).get(table_name)
 
-    def get_stats_info_keys(self):
+    def get_stats_info_keys(self) -> Dict[str, List[str]]:
         """
         return format: {'db1': ['tb1', 'tb2'], 'db2': ['tb3']} in stats_dict
         """
         return {db: list(sorted(db_stats.keys())) for db, db_stats in self.stats_dict.items()}
 
-    def get_meta_info_keys(self):
+    def get_meta_info_keys(self) -> Dict[str, List[str]]:
         """
         return format: {'db1': ['tb1', 'tb2'], 'db2': ['tb3']} in meta_dict
         """
@@ -142,8 +142,7 @@ class VidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
             if db not in target.stats_dict:
                 target.stats_dict[db] = tables
             else:
-                for table, stats in tables.items():
-                    target.stats_dict[db][table] = stats
+                target.stats_dict[db].update(tables)
 
         # Merge sample_file_info
         if self.sample_file_info and other.sample_file_info:

@@ -66,11 +66,19 @@ class VidexTaskCache:
         self.model_cache_dict = {k.lower(): {k1.lower(): v1 for k1, v1 in v.items()} for k, v in
                                  self.model_cache_dict.items()}
 
-    def add_db_tasks_stats(self, stats: VidexDBTaskStats ):
+    def add_db_tasks_stats(self, stats: VidexDBTaskStats):
         if self.db_tasks_stats is None:
             self.db_tasks_stats = stats
         else:
             self.db_tasks_stats.merge_with(stats, inplace=True)
+            # discard model cache if db and table exists
+            for db_name, table_list in self.db_tasks_stats.get_meta_info_keys().items():
+                if db_name not in self.model_cache_dict:
+                    self.model_cache_dict[db_name] = {}
+                for table_name in table_list:
+                    if table_name in self.model_cache_dict[db_name]:
+                        logging.info(f"discard exist model cache: {db_name}.{table_name}")
+                        self.model_cache_dict[db_name][table_name] = None
 
     def get_table_model_cache(self, db_name: str, table_name: str) -> Optional[VidexModelBase]:
         db_name = db_name.lower()
