@@ -160,12 +160,3 @@ docker run -d --name videx-server \
   -p 5001:5001 \
   videx:latest
 ```
-
-4. 验证服务是否正常运行：
-```bash
-# 检查容器状态
-docker ps
-
-# 连接到 MySQL
-mysql -h 127.0.0.1 -P 13308 -u videx -ppassword
-```

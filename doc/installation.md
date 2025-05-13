@@ -161,12 +161,3 @@ docker run -d --name videx-server \
   -p 5001:5001 \
   videx:latest
 ```
-
-4. Verify that the service is running properly:
-```bash
-# Check container status
-docker ps
-
-# Connect to MySQL
-mysql -h 127.0.0.1 -P 13308 -u videx -ppassword
-```
