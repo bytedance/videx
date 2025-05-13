@@ -279,8 +279,7 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                         elif self.data_type in ['float', 'double', 'decimal']:
                             # we thought the width of float number can be close to 0 temporarily
                             one_value_offset = (value - cur.min_value) / (cur.max_value - cur.min_value)
-                        elif self.data_type in ['string']:
-                            # 字符串仅支持比较，不支持加减，所以仅仅比较两端。非 min、max 的，暂定为 1/2
+                        elif self.data_type in ['string', 'varchar', 'char']:
                             # Strings only support comparison and do not support addition or subtraction,
                             # so we only compare the two ends.
                             # For values that are neither the minimum (min) nor the maximum (max), we take 1/2.
