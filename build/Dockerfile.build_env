@@ -82,16 +82,16 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     libtirpc-dev \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# set GCC env
-RUN mkdir -p /usr/local/gcc-9.3.0/lib64 \
-    && echo "/usr/local/gcc-9.3.0/lib64" > /etc/ld.so.conf.d/gcc.conf \
-    && cp /usr/lib/*/libgmp.so.* /usr/local/gcc-9.3.0/lib64/ \
-    && cp /usr/lib/*/libmpfr.so.* /usr/local/gcc-9.3.0/lib64/ \
-    && cp /usr/lib/*/libmpc.so.* /usr/local/gcc-9.3.0/lib64/ \
-    && ln -sf $(ls /usr/local/gcc-9.3.0/lib64/libgmp.so.* | sort | tail -1) /usr/local/gcc-9.3.0/lib64/libgmp.so \
-    && ln -sf $(ls /usr/local/gcc-9.3.0/lib64/libmpfr.so.* | sort | tail -1) /usr/local/gcc-9.3.0/lib64/libmpfr.so \
-    && ln -sf $(ls /usr/local/gcc-9.3.0/lib64/libmpc.so.* | sort | tail -1) /usr/local/gcc-9.3.0/lib64/libmpc.so \
-    && ldconfig
+# # set GCC env
+# RUN mkdir -p /usr/local/gcc-9.3.0/lib64 \
+#     && echo "/usr/local/gcc-9.3.0/lib64" > /etc/ld.so.conf.d/gcc.conf \
+#     && cp /usr/lib/*/libgmp.so.* /usr/local/gcc-9.3.0/lib64/ \
+#     && cp /usr/lib/*/libmpfr.so.* /usr/local/gcc-9.3.0/lib64/ \
+#     && cp /usr/lib/*/libmpc.so.* /usr/local/gcc-9.3.0/lib64/ \
+#     && ln -sf $(ls /usr/local/gcc-9.3.0/lib64/libgmp.so.* | sort | tail -1) /usr/local/gcc-9.3.0/lib64/libgmp.so \
+#     && ln -sf $(ls /usr/local/gcc-9.3.0/lib64/libmpfr.so.* | sort | tail -1) /usr/local/gcc-9.3.0/lib64/libmpfr.so \
+#     && ln -sf $(ls /usr/local/gcc-9.3.0/lib64/libmpc.so.* | sort | tail -1) /usr/local/gcc-9.3.0/lib64/libmpc.so \
+#     && ldconfig
 
 # 配置 Python 和其他工具
 RUN ln -sf /usr/local/gcc-9.3.0/bin/gcc /usr/local/bin/gcc \
