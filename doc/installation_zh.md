@@ -10,6 +10,7 @@ VIDEX 支持以下安装方式：
 
 1. 编译完整的 MySQL Server (包含 VIDEX 引擎)
 2. 编译 VIDEX 插件并安装到现有 MySQL Server
+3. 使用 Docker 镜像方式安装
 
 ## 1. 准备工作
 
@@ -130,13 +131,44 @@ cd $VIDEX_HOME/src/sub_platforms/sql_opt/videx/scripts
 python start_videx_server.py --port 5001
 ```
 
-## 5 安装方式三：编译 Docker 镜像
+## 5. 安装方式三：使用 Docker 镜像
+
+### 5.1 准备工作
 
 首先完成步骤 1：下载 VIDEX 和 MySQL 的代码。
 请确保 VIDEX 和 MySQL 的代码位于同一目录下。并且目录名分别为 `videx_server` 和 `mysql_server`。你可以使用软链接。
 
-然后执行以下命令：
-```sql
+### 5.2 构建和运行 Docker 镜像
+
+1. 构建 build 环境镜像：
+```bash
 cd videx_server
+docker build -t videx_build:latest -f build/Dockerfile.build_env .
+```
+
+2. 构建 VIDEX 镜像：
+```bash
 docker build -t videx:latest -f build/Dockerfile.videx ..
+```
+
+> 注意：此过程需要较大内存资源（建议至少 8GB Docker 内存），编译时间较长。
+
+3. 运行 Docker 镜像：
+```bash
+docker run -d --name videx-server \
+  -p 13308:13308 \
+  -p 5001:5001 \
+  videx:latest
+```
+
+4. 验证服务是否正常运行：
+```bash
+# 检查容器状态
+docker ps
+
+# 连接到 MySQL
+mysql -h 127.0.0.1 -P 13308 -u videx -ppassword
+
+# 在 MySQL 中验证 VIDEX 引擎
+mysql> SHOW ENGINES;  # VIDEX 应出现在引擎列表中
 ```
