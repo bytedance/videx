@@ -140,7 +140,7 @@ python start_videx_server.py --port 5001
 
 ### 5.2 构建和运行 Docker 镜像
 
-1. 构建 build 环境镜像：
+1. 构建环境镜像：
 ```bash
 cd videx_server
 docker build -t videx_build:latest -f build/Dockerfile.build_env .
@@ -151,7 +151,7 @@ docker build -t videx_build:latest -f build/Dockerfile.build_env .
 docker build -t videx:latest -f build/Dockerfile.videx ..
 ```
 
-> 注意：此过程需要较大内存资源（建议至少 8GB Docker 内存），编译时间较长。
+> 注意：此过程需要较大内存资源（建议至少 8GB Docker 内存）。
 
 3. 运行 Docker 镜像：
 ```bash
@@ -168,7 +168,4 @@ docker ps
 
 # 连接到 MySQL
 mysql -h 127.0.0.1 -P 13308 -u videx -ppassword
-
-# 在 MySQL 中验证 VIDEX 引擎
-mysql> SHOW ENGINES;  # VIDEX 应出现在引擎列表中
 ```

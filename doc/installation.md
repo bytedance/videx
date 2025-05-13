@@ -141,7 +141,7 @@ You may use symbolic links.
 
 ### 5.2 Build and Run Docker Image
 
-1. Build the build environment image:
+1. Build the environment image:
 ```bash
 cd videx_server
 docker build -t videx_build:latest -f build/Dockerfile.build_env .
@@ -152,7 +152,7 @@ docker build -t videx_build:latest -f build/Dockerfile.build_env .
 docker build -t videx:latest -f build/Dockerfile.videx ..
 ```
 
-> Note: This process requires significant memory resources (at least 8GB Docker memory is recommended) and compilation time may be lengthy.
+> Note: This process requires significant memory resources (at least 8GB Docker memory is recommended).
 
 3. Run the Docker image:
 ```bash
@@ -169,7 +169,4 @@ docker ps
 
 # Connect to MySQL
 mysql -h 127.0.0.1 -P 13308 -u videx -ppassword
-
-# Verify VIDEX engine in MySQL
-mysql> SHOW ENGINES;  # VIDEX should appear in the engine list
 ```
