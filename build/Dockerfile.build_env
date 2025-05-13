@@ -85,12 +85,12 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
 # set GCC env
 RUN mkdir -p /usr/local/gcc-9.3.0/lib64 \
     && echo "/usr/local/gcc-9.3.0/lib64" > /etc/ld.so.conf.d/gcc.conf \
-    && cp /usr/lib/x86_64-linux-gnu/libgmp.so.10* /usr/local/gcc-9.3.0/lib64/ \
-    && cp /usr/lib/x86_64-linux-gnu/libmpfr.so.6* /usr/local/gcc-9.3.0/lib64/ \
-    && cp /usr/lib/x86_64-linux-gnu/libmpc.so.3* /usr/local/gcc-9.3.0/lib64/ \
-    && ln -sf libgmp.so.10 /usr/local/gcc-9.3.0/lib64/libgmp.so \
-    && ln -sf libmpfr.so.6 /usr/local/gcc-9.3.0/lib64/libmpfr.so \
-    && ln -sf libmpc.so.3 /usr/local/gcc-9.3.0/lib64/libmpc.so \
+    && cp /usr/lib/*/libgmp.so.* /usr/local/gcc-9.3.0/lib64/ \
+    && cp /usr/lib/*/libmpfr.so.* /usr/local/gcc-9.3.0/lib64/ \
+    && cp /usr/lib/*/libmpc.so.* /usr/local/gcc-9.3.0/lib64/ \
+    && ln -sf $(ls /usr/local/gcc-9.3.0/lib64/libgmp.so.* | sort | tail -1) /usr/local/gcc-9.3.0/lib64/libgmp.so \
+    && ln -sf $(ls /usr/local/gcc-9.3.0/lib64/libmpfr.so.* | sort | tail -1) /usr/local/gcc-9.3.0/lib64/libmpfr.so \
+    && ln -sf $(ls /usr/local/gcc-9.3.0/lib64/libmpc.so.* | sort | tail -1) /usr/local/gcc-9.3.0/lib64/libmpc.so \
     && ldconfig
 
 # 配置 Python 和其他工具
