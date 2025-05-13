@@ -190,7 +190,7 @@ class VidexSingleton:
             return success_code, success_msg, expect_resp
 
         if db_task_stats.get_table_meta(videx_db, table_name) is None:
-            return 404, f"Not Found table_name: {table_name}", {}
+            return 404, f"Not Found table_name: {videx_db}.{table_name}", {}
         func = str2VidexFunc(func_str)
         if func == VidexFunc.not_supported:
             return 400, f"Not Supported function: {func_str}", {}
@@ -219,7 +219,7 @@ class VidexSingleton:
                 raise
             logging.error(f"meet error in {target_engine}, {videx_db}, {table_name}, {func_str}: {e}, "
                           f"{traceback.format_exc()}")
-            return 500, "not implement yet", {}
+            return 500, str(e), {}
         if result2str:
             final_resp = {k: str(v) for k, v in resp.items()}
         else:
