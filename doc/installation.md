@@ -10,6 +10,7 @@ VIDEX supports the following installation methods:
 
 1. Compile a complete MySQL Server (including VIDEX engine)
 2. Compile VIDEX plugin and install it on an existing MySQL Server
+3. Use Docker image installation method
 
 ## 1. Preparation
 
@@ -130,14 +131,33 @@ cd $VIDEX_HOME/src/sub_platforms/sql_opt/videx/scripts
 python start_videx_server.py --port 5001
 ```
 
-## 5. Installation Method 3: Compile Docker Image
+## 5. Installation Method 3: Using Docker Image
+
+### 5.1 Preparation
 
 First, complete step 1: download the VIDEX and MySQL code.  
 Ensure that the VIDEX and MySQL code are in the same directory, named `videx_server` and `mysql_server` respectively. 
 You may use symbolic links.
 
-Then, execute the following command:
+### 5.2 Build and Run Docker Image
+
+1. Build the environment image:
 ```bash
 cd videx_server
+docker build -t videx_build:latest -f build/Dockerfile.build_env .
+```
+
+2. Build the VIDEX image:
+```bash
 docker build -t videx:latest -f build/Dockerfile.videx ..
+```
+
+> Note: This process requires significant memory resources (at least 8GB Docker memory is recommended).
+
+3. Run the Docker image:
+```bash
+docker run -d --name videx-server \
+  -p 13308:13308 \
+  -p 5001:5001 \
+  videx:latest
 ```
