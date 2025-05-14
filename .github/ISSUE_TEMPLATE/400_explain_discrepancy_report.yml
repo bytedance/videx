@@ -1,6 +1,6 @@
 name: "📊 EXPLAIN Discrepancy Report"
 description: Report differences between VIDEX and MySQL/Percona/MariaDB query plans
-labels: [ "discrepancy", "explain" ]
+labels: [ "discrepancy" ]
 body:
   - type: dropdown
     attributes:
@@ -85,7 +85,7 @@ body:
 
   - type: textarea
     attributes:
-      label: "Demo Data Generation"
+      label: "Demo Data Generation [Optional]"
       description: "Code to generate sample data that reproduces the issue (SQL procedure, shell script, Python code, or SQL file)"
       placeholder: |
         ```sql
@@ -115,19 +115,6 @@ body:
 
     validations:
       required: false
-
-  - type: textarea
-    attributes:
-      label: "SQL Query"
-      description: "The SQL query showing different plans"
-      placeholder: |
-        ```sql
-        SELECT * FROM example 
-        WHERE created_at > '2024-01-01' 
-        ORDER BY id LIMIT 10;
-        ```
-    validations:
-      required: true
 
   - type: textarea
     attributes:
