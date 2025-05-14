@@ -1,0 +1,142 @@
+name: "📊 EXPLAIN Discrepancy Report"
+description: Report differences between VIDEX and MySQL/Percona/MariaDB query plans
+labels: [ "discrepancy", "explain" ]
+body:
+  - type: dropdown
+    attributes:
+      label: "VIDEX Mode"
+      description: "Which VIDEX deployment mode are you using?"
+      options:
+        - Standalone Mode
+        - Plugin Mode
+    validations:
+      required: true
+
+  - type: input
+    attributes:
+      label: "Target Database"
+      description: "Database type and version you're comparing against. e.g. MySQL 5.7, Percona 8.0.34"
+      placeholder: "MySQL 8.0.34, Percona 5.7.42, MariaDB 10.6.12, etc."
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Table Schema"
+      description: "Provide the relevant table definitions/schemas"
+      placeholder: |
+        ```sql
+        CREATE TABLE example (
+          id INT PRIMARY KEY,
+          value VARCHAR(255),
+          created_at DATETIME,
+          KEY idx_created (created_at)
+        );
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "SQL Query"
+      description: "The SQL query showing different plans"
+      placeholder: |
+        ```sql
+        SELECT * FROM example 
+        WHERE created_at > '2024-01-01' 
+        ORDER BY id LIMIT 10;
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "EXPLAIN Results Comparison"
+      description: "EXPLAIN FORMAT=JSON output from both VIDEX and the target database"
+      placeholder: |
+        **Target Database:**
+        ```json
+        [EXPLAIN FORMAT=JSON SQL]
+        ```
+        
+        **VIDEX:**
+        ```json
+        [EXPLAIN FORMAT=JSON SQL]
+        ```
+
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Optimizer Trace Comparison [Optional]"
+      description: "Provide optimizer trace output if available"
+      placeholder: |
+        Run following scripts on both systems, if supported:
+        ```sql
+        SET optimizer_trace="enabled=on";
+        SET optimizer_trace_max_mem_size=4294967295;
+        EXPLAIN YOUR_SQL;
+        SELECT trace FROM INFORMATION_SCHEMA.OPTIMIZER_TRACE\G
+        ```
+
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: "Demo Data Generation"
+      description: "Code to generate sample data that reproduces the issue (SQL procedure, shell script, Python code, or SQL file)"
+      placeholder: |
+        ```sql
+        -- SQL procedure
+        DELIMITER //
+        CREATE PROCEDURE generate_test_data()
+        BEGIN
+          DECLARE i INT DEFAULT 1;
+          WHILE i <= 1000 DO
+            INSERT INTO example VALUES (i, CONCAT('val_', i), DATE_ADD('2023-01-01', INTERVAL i DAY));
+            SET i = i + 1;
+          END WHILE;
+        END //
+        DELIMITER ;
+        
+        CALL generate_test_data();
+        ```
+        
+        Or attach a data generation script (shell/Python/etc.)
+        
+        Or an Example SQL file to load data:
+        INSERT INTO example (id, value, created_at)
+        VALUES 
+          (1, 'test1', '2023-01-01'),
+          (2, 'test2', '2023-02-01'),
+          (3, 'test3', '2023-03-01');
+
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: "SQL Query"
+      description: "The SQL query showing different plans"
+      placeholder: |
+        ```sql
+        SELECT * FROM example 
+        WHERE created_at > '2024-01-01' 
+        ORDER BY id LIMIT 10;
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: "Additional Context [Optional]"
+      description: "Any other information that might help diagnose the discrepancy"
+      placeholder: |
+        - Statistics differences
+        - Indexes present in one system but not the other
+        - Configuration differences
+        - Expected behavior based on documentation
+    validations:
+      required: false
