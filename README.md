@@ -49,7 +49,7 @@ However, it currently does not support functional indexes, FULL-Text, and Spatia
 
 In terms of **accuracy**, we have tested VIDEX on complex analytical benchmarks such as `TPC-H`, `TPC-H-Skew`, and `JOB`.
 <font color="red">Given only the oracle NDV and cardinality, **the VIDEX query plan is 100% identical to InnoDB**.</font> 
-(Refer to [Example: TPC-H](#example-tpch) for additional details). 
+(Refer to [Example: TPC-H](#3-examples) for additional details). 
 We expect that VIDEX can provide users with a better platform to more easily test the effectiveness of cardinality and NDV algorithms, and apply them on SQL optimization tasks. VIDEX has been deployed in Bytedance production environment, serving large-scale slow SQL optimizations. 
 
 ---
