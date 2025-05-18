@@ -6,7 +6,21 @@ source "${SCRIPT_DIR}/config.sh"
 set -e  # Exit on error
 set -x  # Print commands for debugging
 
+if [ -d "$MYSQL_HOME/storage/videx" ]; then
+    echo "Deleting existing $MYSQL_HOME/storage/videx directory..."
+    rm -rf "$MYSQL_HOME/storage/videx"
+fi
+
+echo "Copying $VIDEX_HOME/src/mysql/videx to $MYSQL_HOME/storage..."
+cp -r "$VIDEX_HOME/src/mysql/videx" "$MYSQL_HOME/storage"
+
 BOOST_DIR=$MYSQL_HOME/boost
+
+# Clean previous build
+if [ -d "$MYSQL_BUILD_DIR" ]; then
+    echo "Cleaning previous build directory..."
+    rm -rf "$MYSQL_BUILD_DIR"
+fi
 
 # Create necessary directories
 mkdir -p "$BOOST_DIR"
