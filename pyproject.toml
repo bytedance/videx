@@ -38,6 +38,7 @@ dependencies = [
     "tqdm==4.65.2",
     "matplotlib==3.7.2",
     "Flask==2.3.3",
+    "flask-restx==1.3.0",
     "gunicorn~=21.2.0",
     "psutil==5.9.5",
     "retrying==1.3.4",
