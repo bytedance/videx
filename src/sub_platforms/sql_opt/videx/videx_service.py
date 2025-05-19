@@ -54,21 +54,25 @@ response_model = api.model('Response', {
 
 task_meta_model = api.model('TaskMeta', {
     'task_id': fields.String(required=True, description='Task ID'),
-    'meta_dict': fields.Dict(required=True, description='Meta Dictionary'),
-    'stats_dict': fields.Dict(required=True, description='Stats Dictionary'),
+    'meta_dict': fields.Raw(required=True, description='Meta Dictionary'),
+    'stats_dict': fields.Raw(required=True, description='Stats Dictionary'),
     'db_config': fields.Raw(required=True, description='DB Config')
 })
 
-ask_videx_model = api.model('AskVidEx', {
+ask_videx_model = api.model('AskVidex', {
     'item_type': fields.String(required=True, description='item type'),
     'properties': fields.Nested(api.model('VidexProperties', {
         'dbname': fields.String(required=True, description='database name'),
         'function': fields.String(required=True, description='function name'),
         'table_name': fields.String(required=True, description='table name'),
         'target_storage_engine': fields.String(required=True, description='target storage engine'),
-        'videx_options': fields.Dict(description='Videx options JSON string')
+        'videx_options': fields.Raw(description='Videx options JSON string')
     })),
-    'data': fields.List(fields.Raw, description='List of data items')
+    'data': fields.List(fields.Raw, required=True, description='List of data items')
+})
+
+clear_cache_model = api.model('ClearCache', {
+    'key_list': fields.List(fields.String, required=False, description='List of keys to clear')
 })
 
 
@@ -434,13 +438,20 @@ class CreateTaskMeta(Resource):
         }
 
 
-@app.route('/clear_cache', methods=['GET'])
-def clear_cache():
-    global videx_meta_singleton
-    videx_meta_singleton.clear_cache({})
+@ns.route('/clear_cache')
+class ClearCache(Resource):
+    @ns.doc('Clear Cache')
+    @ns.expect(clear_cache_model)
+    @ns.response(200, 'Success', response_model)
+    def post(self):
+        global videx_meta_singleton
+        videx_meta_singleton.clear_cache({})
 
-    code, message, response_data = 200, "OK", {}
-    return jsonify(code=code, message=message, data=response_data)
+        return {
+            'code': 200,
+            'message': 'Success',
+            'data': {}
+        }
 
 
 @app.route('/update_gt_stats', methods=['POST'])
