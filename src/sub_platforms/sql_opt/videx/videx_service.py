@@ -66,7 +66,7 @@ ask_videx_model = api.model('AskVidex', {
         'function': fields.String(required=True, description='function name'),
         'table_name': fields.String(required=True, description='table name'),
         'target_storage_engine': fields.String(required=True, description='target storage engine'),
-        'videx_options': fields.Raw(description='Videx options JSON string')
+        'videx_options': fields.Raw(required=False, description='Videx options JSON string')
     })),
     'data': fields.List(fields.Raw, required=True, description='List of data items')
 })
