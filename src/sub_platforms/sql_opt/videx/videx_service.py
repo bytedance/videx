@@ -75,6 +75,13 @@ clear_cache_model = api.model('ClearCache', {
     'key_list': fields.List(fields.String, required=False, description='List of keys to clear')
 })
 
+update_gt_stats_model = api.model('UpdateGTStats', {
+    'task_id': fields.String(required=True, description='Task ID'),
+    'gt_stats_file': fields.Raw(required=True, description='GT stats file'),
+    'gt_ndv_mulcol_file': fields.Raw(required=True, description='GT ndv mulcol file'),
+    'gt_rec_in_ranges': fields.Raw(required=False, description='GT rec in ranges'),
+    'gt_req_resp': fields.Raw(required=True, description='GT req resp')
+})
 
 class VidexFunc(enum.Enum):
     scan_time = "scan_time"
@@ -454,36 +461,39 @@ class ClearCache(Resource):
         }
 
 
-@app.route('/update_gt_stats', methods=['POST'])
-def update_gt_stats():
-    """
-    提供 gt 结果，用于测试 videx-py 的其他环节是否正确。这些 gt 可能由于算法无法完美贴合 innodb（多列 ndv、多列 rec_in_ranges），
-    也可能是由于新建索引后一些统计量变化。
+@ns.route('/update_gt_stats')
+class UpdateGTStats(Resource):
+    @ns.doc('Update GT Stats')
+    @ns.expect(update_gt_stats_model)
+    @ns.response(200, 'Success', response_model)
+    @ns.response(400, 'Validation Error')
+    def post(self):
+        # 提供 gt 结果，用于测试 videx-py 的其他环节是否正确。这些 gt 可能由于算法无法完美贴合 innodb（多列 ndv、多列 rec_in_ranges），
+        # 也可能是由于新建索引后一些统计量变化。
+        #
+        # 传入格式为：
+        #     req_dict = {
+        #         "task_id": task_id,
+        #         "gt_stats_file": load_json_from_file(expect_meta_files[0]),
+        #         "gt_ndv_mulcol_file": load_json_from_file(expect_meta_files[3]),
+        #         "gt_rec_in_ranges": gt_rec_in_ranges,  # 可能为空
+        #         "gt_req_resp": gt_req_resp,
+        #     }
+        # 注意，收集最耗时的 "hist_file", "ndv_single_file" 反倒不会因为建删索引而变化，因此 update_gt_stats 不需要传入这些
+        #
+        # Returns:
+        #     创建成功与否
+        raise NotImplementedError
 
-    传入格式为：
-        req_dict = {
-            "task_id": task_id,
-            "gt_stats_file": load_json_from_file(expect_meta_files[0]),
-            "gt_ndv_mulcol_file": load_json_from_file(expect_meta_files[3]),
-            "gt_rec_in_ranges": gt_rec_in_ranges,  # 可能为空
-            "gt_req_resp": gt_req_resp,
-        }
-    注意，收集最耗时的 "hist_file", "ndv_single_file" 反倒不会因为建删索引而变化，因此 update_gt_stats 不需要传入这些
 
-    Returns:
-        创建成功与否
-    """
-    raise NotImplementedError
-
-
-@app.route('/set_task_variables', methods=['POST'])
-def set_task_variables():
-    """
-    主要是指定某个 task 是否启用 gt 数据
-    Returns:
-
-    """
-    raise NotImplementedError
+@ns.route('/set_task_variables')
+class SetTaskVariables(Resource):
+    @ns.doc('set task variables')
+    @ns.response(200, 'Success', response_model)
+    @ns.response(400, 'Validation Error')
+    def post(self):
+        # 主要是指定某个 task 是否启用 gt 数据
+        raise NotImplementedError
 
 
 @ns.route('/ask_videx')
