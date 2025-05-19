@@ -437,12 +437,9 @@ class CreateTaskMeta(Resource):
         req_json_item = api.payload
         global videx_meta_singleton
         videx_meta_singleton.add_task_meta(req_json_item)
-
-        return {
-            'code': 200,
-            'message': 'Success',
-            'data': {}
-        }
+    
+        code, message, response_data = 200, "OK", {}
+        return jsonify(code=code, message=message, data=response_data)
 
 
 @ns.route('/clear_cache')
@@ -454,11 +451,9 @@ class ClearCache(Resource):
         global videx_meta_singleton
         videx_meta_singleton.clear_cache({})
 
-        return {
-            'code': 200,
-            'message': 'Success',
-            'data': {}
-        }
+        code, message, response_data = 200, "OK", {}
+        return jsonify(code=code, message=message, data=response_data)
+
 
 
 @ns.route('/update_gt_stats')
@@ -466,7 +461,6 @@ class UpdateGTStats(Resource):
     @ns.doc('Update GT Stats')
     @ns.expect(update_gt_stats_model)
     @ns.response(200, 'Success', response_model)
-    @ns.response(400, 'Validation Error')
     def post(self):
         # 提供 gt 结果，用于测试 videx-py 的其他环节是否正确。这些 gt 可能由于算法无法完美贴合 innodb（多列 ndv、多列 rec_in_ranges），
         # 也可能是由于新建索引后一些统计量变化。
@@ -490,7 +484,6 @@ class UpdateGTStats(Resource):
 class SetTaskVariables(Resource):
     @ns.doc('set task variables')
     @ns.response(200, 'Success', response_model)
-    @ns.response(400, 'Validation Error')
     def post(self):
         # 主要是指定某个 task 是否启用 gt 数据
         raise NotImplementedError
@@ -525,35 +518,31 @@ class AskVidEx(Resource):
             logging.info(f"[{req_idx}] == [{code=}] use {elapsed_time:.2f}s response data: {json.dumps(response_data)}")
         else:
             logging.error(f"[{req_idx}] == [{code=}] use {elapsed_time:.2f}s {message=} "
-                      f"response data: ={json.dumps(response_data)}")
-                      
-        return {
-            'code': code,
-            'message': message,
-            'data': response_data
-        }
+                          f"response data: ={json.dumps(response_data)}")
+        return jsonify(code=code, message=message, data=response_data)
 
 
-@app.route('/videx/visualization/get_stats', methods=['GET'])
-def get_stats():
-    """
-    返回 videx_meta_singleton 当前的缓存大小。
-    """
-    non_task_cache: VidexTaskCache = videx_meta_singleton.non_task_cache
-    data_dict = {}
-    if non_task_cache is not None and non_task_cache.db_tasks_stats is not None:
-        data_dict = json.loads(non_task_cache.db_tasks_stats.to_json())
-    code, message, response_data = 200, "OK", {'stats': data_dict}
-    return jsonify(code=code, message=message, data=response_data)
+@ns.route('/videx/visualization/get_stats')
+class GetStats(Resource):
+    @ns.doc('get stats')
+    @ns.response(200, 'Success', response_model)
+    def get(self):
+        # 返回 videx_meta_singleton 当前的缓存大小。
+        non_task_cache: VidexTaskCache = videx_meta_singleton.non_task_cache
+        data_dict = {}
+        if non_task_cache is not None and non_task_cache.db_tasks_stats is not None:
+            data_dict = json.loads(non_task_cache.db_tasks_stats.to_json())
+        code, message, response_data = 200, "OK", {'stats': data_dict}
+        return jsonify(code=code, message=message, data=response_data)
 
-
-@app.route('/videx/visualization/status', methods=['GET'])
-def status():
-    """
-    返回 videx_meta_singleton 当前的缓存大小。
-    """
-    code, message, response_data = 200, "OK", {'cache': dict(videx_meta_singleton.cache)}
-    return jsonify(code=code, message=message, data=response_data)
+@ns.route('/videx/visualization/status')
+class Status(Resource):
+    @ns.doc('status')
+    @ns.response(200, 'Success', response_model)
+    def get(self):
+        # 返回 videx_meta_singleton 当前的缓存大小。
+        code, message, response_data = 200, "OK", {'cache': dict(videx_meta_singleton.cache)}
+        return jsonify(code=code, message=message, data=response_data)
 
 
 def post_add_videx_meta(req: VidexDBTaskStats, videx_server_ip_port: str, use_gzip: bool):
