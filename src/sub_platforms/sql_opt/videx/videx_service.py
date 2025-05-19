@@ -17,6 +17,7 @@ from typing import List, Tuple, Union, Callable, Type, Dict, Optional
 import requests
 from cachetools import TTLCache
 from flask import Flask, request, jsonify
+from flask_restx import Api, Resource, fields, Namespace
 from requests import Response
 
 from sub_platforms.sql_opt.env.rds_env import Env
@@ -29,6 +30,46 @@ from sub_platforms.sql_opt.videx.videx_utils import GT_Table_Return, get_local_i
 
 app = Flask(__name__)
 ENV_KEY_POST_VIDEX_META = 'POST_VIDEX_META'
+
+# Create API object
+api = Api(
+    app,
+    version='1.0',
+    title='VIDEX API',
+    description='This API doc integrates Swagger support into the VIDEX server using the Flask-RESTX, providing automated API description and interactive testing.',
+    doc='/docs',
+    ui=True,
+    validate=True
+)
+
+# Define a single namespace to maintain original path compatibility
+ns = api.namespace('', description='VIDEX API List')
+
+# Standard response model
+response_model = api.model('Response', {
+    'code': fields.Integer(required=True, description='Status Code'),
+    'message': fields.String(required=True, description='Response Message'),
+    'data': fields.Raw(description='Response Data')
+})
+
+task_meta_model = api.model('TaskMeta', {
+    'task_id': fields.String(required=True, description='Task ID'),
+    'meta_dict': fields.Dict(required=True, description='Meta Dictionary'),
+    'stats_dict': fields.Dict(required=True, description='Stats Dictionary'),
+    'db_config': fields.Raw(required=True, description='DB Config')
+})
+
+ask_videx_model = api.model('AskVidEx', {
+    'item_type': fields.String(required=True, description='item type'),
+    'properties': fields.Nested(api.model('VidexProperties', {
+        'dbname': fields.String(required=True, description='database name'),
+        'function': fields.String(required=True, description='function name'),
+        'table_name': fields.String(required=True, description='table name'),
+        'target_storage_engine': fields.String(required=True, description='target storage engine'),
+        'videx_options': fields.Dict(description='Videx options JSON string')
+    })),
+    'data': fields.List(fields.Raw, description='List of data items')
+})
 
 
 class VidexFunc(enum.Enum):
@@ -375,20 +416,22 @@ def before_request():
         # del request.headers['Content-Encoding']
 
 
-@app.route('/create_task_meta', methods=['POST'])
-def create_task_meta():
-    """
-    参考 create_videx_env 函数的调用。
-    传入格式参见 singleton 注释
-    Returns:
-        创建成功与否
-    """
-    req_json_item = request.get_json()
-    global videx_meta_singleton
-    videx_meta_singleton.add_task_meta(req_json_item)
+@ns.route('/create_task_meta')
+class CreateTaskMeta(Resource):
+    @ns.doc('Create Task Meta')
+    @ns.expect(task_meta_model)
+    @ns.response(200, 'Success', response_model)
+    @ns.response(400, 'Validation Error')
+    def post(self):
+        req_json_item = api.payload
+        global videx_meta_singleton
+        videx_meta_singleton.add_task_meta(req_json_item)
 
-    code, message, response_data = 200, "OK", {}
-    return jsonify(code=code, message=message, data=response_data)
+        return {
+            'code': 200,
+            'message': 'Success',
+            'data': {}
+        }
 
 
 @app.route('/clear_cache', methods=['GET'])
@@ -432,34 +475,42 @@ def set_task_variables():
     raise NotImplementedError
 
 
-@app.route('/ask_videx', methods=['POST'])
-def ask_videx():
-    """
-    mysql 接口
-    Returns:
+@ns.route('/ask_videx')
+class AskVidEx(Resource):
+    @ns.doc('Ask VIDEX')
+    @ns.expect(ask_videx_model)
+    @ns.response(200, 'Success', response_model)
+    @ns.response(400, 'Validation Error')
+    @ns.response(404, 'Table Not Found')
+    @ns.response(502, 'Bad Gateway')
+    def post(self):
+        req_json_item = api.payload
+        global videx_meta_singleton
+        # global request_count
+        # global resp_expect_dict
+        
+        # set task id
+        req_idx = videx_meta_singleton.request_count
+        task_id = videx_meta_singleton.extract_task_id(req_json_item)
+        videx_meta_singleton.logging_package.set_thread_trace_id(f"<<{task_id}#{req_idx}>>")
+        videx_meta_singleton.request_count += 1
+        logging.info(f"[{req_idx}] ==== receive data, {json.dumps(req_json_item)}")
 
-    """
-    req_json_item = request.get_json()
-    global videx_meta_singleton
-    # global request_count
-    # global resp_expect_dict
-
-    # set task id
-    req_idx = videx_meta_singleton.request_count
-    task_id = videx_meta_singleton.extract_task_id(req_json_item)
-    videx_meta_singleton.logging_package.set_thread_trace_id(f"<<{task_id}#{req_idx}>>")
-    videx_meta_singleton.request_count += 1
-    logging.info(f"[{req_idx}] ==== receive data, {json.dumps(req_json_item)}")
-
-    st = time.perf_counter()
-    code, message, response_data = videx_meta_singleton.ask(req_json_item)
-    elapsed_time = time.perf_counter() - st
-    if code == 200:
-        logging.info(f"[{req_idx}] == [{code=}] use {elapsed_time:.2f}s response data: {json.dumps(response_data)}")
-    else:
-        logging.error(f"[{req_idx}] == [{code=}] use {elapsed_time:.2f}s {message=} "
+        st = time.perf_counter()
+        code, message, response_data = videx_meta_singleton.ask(req_json_item)
+        elapsed_time = time.perf_counter() - st
+        
+        if code == 200:
+            logging.info(f"[{req_idx}] == [{code=}] use {elapsed_time:.2f}s response data: {json.dumps(response_data)}")
+        else:
+            logging.error(f"[{req_idx}] == [{code=}] use {elapsed_time:.2f}s {message=} "
                       f"response data: ={json.dumps(response_data)}")
-    return jsonify(code=code, message=message, data=response_data)
+                      
+        return {
+            'code': code,
+            'message': message,
+            'data': response_data
+        }
 
 
 @app.route('/videx/visualization/get_stats', methods=['GET'])
