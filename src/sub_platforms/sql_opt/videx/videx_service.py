@@ -66,11 +66,19 @@ class VidexTaskCache:
         self.model_cache_dict = {k.lower(): {k1.lower(): v1 for k1, v1 in v.items()} for k, v in
                                  self.model_cache_dict.items()}
 
-    def add_db_tasks_stats(self, stats: VidexDBTaskStats ):
+    def add_db_tasks_stats(self, stats: VidexDBTaskStats):
         if self.db_tasks_stats is None:
             self.db_tasks_stats = stats
         else:
             self.db_tasks_stats.merge_with(stats, inplace=True)
+            # discard model cache if db and table exists
+            for db_name, table_list in self.db_tasks_stats.get_meta_info_keys().items():
+                if db_name not in self.model_cache_dict:
+                    self.model_cache_dict[db_name] = {}
+                for table_name in table_list:
+                    if table_name in self.model_cache_dict[db_name]:
+                        logging.info(f"discard exist model cache: {db_name}.{table_name}")
+                        self.model_cache_dict[db_name][table_name] = None
 
     def get_table_model_cache(self, db_name: str, table_name: str) -> Optional[VidexModelBase]:
         db_name = db_name.lower()
@@ -182,7 +190,7 @@ class VidexSingleton:
             return success_code, success_msg, expect_resp
 
         if db_task_stats.get_table_meta(videx_db, table_name) is None:
-            return 404, f"Not Found table_name: {table_name}", {}
+            return 404, f"Not Found table_name: {videx_db}.{table_name}", {}
         func = str2VidexFunc(func_str)
         if func == VidexFunc.not_supported:
             return 400, f"Not Supported function: {func_str}", {}
@@ -211,7 +219,7 @@ class VidexSingleton:
                 raise
             logging.error(f"meet error in {target_engine}, {videx_db}, {table_name}, {func_str}: {e}, "
                           f"{traceback.format_exc()}")
-            return 500, "not implement yet", {}
+            return 500, str(e), {}
         if result2str:
             final_resp = {k: str(v) for k, v in resp.items()}
         else:

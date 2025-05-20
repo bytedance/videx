@@ -142,7 +142,8 @@ if __name__ == "__main__":
         if os.path.dirname(meta_path):
             os.makedirs(os.path.dirname(meta_path), exist_ok=True)
     else:
-        meta_path = f'videx_metadata_{target_db}.json'
+        # Load the existing meta file or save it to a file only when the meta_path is explicitly defined.
+        meta_path = None
     logging.info(f"metadata file is {meta_path}")
 
     # step 2: fetch or read metadata and statistics

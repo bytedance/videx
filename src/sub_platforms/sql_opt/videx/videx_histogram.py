@@ -279,8 +279,7 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                         elif self.data_type in ['float', 'double', 'decimal']:
                             # we thought the width of float number can be close to 0 temporarily
                             one_value_offset = (value - cur.min_value) / (cur.max_value - cur.min_value)
-                        elif self.data_type in ['string']:
-                            # 字符串仅支持比较，不支持加减，所以仅仅比较两端。非 min、max 的，暂定为 1/2
+                        elif self.data_type in ['string', 'varchar', 'char']:
                             # Strings only support comparison and do not support addition or subtraction,
                             # so we only compare the two ends.
                             # For values that are neither the minimum (min) nor the maximum (max), we take 1/2.
@@ -690,9 +689,9 @@ def force_generate_histogram_by_sdc_for_col(env: Env, db_name: str, table_name: 
     null_values = env.mysql_util.query_for_value(
         f"SELECT COUNT(1) FROM {db_name}.{table_name} WHERE {col_name} IS NULL;")
     total_rows = env.mysql_util.query_for_value(f"SELECT COUNT(1) FROM {db_name}.{table_name}")
-    null_values /= total_rows  # null_values is in [0, 1]
+    null_values = null_values / total_rows if total_rows > 0 else 0  # null_values is in [0, 1]
     n_buckets = min(total_rows, n_buckets)
-    if data_type_is_int(data_type):
+    if total_rows > 0 and data_type_is_int(data_type):
         n_buckets = min(n_buckets, max_val - min_val + 1)
 
     res_dict['data-type'] = data_type
