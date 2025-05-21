@@ -130,7 +130,7 @@ docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:latest
 
 ## 3 Examples
 
-### 3.1 TPCH-Tiny 示例 (MySQL 8.0)
+### 3.1 TPCH-Tiny Example (MySQL 8.0)
 
 This example demonstrates the complete VIDEX workflow using the `TPC-H Tiny` dataset (1% random sample from TPC-H sf1).
 
