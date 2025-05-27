@@ -52,8 +52,18 @@ response_model = api.model('Response', {
     'data': fields.Raw(description='Response Data')
 })
 
+# define a nullable string field
+class NullableString(fields.Raw):
+    __schema_type__ = ['string', 'null']
+    __nullable__ = True
+
+    def format(self, value):
+        if value is None or isinstance(value, str):
+            return value
+        raise ValueError('task_id must be string or null')
+
 task_meta_model = api.model('TaskMeta', {
-    'task_id': fields.String(required=False, description='Task ID'),
+    'task_id': NullableString(required=True, description='Task ID'),
     'meta_dict': fields.Raw(required=True, description='Meta Dictionary'),
     'stats_dict': fields.Raw(required=True, description='Stats Dictionary'),
     'db_config': fields.Raw(required=True, description='DB Config')
@@ -66,8 +76,8 @@ ask_videx_model = api.model('AskVidex', {
         'function': fields.String(required=True, description='function name'),
         'table_name': fields.String(required=True, description='table name'),
         'target_storage_engine': fields.String(required=True, description='target storage engine'),
-        'videx_options': fields.Raw(required=False, description='Videx options JSON string')
-    })),
+        'videx_options': fields.String(required=False, description='Videx options JSON string')
+    }), required=True, description='Videx properties'),
     'data': fields.List(fields.Raw, required=True, description='List of data items')
 })
 
@@ -76,7 +86,7 @@ clear_cache_model = api.model('ClearCache', {
 })
 
 update_gt_stats_model = api.model('UpdateGTStats', {
-    'task_id': fields.String(required=False, description='Task ID'),
+    'task_id': NullableString(required=True, description='Task ID'),
     'gt_stats_file': fields.Raw(required=True, description='GT stats file'),
     'gt_ndv_mulcol_file': fields.Raw(required=True, description='GT ndv mulcol file'),
     'gt_rec_in_ranges': fields.Raw(required=False, description='GT rec in ranges'),
