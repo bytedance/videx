@@ -53,7 +53,7 @@ response_model = api.model('Response', {
 })
 
 task_meta_model = api.model('TaskMeta', {
-    'task_id': fields.String(required=True, description='Task ID'),
+    'task_id': fields.String(required=False, description='Task ID'),
     'meta_dict': fields.Raw(required=True, description='Meta Dictionary'),
     'stats_dict': fields.Raw(required=True, description='Stats Dictionary'),
     'db_config': fields.Raw(required=True, description='DB Config')
@@ -76,7 +76,7 @@ clear_cache_model = api.model('ClearCache', {
 })
 
 update_gt_stats_model = api.model('UpdateGTStats', {
-    'task_id': fields.String(required=True, description='Task ID'),
+    'task_id': fields.String(required=False, description='Task ID'),
     'gt_stats_file': fields.Raw(required=True, description='GT stats file'),
     'gt_ndv_mulcol_file': fields.Raw(required=True, description='GT ndv mulcol file'),
     'gt_rec_in_ranges': fields.Raw(required=False, description='GT rec in ranges'),
@@ -490,7 +490,7 @@ class SetTaskVariables(Resource):
 
 
 @ns.route('/ask_videx')
-class AskVidEx(Resource):
+class AskVidex(Resource):
     @ns.doc('Ask VIDEX')
     @ns.expect(ask_videx_model)
     @ns.response(200, 'Success', response_model)
