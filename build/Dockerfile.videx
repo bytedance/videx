@@ -1,5 +1,5 @@
 # Build MySQL
-FROM videx_build:latest as builder
+FROM videx_build:latest AS builder
 
 WORKDIR /root
 
