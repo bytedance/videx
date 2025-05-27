@@ -98,5 +98,5 @@ RUN gcc --version | grep "9.3.0" \
     && cmake --version | grep "cmake version" \
     && echo "All version checks passed!"
 
-ENV PATH=/usr/local/gcc-9.3.0/bin:/opt/tiger/typhoon-blade:/opt/common_tools:$PATH \
-    LD_LIBRARY_PATH=/usr/local/gcc-9.3.0/lib64:$LD_LIBRARY_PATH
+ENV PATH=/usr/local/gcc-9.3.0/bin:/opt/tiger/typhoon-blade:/opt/common_tools:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/gcc-9.3.0/lib64
