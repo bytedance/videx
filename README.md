@@ -14,13 +14,23 @@
   <a href="https://hub.docker.com/repository/docker/kangrongme/videx">
     <img src="https://img.shields.io/docker/pulls/kangrongme/videx?style=for-the-badge&logo=docker" alt="Docker Pulls"/>
   </a>
-  <img src="https://img.shields.io/badge/MySQL|Percona-8.0|_5.7-FF9800?style=for-the-badge&logo=mysql" alt="MySQL Support"/>
+  <a href="https://arxiv.org/abs/2503.23776">
+    <img src="https://img.shields.io/badge/VLDB Demo-2025-Teal?style=for-the-badge&logo=acm" alt="VLDB-Demo 2025"/>
+  </a>
+  <img src="https://img.shields.io/badge/MySQL|Percona-8.0|5.7-FF9800?style=for-the-badge&logo=mysql" alt="MySQL Support"/>
 </p>
 
-**VIDEX**: The Disaggregated, Extensible **\[VI\]**rtual in**\[DEX\]** Engine for What-If Analysis in MySQL 🚀
+**VIDEX**: The Disaggregated, Extensible **\[VI\]**rtual in**\[DEX\]** Engine for What-If Analysis in MySQL.
 - **Virtual Index**: Does not require real data, relies only on statistical information and algorithm models to accurately simulate MySQL query plans, table join orders, and index selections;
 - **Disaggregated**: VIDEX runs on a standalone instance without affecting production MySQL. Furthermore, the Statistic Server (optionally AI-enhanced to provide cardinality and ndv) can be deployed separately, enabling GPU-heterogeneous computing and seamless hot-updates.
 - **Extensible**: VIDEX offers convenient interfaces allowing users to apply models like `cardinality` and `ndv` to downstream MySQL tasks (e.g., index recommendation);
+
+## Latest News
+
+- **[2025-05-28]** 🥳🎉 VIDEX demo paper has been accepted by the **VLDB 2025 Demo Track**! 🥳🎉 "VIDEX: A Disaggregated and Extensible Virtual Index for the Cloud and AI Era" ([arXiv Preprint](https://arxiv.org/abs/2503.23776) | [How to Cite](#paper-citation))
+- **[2025-04-28]** VIDEX [v0.1.0](https://github.com/bytedance/videx/releases/tag/v0.1.0) is released.
+
+## What's VIDEX
 
 The `virtual index` (aka `hypothetical index`) aims to simulate the cost of indexes within SQL query plans, 
 thereby demonstrating to users the impact of indexes on SQL plans without the need to create actual indexes on raw instances.
@@ -55,7 +65,7 @@ We expect that VIDEX can provide users with a better platform to more easily tes
 ---
 
 
-## 1. Overview
+## 1. Architecture Overview
 
 <p align="center">
   <img src="doc/videx-structure.png" width="600">

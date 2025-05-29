@@ -14,14 +14,25 @@
   <a href="https://hub.docker.com/repository/docker/kangrongme/videx">
     <img src="https://img.shields.io/docker/pulls/kangrongme/videx?style=for-the-badge&logo=docker" alt="Docker Pulls"/>
   </a>
-  <img src="https://img.shields.io/badge/MySQL|Percona-8.0|_5.7-FF9800?style=for-the-badge&logo=mysql" alt="MySQL Support"/>
+  <a href="https://arxiv.org/abs/2503.23776">
+    <img src="https://img.shields.io/badge/VLDB Demo-2025-Teal?style=for-the-badge&logo=acm" alt="VLDB-Demo 2025"/>
+  </a>
+  <img src="https://img.shields.io/badge/MySQL|Percona-8.0|5.7-FF9800?style=for-the-badge&logo=mysql" alt="MySQL Support"/>
 </p>
 
-**VIDEX** 为 MySQL 提供了一个解耦的、可扩展的开源虚拟索引引擎 (**\[VI\]**rtual in**\[DEX\]**)。🚀
+**VIDEX** 为 MySQL 提供了一个解耦的、可扩展的开源虚拟索引引擎 (**\[VI\]**rtual in**\[DEX\]**)。
 
 - **虚拟索引**：不需要真实数据、仅基于统计信息和算法模型，即可高精度地模拟 MySQL 产生的查询计划、模拟表连接顺序、模拟索引选择；
 - **分离式架构** (Disaggregated)：VIDEX 支持在单独的实例上部署，而不必须在原始库 MySQL 上安装；VIDEX 支持独立启动算法服务，而不必嵌入 MySQL 中；
 - **可拓展** (Extensible)：VIDEX提供了便捷的接口，用户可以将 基数估计（Cardinality）、独立值估计（NDV） 等算法模型应用于 MySQL 的下游任务中（例如索引推荐）；
+
+
+## Latest News
+
+- **[2025-05-28]** 🥳🎉VIDEX demo 论文被 **VLDB 2025 Demo Track** 接收!🥳🎉 "VIDEX: A Disaggregated and Extensible Virtual Index for the Cloud and AI Era" ([arXiv Preprint](https://arxiv.org/abs/2503.23776) | [How to Cite](#paper-citation))
+- **[2025-04-28]** VIDEX [v0.1.0](https://github.com/bytedance/videx/releases/tag/v0.1.0) 发布.
+
+## What's VIDEX
 
 “虚拟索引” 旨在模拟 SQL 查询计划中使用索引的代价（cost）， 从而向用户展示索引对 SQL 计划的影响，而无需在原始实例上创建实际索引。
 这项技术广泛应用于各种 SQL 优化任务，包括索引推荐和表连接顺序优化。
