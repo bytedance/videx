@@ -1,13 +1,10 @@
 name: VIDEX CI Check
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
-    paths:
-      - 'src/**'
-      - 'build/**'
-      - 'pyproject.toml'
-      - 'requirements.txt'
 
 jobs:
   videx-validation:
