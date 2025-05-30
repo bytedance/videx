@@ -1,13 +1,23 @@
-name: VIDEX CI Check
+name: VIDEX Basic CI Check
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'build/**'
+      - 'pyproject.toml'
+      - 'requirements.txt'
   pull_request:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'build/**'
+      - 'pyproject.toml'
+      - 'requirements.txt'
 
 jobs:
-  videx-validation:
+  videx-basic-check:
     runs-on: ubuntu-latest
 
     steps:
