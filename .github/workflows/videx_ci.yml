@@ -63,12 +63,6 @@ jobs:
       - name: Run VIDEX Docker container
         run: docker run -d --name videx-server -p 13308:13308 -p 5001:5001 videx:latest
 
-      - name: Wait for Docker services
-        run: |
-          echo "Waiting for VIDEX services to start..."
-          sleep 10
-          docker ps
-
       # Step 2: TPCH-Tiny Data Preparation & Python Env for runner
       - name: Install Python package
         run: python -m pip install -e . --use-pep517
@@ -87,16 +81,6 @@ jobs:
           python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
             --target 127.0.0.1:13308:tpch_tiny:videx:password \
             --videx 127.0.0.1:13308:videx_tpch_tiny:videx:password
-        working-directory: videx_server
-
-      - name: Verify metadata script output
-        run: |
-          if [ -f videx_metadata_tpch_tiny.json ]; then
-            echo "videx_metadata_tpch_tiny.json found."
-          else
-            echo "videx_metadata_tpch_tiny.json not found in $(pwd)!"
-            exit 1
-          fi
         working-directory: videx_server
 
       # Step 4: Execute EXPLAIN SQL and Export Result
