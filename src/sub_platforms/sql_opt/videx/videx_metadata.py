@@ -938,7 +938,15 @@ def meta_dict_to_sample_file(
             table_stat_info = TableStatisticsInfo(db_name=db_name, table_name=table_name)
 
             table_stat_info.ndv_dict = ndv_single_dict[db_name][table_name]
-            table_stat_info.histogram_dict = hist_dict[db_name][table_name]
+
+            histogram_data = hist_dict[db_name][table_name]
+            if histogram_data and isinstance(list(histogram_data.values())[0], dict):
+                # if histogram_dict is a dict, convert it to HistogramStats object
+                histogram_data = {
+                    col: HistogramStats.from_dict(hist_data) if hist_data else None
+                    for col, hist_data in histogram_data.items()
+                }
+            table_stat_info.histogram_dict = histogram_data
 
             table_stat_info.not_null_ratio_dict = None  # to full it later if required
             # if 'TABLE_ROWS' not in table_raw_stat_dict:
