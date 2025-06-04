@@ -1,0 +1,144 @@
+name: VIDEX Basic CI Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'build/**'
+      - 'pyproject.toml'
+      - 'requirements.txt'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'build/**'
+      - 'pyproject.toml'
+      - 'requirements.txt'
+
+jobs:
+  videx-basic-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout VIDEX repository
+        uses: actions/checkout@v4
+        with:
+          path: videx_server
+
+      - name: Checkout Percona Server repository
+        uses: actions/checkout@v4
+        with:
+          repository: percona/percona-server
+          ref: release-8.0.34-26
+          path: mysql_server
+          submodules: true
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client
+
+      - name: Download and extract Boost
+        run: |
+          mkdir -p mysql_server/boost && cd mysql_server/boost
+          wget https://archives.boost.io/release/1.77.0/source/boost_1_77_0.tar.bz2
+          tar -xvjf boost_1_77_0.tar.bz2
+          cd ../..
+
+      # Step 1: Docker Build and Run
+      - name: Build Docker environment image
+        run: docker build -t videx_build:latest -f build/Dockerfile.build_env .
+        working-directory: videx_server
+
+      - name: Build VIDEX Docker image
+        run: docker build -t videx:latest -f build/Dockerfile.videx ..
+        working-directory: videx_server
+
+      - name: Run VIDEX Docker container
+        run: docker run -d --name videx-server -p 13308:13308 -p 5001:5001 videx:latest
+
+      # Step 2: TPCH-Tiny Data Preparation & Python Env for runner
+      - name: Install Python package
+        run: python -m pip install -e . --use-pep517
+        working-directory: videx_server
+
+      - name: Create tpch_tiny database and import data
+        run: |
+          mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
+          tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
+          mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
+        working-directory: videx_server
+
+      # Step 3: VIDEX Metadata Collection
+      - name: Run videx_build_env.py
+        run: |
+          python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
+            --target 127.0.0.1:13308:tpch_tiny:videx:password \
+            --videx 127.0.0.1:13308:videx_tpch_tiny:videx:password
+        working-directory: videx_server
+
+      # Step 4: Execute EXPLAIN SQL and Export Result
+      - name: Execute EXPLAIN SQL for TPCH Q21
+        run: |
+          mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dvidex_tpch_tiny -e "
+          USE videx_tpch_tiny;
+          EXPLAIN FORMAT=JSON
+          SELECT
+            s_name,
+            count(*) AS numwait
+          FROM
+            supplier,
+            lineitem l1,
+            orders,
+            nation
+          WHERE
+            s_suppkey = l1.l_suppkey
+            AND o_orderkey = l1.l_orderkey
+            AND o_orderstatus = 'F'
+            AND l1.l_receiptdate > l1.l_commitdate
+            AND EXISTS (
+              SELECT *
+              FROM lineitem l2
+              WHERE l2.l_orderkey = l1.l_orderkey
+                AND l2.l_suppkey <> l1.l_suppkey
+            )
+            AND NOT EXISTS (
+              SELECT *
+              FROM lineitem l3
+              WHERE l3.l_orderkey = l1.l_orderkey
+                AND l3.l_suppkey <> l1.l_suppkey
+                AND l3.l_receiptdate > l3.l_commitdate
+            )
+            AND s_nationkey = n_nationkey
+            AND n_name = 'IRAQ'
+          GROUP BY
+            s_name
+          ORDER BY
+            numwait DESC,
+            s_name;
+          " | tail -n +2 > explain_output_ci.json
+
+          # Re-format the JSON with actual newlines
+          printf '%b' "$(<explain_output_ci.json)" > explain_output_ci.json
+        working-directory: videx_server
+
+      # Step 5: Verify EXPLAIN JSON Structure
+      - name: Compare EXPLAIN JSON with reference
+        run: |
+          python build/compare_explain_json.py explain_output_ci.json data/tpch_tiny/explain_tpch_tiny_q21_videx.json
+        working-directory: videx_server
+
+      # Cleanup
+      - name: Cleanup Docker container
+        if: always()
+        run: |
+          echo "Cleaning up Docker container..."
+          docker logs videx-server || true
+          docker stop videx-server || true
+          docker rm videx-server || true 
