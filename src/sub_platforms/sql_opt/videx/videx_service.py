@@ -17,6 +17,7 @@ from typing import List, Tuple, Union, Callable, Type, Dict, Optional
 import requests
 from cachetools import TTLCache
 from flask import Flask, request, jsonify
+from flask_restx import Api, Resource, fields, Namespace
 from requests import Response
 
 from sub_platforms.sql_opt.env.rds_env import Env
@@ -30,6 +31,67 @@ from sub_platforms.sql_opt.videx.videx_utils import GT_Table_Return, get_local_i
 app = Flask(__name__)
 ENV_KEY_POST_VIDEX_META = 'POST_VIDEX_META'
 
+# Create API object
+api = Api(
+    app,
+    version='1.0',
+    title='VIDEX API',
+    description='This API doc integrates Swagger support into the VIDEX server using the Flask-RESTX, providing automated API description and interactive testing.',
+    doc='/docs',
+    ui=True,
+    validate=True
+)
+
+# Define a single namespace to maintain original path compatibility
+ns = api.namespace('', description='VIDEX API List')
+
+# Standard response model
+response_model = api.model('Response', {
+    'code': fields.Integer(required=True, description='Status Code'),
+    'message': fields.String(required=True, description='Response Message'),
+    'data': fields.Raw(description='Response Data')
+})
+
+# define a nullable string field
+class NullableString(fields.Raw):
+    __schema_type__ = ['string', 'null']
+    __nullable__ = True
+
+    def format(self, value):
+        if value is None or isinstance(value, str):
+            return value
+        raise ValueError('task_id must be string or null')
+
+task_meta_model = api.model('TaskMeta', {
+    'task_id': NullableString(required=True, description='Task ID'),
+    'meta_dict': fields.Raw(required=True, description='Meta Dictionary'),
+    'stats_dict': fields.Raw(required=True, description='Stats Dictionary'),
+    'db_config': fields.Raw(required=True, description='DB Config')
+})
+
+ask_videx_model = api.model('AskVidex', {
+    'item_type': fields.String(required=True, description='item type'),
+    'properties': fields.Nested(api.model('VidexProperties', {
+        'dbname': fields.String(required=True, description='database name'),
+        'function': fields.String(required=True, description='function name'),
+        'table_name': fields.String(required=True, description='table name'),
+        'target_storage_engine': fields.String(required=True, description='target storage engine'),
+        'videx_options': fields.String(required=False, description='Videx options JSON string')
+    }), required=True, description='Videx properties'),
+    'data': fields.List(fields.Raw, required=True, description='List of data items')
+})
+
+clear_cache_model = api.model('ClearCache', {
+    'key_list': fields.List(fields.String, required=False, description='List of keys to clear')
+})
+
+update_gt_stats_model = api.model('UpdateGTStats', {
+    'task_id': NullableString(required=True, description='Task ID'),
+    'gt_stats_file': fields.Raw(required=True, description='GT stats file'),
+    'gt_ndv_mulcol_file': fields.Raw(required=True, description='GT ndv mulcol file'),
+    'gt_rec_in_ranges': fields.Raw(required=False, description='GT rec in ranges'),
+    'gt_req_resp': fields.Raw(required=True, description='GT req resp')
+})
 
 class VidexFunc(enum.Enum):
     scan_time = "scan_time"
@@ -375,113 +437,122 @@ def before_request():
         # del request.headers['Content-Encoding']
 
 
-@app.route('/create_task_meta', methods=['POST'])
-def create_task_meta():
-    """
-    参考 create_videx_env 函数的调用。
-    传入格式参见 singleton 注释
-    Returns:
-        创建成功与否
-    """
-    req_json_item = request.get_json()
-    global videx_meta_singleton
-    videx_meta_singleton.add_task_meta(req_json_item)
-
-    code, message, response_data = 200, "OK", {}
-    return jsonify(code=code, message=message, data=response_data)
-
-
-@app.route('/clear_cache', methods=['GET'])
-def clear_cache():
-    global videx_meta_singleton
-    videx_meta_singleton.clear_cache({})
-
-    code, message, response_data = 200, "OK", {}
-    return jsonify(code=code, message=message, data=response_data)
+@ns.route('/create_task_meta')
+class CreateTaskMeta(Resource):
+    @ns.doc('Create Task Meta')
+    @ns.expect(task_meta_model)
+    @ns.response(200, 'Success', response_model)
+    @ns.response(400, 'Validation Error')
+    def post(self):
+        req_json_item = api.payload
+        global videx_meta_singleton
+        videx_meta_singleton.add_task_meta(req_json_item)
+    
+        code, message, response_data = 200, "OK", {}
+        return jsonify(code=code, message=message, data=response_data)
 
 
-@app.route('/update_gt_stats', methods=['POST'])
-def update_gt_stats():
-    """
-    提供 gt 结果，用于测试 videx-py 的其他环节是否正确。这些 gt 可能由于算法无法完美贴合 innodb（多列 ndv、多列 rec_in_ranges），
-    也可能是由于新建索引后一些统计量变化。
+@ns.route('/clear_cache')
+class ClearCache(Resource):
+    @ns.doc('Clear Cache')
+    @ns.expect(clear_cache_model)
+    @ns.response(200, 'Success', response_model)
+    def post(self):
+        global videx_meta_singleton
+        videx_meta_singleton.clear_cache({})
 
-    传入格式为：
-        req_dict = {
-            "task_id": task_id,
-            "gt_stats_file": load_json_from_file(expect_meta_files[0]),
-            "gt_ndv_mulcol_file": load_json_from_file(expect_meta_files[3]),
-            "gt_rec_in_ranges": gt_rec_in_ranges,  # 可能为空
-            "gt_req_resp": gt_req_resp,
-        }
-    注意，收集最耗时的 "hist_file", "ndv_single_file" 反倒不会因为建删索引而变化，因此 update_gt_stats 不需要传入这些
-
-    Returns:
-        创建成功与否
-    """
-    raise NotImplementedError
+        code, message, response_data = 200, "OK", {}
+        return jsonify(code=code, message=message, data=response_data)
 
 
-@app.route('/set_task_variables', methods=['POST'])
-def set_task_variables():
-    """
-    主要是指定某个 task 是否启用 gt 数据
-    Returns:
 
-    """
-    raise NotImplementedError
-
-
-@app.route('/ask_videx', methods=['POST'])
-def ask_videx():
-    """
-    mysql 接口
-    Returns:
-
-    """
-    req_json_item = request.get_json()
-    global videx_meta_singleton
-    # global request_count
-    # global resp_expect_dict
-
-    # set task id
-    req_idx = videx_meta_singleton.request_count
-    task_id = videx_meta_singleton.extract_task_id(req_json_item)
-    videx_meta_singleton.logging_package.set_thread_trace_id(f"<<{task_id}#{req_idx}>>")
-    videx_meta_singleton.request_count += 1
-    logging.info(f"[{req_idx}] ==== receive data, {json.dumps(req_json_item)}")
-
-    st = time.perf_counter()
-    code, message, response_data = videx_meta_singleton.ask(req_json_item)
-    elapsed_time = time.perf_counter() - st
-    if code == 200:
-        logging.info(f"[{req_idx}] == [{code=}] use {elapsed_time:.2f}s response data: {json.dumps(response_data)}")
-    else:
-        logging.error(f"[{req_idx}] == [{code=}] use {elapsed_time:.2f}s {message=} "
-                      f"response data: ={json.dumps(response_data)}")
-    return jsonify(code=code, message=message, data=response_data)
+@ns.route('/update_gt_stats')
+class UpdateGTStats(Resource):
+    @ns.doc('Update GT Stats')
+    @ns.expect(update_gt_stats_model)
+    @ns.response(200, 'Success', response_model)
+    def post(self):
+        # 提供 gt 结果，用于测试 videx-py 的其他环节是否正确。这些 gt 可能由于算法无法完美贴合 innodb（多列 ndv、多列 rec_in_ranges），
+        # 也可能是由于新建索引后一些统计量变化。
+        #
+        # 传入格式为：
+        #     req_dict = {
+        #         "task_id": task_id,
+        #         "gt_stats_file": load_json_from_file(expect_meta_files[0]),
+        #         "gt_ndv_mulcol_file": load_json_from_file(expect_meta_files[3]),
+        #         "gt_rec_in_ranges": gt_rec_in_ranges,  # 可能为空
+        #         "gt_req_resp": gt_req_resp,
+        #     }
+        # 注意，收集最耗时的 "hist_file", "ndv_single_file" 反倒不会因为建删索引而变化，因此 update_gt_stats 不需要传入这些
+        #
+        # Returns:
+        #     创建成功与否
+        raise NotImplementedError
 
 
-@app.route('/videx/visualization/get_stats', methods=['GET'])
-def get_stats():
-    """
-    返回 videx_meta_singleton 当前的缓存大小。
-    """
-    non_task_cache: VidexTaskCache = videx_meta_singleton.non_task_cache
-    data_dict = {}
-    if non_task_cache is not None and non_task_cache.db_tasks_stats is not None:
-        data_dict = json.loads(non_task_cache.db_tasks_stats.to_json())
-    code, message, response_data = 200, "OK", {'stats': data_dict}
-    return jsonify(code=code, message=message, data=response_data)
+@ns.route('/set_task_variables')
+class SetTaskVariables(Resource):
+    @ns.doc('set task variables')
+    @ns.response(200, 'Success', response_model)
+    def post(self):
+        # 主要是指定某个 task 是否启用 gt 数据
+        raise NotImplementedError
 
 
-@app.route('/videx/visualization/status', methods=['GET'])
-def status():
-    """
-    返回 videx_meta_singleton 当前的缓存大小。
-    """
-    code, message, response_data = 200, "OK", {'cache': dict(videx_meta_singleton.cache)}
-    return jsonify(code=code, message=message, data=response_data)
+@ns.route('/ask_videx')
+class AskVidex(Resource):
+    @ns.doc('Ask VIDEX')
+    @ns.expect(ask_videx_model)
+    @ns.response(200, 'Success', response_model)
+    @ns.response(400, 'Validation Error')
+    @ns.response(404, 'Table Not Found')
+    @ns.response(502, 'Bad Gateway')
+    def post(self):
+        req_json_item = api.payload
+        global videx_meta_singleton
+        # global request_count
+        # global resp_expect_dict
+        
+        # set task id
+        req_idx = videx_meta_singleton.request_count
+        task_id = videx_meta_singleton.extract_task_id(req_json_item)
+        videx_meta_singleton.logging_package.set_thread_trace_id(f"<<{task_id}#{req_idx}>>")
+        videx_meta_singleton.request_count += 1
+        logging.info(f"[{req_idx}] ==== receive data, {json.dumps(req_json_item)}")
+
+        st = time.perf_counter()
+        code, message, response_data = videx_meta_singleton.ask(req_json_item)
+        elapsed_time = time.perf_counter() - st
+        
+        if code == 200:
+            logging.info(f"[{req_idx}] == [{code=}] use {elapsed_time:.2f}s response data: {json.dumps(response_data)}")
+        else:
+            logging.error(f"[{req_idx}] == [{code=}] use {elapsed_time:.2f}s {message=} "
+                          f"response data: ={json.dumps(response_data)}")
+        return jsonify(code=code, message=message, data=response_data)
+
+
+@ns.route('/videx/visualization/get_stats')
+class GetStats(Resource):
+    @ns.doc('get stats')
+    @ns.response(200, 'Success', response_model)
+    def get(self):
+        # 返回 videx_meta_singleton 当前的缓存大小。
+        non_task_cache: VidexTaskCache = videx_meta_singleton.non_task_cache
+        data_dict = {}
+        if non_task_cache is not None and non_task_cache.db_tasks_stats is not None:
+            data_dict = json.loads(non_task_cache.db_tasks_stats.to_json())
+        code, message, response_data = 200, "OK", {'stats': data_dict}
+        return jsonify(code=code, message=message, data=response_data)
+
+@ns.route('/videx/visualization/status')
+class Status(Resource):
+    @ns.doc('status')
+    @ns.response(200, 'Success', response_model)
+    def get(self):
+        # 返回 videx_meta_singleton 当前的缓存大小。
+        code, message, response_data = 200, "OK", {'cache': dict(videx_meta_singleton.cache)}
+        return jsonify(code=code, message=message, data=response_data)
 
 
 def post_add_videx_meta(req: VidexDBTaskStats, videx_server_ip_port: str, use_gzip: bool):
