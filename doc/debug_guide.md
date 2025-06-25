@@ -38,6 +38,8 @@ chmod +x *.sh
 ./debug.sh
 ```
 
+![container bash](debug_img/container_debugsh.png)
+
 ## 3. Open Project in CLion
 
 Open the local mysql_server project.
@@ -53,11 +55,15 @@ Open the local mysql_server project.
     - Password: root
 3. Click `Test Connection` to verify the connection
 
+![ssh setting](debug_img/ssh_configuration.png)
+
 ### 4.2 Configure Remote Toolchain
 1. Go to `Settings` → `Build, Execution, Deployment` → `Toolchains`
 2. Add a new Remote Host toolchain:
     - Name: Remote Host
     - C++ Compiler: /usr/local/gcc-9.3.0/bin/g++
+
+![toolchain setting](debug_img/toolchain.png)
 
 ## 5. Configure Remote Path Mapping
 
@@ -70,6 +76,10 @@ Open the local mysql_server project.
 3. In the Mappings tab:
     - Local path: Set to the mysql_server path on your local host
     - Deployment path: /root
+
+![deployment setting](debug_img/deployment_setting.png)
+
+![mapping setting](debug_img/deployment_mapping.png)
 
 ## 6. Configure CMake Profile
 1. Go to `Settings` → `Build, Execution, Deployment` → `CMake`
@@ -95,24 +105,43 @@ Open the local mysql_server project.
 
 4. Build directory: mysql_build_output/build
 
+![cmake setting](debug_img/cmake_configuration.png)
 
 ## 7. Configure and Start MySQL Service
 
-### 7.1 Initialize mysqld Data Directory
+### 7.1 Initialize mysqld
+
+1. Go to `Run/Debug Configurations`
+2. Search mysqld and add a new instance
+    - Name: mysqld-init
+    - Target: mysqld
+3. set the program arguments and working directory
+4. click ▶️ to run the mysqld-init
 
 ```bash
 --defaults-file=./etc/my.cnf --initialize-insecure --user=root --basedir=./ --datadir=./data
 ```
 
-7.2 Start mysqld
+![mysqld-init](debug_img/mysqld-init.png)
+
+### 7.2 Start
+
+1. Go to `Run/Debug Configurations`
+2. Search mysqld and add a new instance
+    - Name: mysqld-run
+    - Target: mysqld
+3. set the program arguments and working directory
+4. click ▶️ to run the mysqld-run
 
 ```bash
 --defaults-file=./etc/my.cnf --user=root --basedir=./ --datadir=./data --socket=./mysql_80.sock --port=13308
 ```
 
+![mysqld-run](debug_img/mysqld-run.png)
+
 ## 8. Create Debug User
 
-Execute in the container:
+Execute in the container terminal:
 
 ```bash
 /root/mysql_server/mysql_build_output/build/runtime_output_directory/mysql \
@@ -121,7 +150,7 @@ Execute in the container:
       GRANT ALL ON *.* TO 'videx'@'%'; FLUSH PRIVILEGES;"
 ```
 
-Test in the local terminal:
+Test in your local terminal:
 
 ```bash
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e 'SELECT 1;'
@@ -138,4 +167,6 @@ python3.9 start_videx_server.py --port 5001
 
 10. Start GDB Debugging
 
-Configure GDB remote debugging in CLion
+Switch application to mysqld-run, and click debug
+
+![debug demo](debug_img/clion_debug.png)
