@@ -2,6 +2,8 @@
 
 This guide shows how to mount the `mysql8` and `videx` projects into a container using Docker, creating a debugging environment isolated from the host environment. The code in the container can be affected by local modifications in real-time, facilitating development and debugging.
 
+**Note: This guide is currently only applicable for macOS.**
+
 ## 1. Preparation
 
 Please following the instructions in **Section1 Preparation** in the [installation guide](https://github.com/bytedance/videx/blob/main/doc/installation.md).
@@ -147,7 +149,7 @@ mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e 'SELECT 1;'
 
 You will get the following result if all goes well
 
-![local terminal check](debug_img/local_check.png)
+<img src="debug_img/local_check.png" alt="local terminal check" width="600"/>
 
 ## 9. Start Videx Server
 ```bash
