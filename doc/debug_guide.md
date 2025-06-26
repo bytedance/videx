@@ -145,6 +145,10 @@ Test in your local terminal:
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e 'SELECT 1;'
 ```
 
+You will get the following result if all goes well
+
+![local terminal check](debug_img/local_check.png)
+
 ## 9. Start Videx Server
 ```bash
 cd /root/videx_server
