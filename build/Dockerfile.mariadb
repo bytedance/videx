@@ -1,0 +1,115 @@
+# MariaDB Build Environment
+FROM debian:sid AS builder
+
+# Metadata
+LABEL maintainer="Haibo Yang <haibo942us@gmail.com>"
+
+# Arguments
+ARG MARIADB_BRANCH=11.0
+
+# Install base tools
+RUN echo 'deb-src http://deb.debian.org/debian sid main' > /etc/apt/sources.list.d/deb-src-sid.list && \
+    apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    build-essential \
+    devscripts \
+    equivs \
+    ccache \
+    eatmydata \
+    ninja-build \
+    clang \
+    entr \
+    moreutils \
+    git \
+    cmake \
+    wget \
+    ca-certificates \
+    curl \
+    gnupg \
+    # MariaDB build dependencies (from official debian/control)
+    bison \
+    flex \
+    debhelper \
+    dh-exec \
+    libaio-dev \
+    libboost-dev \
+    libboost-atomic-dev \
+    libboost-chrono-dev \
+    libboost-date-time-dev \
+    libboost-filesystem-dev \
+    libboost-regex-dev \
+    libboost-system-dev \
+    libboost-thread-dev \
+    libbz2-dev \
+    libcrack2-dev \
+    libcurl4-openssl-dev \
+    libedit-dev \
+    libfmt-dev \
+    libjemalloc-dev \
+    libjudy-dev \
+    libkrb5-dev \
+    liblz4-dev \
+    liblzma-dev \
+    liblzo2-dev \
+    libncurses-dev \
+    libpam0g-dev \
+    libpcre2-dev \
+    libreadline-dev \
+    libsnappy-dev \
+    libssl-dev \
+    libsystemd-dev \
+    liburing-dev \
+    libxml2-dev \
+    libzstd-dev \
+    lsb-release \
+    perl \
+    po-debconf \
+    psmisc \
+    unixodbc-dev \
+    uuid-dev \
+    zlib1g-dev \
+    # Additional useful packages
+    pkg-config \
+    libnuma-dev \
+    libpmem-dev \
+    gdb \
+    gdbserver \
+    openssh-server \
+    net-tools \
+    rsync \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Verify key build tools are installed
+RUN bison --version && \
+    cmake --version && \
+    clang --version && \
+    ninja --version && \
+    pkg-config --version && \
+    perl --version && \
+    debhelper --help > /dev/null 2>&1 || echo "debhelper available" && \
+    echo "All build tools verified successfully!"
+
+# Set clang environment
+ENV CXX=clang++ \
+    CC=clang \
+    CXX_FOR_BUILD=clang++ \
+    CC_FOR_BUILD=clang \
+    CFLAGS="-Wno-unused-command-line-argument" \
+    CXXFLAGS="-Wno-unused-command-line-argument"
+
+# Set up SSH server
+RUN mkdir -p /var/run/sshd && \
+    echo 'root:root' | chpasswd && \
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    echo 'ClientAliveInterval 60' >> /etc/ssh/sshd_config
+
+# Application ports:
+# 13308 - MySQL service
+# 5001  - Videx service  
+# 1234  - GDB debug server
+# 22    - SSH service
+EXPOSE 13308 5001 1234 22
+
+CMD ["/etc/init.d/ssh", "start"]
