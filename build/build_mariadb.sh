@@ -6,7 +6,7 @@ set -x
 
 git config --global --add safe.directory /root/mariadb_server
 
-mkdir -p /root/mariadb_server/mysql_build_output/{ccache,build,data,logs,etc}
+mkdir -p /root/mariadb_server/mysql_build_output/{ccache,build,data,logs,etc,tmp}
 
 export CCACHE_DIR=/root/mariadb_server/mysql_build_output/ccache
 

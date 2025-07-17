@@ -5,7 +5,7 @@ FROM debian:sid AS builder
 LABEL maintainer="Haibo Yang <haibo942us@gmail.com>"
 
 # Arguments
-ARG MARIADB_BRANCH=11.0
+ARG MARIADB_BRANCH=11.8
 
 # Install base tools
 RUN echo 'deb-src http://deb.debian.org/debian sid main' > /etc/apt/sources.list.d/deb-src-sid.list && \
