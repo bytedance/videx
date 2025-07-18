@@ -11,6 +11,8 @@ import numpy as np
 from estndv import ndvEstimator
 from pandas import DataFrame
 
+from adandv_model_infer import AdaNDVPredictor, AdaNDVConfig
+
 from sub_platforms.sql_opt.videx.videx_utils import safe_tolist
 
 
@@ -117,6 +119,7 @@ class NDVEstimator:
     def __init__(self, original_num) -> None:
         self.original_num = original_num # 原表行数
         self.tools = NEVUtils()
+        self.ada_model = None
 
     def estimator(self, r: int, profile: List[int], method: str = 'GEE'):
         """
@@ -136,10 +139,46 @@ class NDVEstimator:
             ndv = self.ChaoLee_estimate(r, profile)
         elif method == 'LS':
             ndv = self.LS_estimate(profile)
+        elif method == 'Ada':
+            if self.ada_model is None:
+                sample_rate = r / self.original_num
+                config = AdaNDVConfig(
+                    model_path="./resources/adandv_model.pt",
+                    model_input_len=100,
+                    estimator_num=14,
+                    k=2,
+                    sample_rate=sample_rate
+                )
+                self.ada_model = AdaNDVPredictor(config)
+            ndv = self.ada_estimate(r, profile)
         else:
             raise ValueError(f"Unsupported NDV estimation method: {method}")
         return ndv
 
+
+    def ada_estimate(self, r: int, profile: List[int]):
+        estimate_list = []
+        base_methods = [
+            'error_bound', 'GEE', 'Chao', 'shlosser', 'ChaoLee',
+            'Goodman', 'Jackknife', 'Sichel',
+            'Method of Movement', 'Bootstrap', 'Horvitz Thompson',
+            'Method of Movement v2', 'Method of Movement v3', 'Smoothed Jackknife'
+        ] 
+        # currently unsupported estimator: 
+        # Goodman, Jackknife, Sichel, Method of Movement, 
+        # Bootstrap, Horvitz Thompson, Method of Movement v2,
+        # Method of Movement v3, Smoothed Jackknife
+
+        for method in base_methods:
+            try:
+                estimate = self.estimator(r, profile, method)
+            except Exception:
+                estimate = 1.0  # fallback if method not implemented
+            estimate_list.append(estimate)
+
+        ndv = self.ada_model.predict(profile, estimate_list)
+        return ndv
+    
 
     def estimate(self, all_sampled_data: DataFrame) -> Dict[str, float]:
         """input all data and estimate NDV
