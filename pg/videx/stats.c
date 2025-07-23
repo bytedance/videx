@@ -18,6 +18,7 @@
 #include "commands/vacuum.h"
 #include "videxam.h"
 #include "access/heapam.h"
+#include "utils/selfuncs.h"
 
 PG_MODULE_MAGIC;
 PG_FUNCTION_INFO_V1(videx_analyze);
@@ -200,8 +201,8 @@ videx_tableam_handler(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(&videxam_methods);
 }
 
-// static get_relation_stats_hook_type prev_get_relation_stats_hook = NULL;
-// static get_index_stats_hook_type  prev_get_index_stats_hook = NULL;
+static get_relation_stats_hook_type prev_get_relation_stats_hook = NULL;
+static get_index_stats_hook_type  prev_get_index_stats_hook = NULL;
 
 
 // static bool videx_get_relation_stats(PlannerInfo *root,

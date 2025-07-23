@@ -3,8 +3,8 @@
 MODULE_big = videx
 OBJS = \
 	$(WIN32RES) \
-	src/pg/stats.o \
-	src/pg/videxam.o \
+	pg/videx/stats.o \
+	pg/videx/videxam.o \
 
 EXTENSION = videx
 DATA = videx--1.0.sql
