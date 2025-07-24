@@ -10,7 +10,7 @@ import os
 
 from pymysql import InternalError
 
-from sub_platforms.sql_opt.env.rds_env import OpenMySQLEnv
+from sub_platforms.sql_opt.env.rds_env import OpenMySQLEnv, OpenPGEnv
 from sub_platforms.sql_opt.videx import videx_logging
 from sub_platforms.sql_opt.videx.videx_metadata import fetch_all_meta_for_videx, \
     construct_videx_task_meta_from_local_files, fetch_all_meta_with_one_file
@@ -122,12 +122,19 @@ if __name__ == "__main__":
 
     db_type = args.db_type
 
-    target_env = OpenMySQLEnv(ip=target_ip, port=target_port, usr=target_user, pwd=target_pwd, db_name=target_db,
+    if db_type == "mysql":
+        target_env = OpenMySQLEnv(ip=target_ip, port=target_port, usr=target_user, pwd=target_pwd, db_name=target_db,
+                              read_timeout=300, write_timeout=300, connect_timeout=10)
+    elif db_type == "pg":
+        target_env = OpenPGEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=videx_db,
                               read_timeout=300, write_timeout=300, connect_timeout=10)
     
-    
     try:
-        videx_env = OpenMySQLEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=videx_db,
+        if db_type == "mysql":
+            videx_env = OpenMySQLEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=videx_db,
+                                 read_timeout=300, write_timeout=300, connect_timeout=10)
+        elif db_type == "pg":
+            videx_env = OpenPGEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=videx_db,
                                  read_timeout=300, write_timeout=300, connect_timeout=10)
     except InternalError as e:
         if f"Unknown database '{videx_db}'" in str(e):

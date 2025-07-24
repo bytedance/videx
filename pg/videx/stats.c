@@ -18,7 +18,8 @@
 #include "commands/vacuum.h"
 #include "videxam.h"
 #include "access/heapam.h"
-#include "utils/selfuncs.h"
+#include "catalog/pg_index.h"
+#include "catalog/pg_statistic_ext.h"
 
 PG_MODULE_MAGIC;
 PG_FUNCTION_INFO_V1(videx_analyze);
@@ -27,7 +28,7 @@ PG_FUNCTION_INFO_V1(videx_tableam_handler);
 static void
 copy_pg_statistic(Oid src_relid, Oid dst_relid)
 {
-    Relation statRel;
+    Relation stat_rel;
     ScanKeyData key;
     SysScanDesc scan;
     HeapTuple tup;
@@ -38,9 +39,10 @@ copy_pg_statistic(Oid src_relid, Oid dst_relid)
     bool nulls[Natts_pg_statistic];
     bool replaces[Natts_pg_statistic];
 
-    statRel = table_open(StatisticRelationId, RowExclusiveLock);
-    if (!RelationIsValid(statRel))
+    stat_rel = table_open(StatisticRelationId, RowExclusiveLock);
+    if (!RelationIsValid(stat_rel))
         elog(ERROR, "failed to open pg_statistic");
+    
 
     ScanKeyInit(&key,
                 Anum_pg_statistic_starelid,
@@ -48,11 +50,11 @@ copy_pg_statistic(Oid src_relid, Oid dst_relid)
                 F_OIDEQ,
                 ObjectIdGetDatum(src_relid));
 
-    scan = systable_beginscan(statRel,
+    scan = systable_beginscan(stat_rel,
                                StatisticRelidAttnumInhIndexId,
                                true, NULL, 1, &key);
 
-    indstate = CatalogOpenIndexes(statRel);
+    indstate = CatalogOpenIndexes(stat_rel);
 
     while ((tup = systable_getnext(scan)) != NULL)
     {
@@ -70,7 +72,7 @@ copy_pg_statistic(Oid src_relid, Oid dst_relid)
         memset(nulls, false, sizeof(nulls));
         memset(replaces, true, sizeof(replaces));
 
-        heap_deform_tuple(tup, RelationGetDescr(statRel), values, nulls);
+        heap_deform_tuple(tup, RelationGetDescr(stat_rel), values, nulls);
 
         values[Anum_pg_statistic_starelid - 1] = ObjectIdGetDatum(dst_relid);
         values[Anum_pg_statistic_staattnum - 1] = Int16GetDatum(dst_attnum);
@@ -83,38 +85,105 @@ copy_pg_statistic(Oid src_relid, Oid dst_relid)
         if (HeapTupleIsValid(oldtup))
         {
             HeapTuple newtup = heap_modify_tuple(oldtup,
-                                                 RelationGetDescr(statRel),
+                                                 RelationGetDescr(stat_rel),
                                                  values, nulls, replaces);
             ReleaseSysCache(oldtup);
-            CatalogTupleUpdateWithInfo(statRel, &newtup->t_self, newtup, indstate);
+            CatalogTupleUpdateWithInfo(stat_rel, &newtup->t_self, newtup, indstate);
             heap_freetuple(newtup);
         }
         else
         {
-            HeapTuple newtup = heap_form_tuple(RelationGetDescr(statRel), values, nulls);
-            CatalogTupleInsertWithInfo(statRel, newtup, indstate);
+            HeapTuple newtup = heap_form_tuple(RelationGetDescr(stat_rel), values, nulls);
+            CatalogTupleInsertWithInfo(stat_rel, newtup, indstate);
             heap_freetuple(newtup);
         }
     }
 
     CatalogCloseIndexes(indstate);
     systable_endscan(scan);
-    table_close(statRel, RowExclusiveLock);
+    table_close(stat_rel, RowExclusiveLock);
 }
 
+static void
+copy_pg_statistic_ext(Oid src_relid, Oid dst_relid)
+{
+    Relation stat_ext_rel;
+    ScanKeyData key;
+    SysScanDesc scan;
+    HeapTuple tup;
+    HeapTuple newtup;
+    CatalogIndexState indstate;
+
+    stat_ext_rel = table_open(StatisticExtRelationId, RowExclusiveLock);
+    if (!RelationIsValid(stat_ext_rel))
+        elog(ERROR, "failed to open pg_statistic_ext");
+
+    ScanKeyInit(&key,
+                 Anum_pg_statistic_ext_stxrelid,
+                 BTEqualStrategyNumber,
+                 F_OIDEQ,
+                 ObjectIdGetDatum(dst_relid));
+    scan = systable_beginscan(stat_ext_rel,
+                               StatisticExtRelidIndexId,
+                               true, NULL, 1, &key);
+
+    indstate = CatalogOpenIndexes(stat_ext_rel);
+
+    while ((tup = systable_getnext(scan)) != NULL)
+    {
+        CatalogTupleDelete(stat_ext_rel, &tup->t_self);
+    }
+    systable_endscan(scan);
+    
+    ScanKeyInit(&key,
+                 Anum_pg_statistic_ext_stxrelid,
+                 BTEqualStrategyNumber,
+                 F_OIDEQ,
+                 ObjectIdGetDatum(src_relid));
+
+    scan = systable_beginscan(stat_ext_rel,
+                            StatisticExtRelidIndexId,
+                               true, NULL, 1, &key);
+
+    while ((tup = systable_getnext(scan)) != NULL)
+    {
+        Datum values[Natts_pg_statistic_ext];
+        bool nulls[Natts_pg_statistic_ext];
+        Oid new_oid;
+        Oid namespace_oid;
+        char *new_stxname;
+
+        heap_deform_tuple(tup, RelationGetDescr(stat_ext_rel), values, nulls);
+
+        values[Anum_pg_statistic_ext_stxrelid - 1] = ObjectIdGetDatum(dst_relid);
+        
+        new_oid = GetNewOidWithIndex(stat_ext_rel, StatisticExtOidIndexId, Anum_pg_statistic_ext_oid);
+        values[Anum_pg_statistic_ext_oid - 1] = ObjectIdGetDatum(new_oid);
+
+        namespace_oid = get_rel_namespace(dst_relid);
+        values[Anum_pg_statistic_ext_stxnamespace - 1] = ObjectIdGetDatum(namespace_oid);
+
+        new_stxname = psprintf("viedex_%s", DatumGetCString(values[Anum_pg_statistic_ext_stxname - 1]));
+        values[Anum_pg_statistic_ext_stxname - 1] = new_stxname;
+
+        newtup = heap_form_tuple(RelationGetDescr(stat_ext_rel), values, nulls);
+        CatalogTupleInsertWithInfo(stat_ext_rel, newtup, indstate);
+        
+        heap_freetuple(newtup);
+    }
+
+    CatalogCloseIndexes(indstate);
+    systable_endscan(scan);
+    table_close(stat_ext_rel, RowExclusiveLock);
+}
 
 static void
 copy_pg_class_stats(Oid src_relid, Oid dst_relid)
 {
-    Relation rel_rel;
     HeapTuple src_tup;
     HeapTuple dst_tup;
     Form_pg_class src_form;
     Relation dst_rel;
-
-    rel_rel = table_open(RelationRelationId, RowExclusiveLock);
-    if (!RelationIsValid(rel_rel))
-        elog(ERROR, "failed to open pg_class relation");
 
     src_tup = SearchSysCache1(RELOID, ObjectIdGetDatum(src_relid));
     dst_tup = SearchSysCache1(RELOID, ObjectIdGetDatum(dst_relid));
@@ -142,7 +211,6 @@ copy_pg_class_stats(Oid src_relid, Oid dst_relid)
 
     ReleaseSysCache(src_tup);
     ReleaseSysCache(dst_tup);
-    table_close(rel_rel, RowExclusiveLock);
 }
 
 Datum
@@ -151,11 +219,10 @@ videx_analyze(PG_FUNCTION_ARGS)
     Oid src_relid = PG_GETARG_OID(0);
     Oid dst_relid = PG_GETARG_OID(1);
 
-    elog(INFO, "Copying pg_class stats from %u to %u", src_relid, dst_relid);
+    elog(INFO, "Copying statistic from %u to %u", src_relid, dst_relid);
     copy_pg_class_stats(src_relid, dst_relid);
-
-    elog(INFO, "Copying pg_statistic from %u to %u", src_relid, dst_relid);
     copy_pg_statistic(src_relid, dst_relid);
+    copy_pg_statistic_ext(src_relid, dst_relid);
 
     CommandCounterIncrement();
     CacheInvalidateRelcacheByRelid(dst_relid);
@@ -201,8 +268,8 @@ videx_tableam_handler(PG_FUNCTION_ARGS)
 	PG_RETURN_POINTER(&videxam_methods);
 }
 
-static get_relation_stats_hook_type prev_get_relation_stats_hook = NULL;
-static get_index_stats_hook_type  prev_get_index_stats_hook = NULL;
+// static get_relation_stats_hook_type prev_get_relation_stats_hook = NULL;
+// static get_index_stats_hook_type  prev_get_index_stats_hook = NULL;
 
 
 // static bool videx_get_relation_stats(PlannerInfo *root,
@@ -240,4 +307,3 @@ static get_index_stats_hook_type  prev_get_index_stats_hook = NULL;
 //                                            AttrNumber indexattnum,
 //                                            VariableStatData *vardata){
 // }
-

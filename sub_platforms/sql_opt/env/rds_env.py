@@ -19,8 +19,8 @@ from sub_platforms.sql_opt.common.sample_info import SampleColumnInfo
 from sub_platforms.sql_opt.meta import Table, Column, Index, IndexColumn, IndexType
 from sub_platforms.sql_opt.databases.mysql.mysql_command import MySQLCommand, get_mysql_version, MySQLVersion
 from sub_platforms.sql_opt.meta import Table, Column, IndexColumn, IndexType
-from sub_platforms.sql_opt.videx.videx_mysql_utils import get_mysql_utils, MySQLConnectionConfig, DBTYPE
-
+from sub_platforms.sql_opt.videx.videx_mysql_utils import get_mysql_utils, MySQLConnectionConfig, DBTYPE,PGConnectionConfig,get_pg_utils
+from sub_platforms.sql_opt.databases.pg.pg_command import PGCommand, get_pg_version, PGVersion 
 
 def add_backquote(name):
     """
@@ -392,5 +392,33 @@ class OpenMySQLEnv(DirectConnectMySQLEnv):
 class DirectConnectPGEnv(Env, ABC):
     pass
 
-class OpenMySQLEnv(DirectConnectPGEnv):
-    pass 
+class OpenPGEnv(DirectConnectPGEnv):
+    def __init__(self, ip, port, usr, pwd, db_name, read_timeout=30, write_timeout=30, connect_timeout=10,
+                 max_connections=None,
+                 ):
+        self.config = PGConnectionConfig(
+            dbtype=DBTYPE.POSTGRESQL,
+            host=ip, port=int(port),
+            user=usr, pwd=pwd,
+            schema=db_name,
+            read_timeout=read_timeout,
+            write_timeout=write_timeout,
+            connect_timeout=connect_timeout,
+            max_connections=max_connections,
+        )
+        self.pg_util = get_pg_utils(self.config)
+        super(OpenPGEnv, self).__init__(default_db=db_name, pg_util=self.pg_util)
+        self.pg_command = PGCommand(pg_util=self.pg_util, version=get_pg_version(self.pg_util))
+    
+    @staticmethod
+    def from_pg_connection_config(config: PGConnectionConfig) -> "OpenPGEnv":
+        return
+    
+    def __repr__(self):
+        return str(self.pg_util)
+
+    def __str__(self):
+        return self.__repr__()
+
+    def _get_instance(self):
+        return f'{self.pg_util.host}:{self.pg_util.port}'
