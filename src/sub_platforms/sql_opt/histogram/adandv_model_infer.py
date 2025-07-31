@@ -1,4 +1,3 @@
-# adandv_model_infer.py
 import os
 import torch
 import torch.nn as nn
@@ -101,17 +100,12 @@ class AdaNDVPredictor:
         data_input = profile + [logn, logd, logN]
         x = torch.tensor([data_input], dtype=torch.float32)
 
-        #est_log = np.log(np.maximum(estimate_list, 1e-10))
-
         estimate_list = [max(e, 1e-5) for e in estimate_list]  
         est_log = np.log(estimate_list)
 
-        print("Estimate list:", estimate_list)
-        print("Input x:", x.shape)
 
         est_log = torch.tensor([est_log], dtype=torch.float32)
 
         logd_pred = self.model.inference(x, est_log)
         d_pred = torch.exp(logd_pred).item()
-        print("logd_pred:", logd_pred)
         return d_pred

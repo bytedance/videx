@@ -162,7 +162,7 @@ class NDVEstimator:
             if self.ada_model is None:
                 sample_rate = r / self.original_num
                 config = AdaNDVConfig(
-                    model_path="src/sub_platforms/sql_opt/histogram/resources/adandv1.pth",
+                    model_path="src/sub_platforms/sql_opt/histogram/resources/adandv.pth",
                     model_input_len=100,
                     estimator_num=9,
                     k=2,
@@ -188,7 +188,7 @@ class NDVEstimator:
             try:
                 estimate = self.estimator(r, profile, method)
             except Exception:
-                estimate = sum(profile[i] for i in range(1, len(profile)))  # fallback if method not implemented fallback = d, d默认为采样的profile每一位之和
+                estimate = sum(profile[i] for i in range(1, len(profile)))  # fallback if method not implemented fallback = d, d defaults to the sum of each bit of the sampled profile
             estimate_list.append(estimate)
 
         ndv = self.ada_model.predict(profile, estimate_list)
