@@ -4,6 +4,7 @@ Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
 import math
+from math import factorial
 from collections import Counter
 from typing import List, Any, Dict
 
@@ -139,13 +140,31 @@ class NDVEstimator:
             ndv = self.ChaoLee_estimate(r, profile)
         elif method == 'LS':
             ndv = self.LS_estimate(profile)
+        elif method == 'Goodman':
+            ndv = self.Goodman_estimate(r, profile)
+        elif method == 'Jackknife':
+            ndv = self.Jackknife_estimate(r, profile)
+        elif method == 'Sichel':
+            ndv = self.Sichel_estimate(r, profile)
+        elif method == 'Method of Movement':
+            ndv = self.Method_of_Movement_estimate(r, profile)
+        elif method == 'Bootstrap':
+            ndv = self.Bootstrap_estimate(r, profile)
+        elif method == 'Horvitz Thompson':
+            ndv = self.Horvitz_Thompson_estimate(r, profile)
+        elif method == 'Method of Movement v2':
+            ndv = self.Method_of_Movement_v2_estimate(r, profile)
+        elif method == 'Method of Movement v3':
+            ndv = self.Method_of_Movement_v3_estimate(r, profile)
+        elif method == 'Smoothed Jackknife':
+            ndv = self.Smoothed_Jackknife_estimate(r, profile)
         elif method == 'Ada':
             if self.ada_model is None:
                 sample_rate = r / self.original_num
                 config = AdaNDVConfig(
-                    model_path="./resources/adandv_model.pt",
+                    model_path="src/sub_platforms/sql_opt/histogram/resources/adandv1.pth",
                     model_input_len=100,
-                    estimator_num=14,
+                    estimator_num=9,
                     k=2,
                     sample_rate=sample_rate
                 )
@@ -160,20 +179,16 @@ class NDVEstimator:
         estimate_list = []
         base_methods = [
             'error_bound', 'GEE', 'Chao', 'shlosser', 'ChaoLee',
-            'Goodman', 'Jackknife', 'Sichel',
-            'Method of Movement', 'Bootstrap', 'Horvitz Thompson',
-            'Method of Movement v2', 'Method of Movement v3', 'Smoothed Jackknife'
+            'Jackknife', 'Sichel',
+            'Method of Movement', 'Bootstrap'
         ] 
-        # currently unsupported estimator: 
-        # Goodman, Jackknife, Sichel, Method of Movement, 
-        # Bootstrap, Horvitz Thompson, Method of Movement v2,
-        # Method of Movement v3, Smoothed Jackknife
+        # ['error_bound', 'GEE', 'Chao', 'shlosser', 'ChaoLee', 'jackknife', 'sichel', 'method_of_movement', 'bootstrap']
 
         for method in base_methods:
             try:
                 estimate = self.estimator(r, profile, method)
             except Exception:
-                estimate = 1.0  # fallback if method not implemented
+                estimate = sum(profile[i] for i in range(1, len(profile)))  # fallback if method not implemented fallback = d, d默认为采样的profile每一位之和
             estimate_list.append(estimate)
 
         ndv = self.ada_model.predict(profile, estimate_list)
@@ -200,6 +215,250 @@ class NDVEstimator:
         """input all sampling data to construct profile"""
         return self.tools.build_column_profile(data)
 
+
+
+    def Goodman_estimate(self, r: int, profile: List[int]):
+        """
+        Goodman estimator based on the profile of frequencies.
+        
+        Args:
+            r (int): total number of observed tuples (sample size).
+            profile (List[int]): profile[i] is the number of distinct values that appear i times.
+
+        Returns:
+            float: estimated number of distinct values in the full population.
+        """
+        n = r  # total number of elements
+        d = self.tools.profile_to_ndv(profile)  # total number of distinct elements observed
+        if n == d:
+            return d  # All values are unique
+        
+        N = getattr(self, "original_num", 2 * r) 
+        memo = {}
+
+        def fact(x):
+            if x not in memo:
+                memo[x] = factorial(x)
+            return memo[x]
+        
+        sum_goodman = 0
+
+        for i in range(1, len(profile)):
+            f_i = profile[i]
+            if f_i == 0:
+                continue
+            try:
+                num = fact(N - n + i - 1) * fact(n - i)
+                denom = fact(N - n - 1) * fact(n)
+                sum_goodman += ((-1) ** (i + 1)) * num * f_i / denom
+            except (ValueError, OverflowError):
+                continue
+        
+        return d + sum_goodman
+
+    def Jackknife_estimate(self, r: int, profile: List[int]):
+        """
+        Jackknife estimator
+        \hat{D}_{jack} = d + (n - 1) * f1 / n
+        where:
+        - d: observed distinct count
+        - f1: frequency of singleton values (appeared once)
+        """
+
+        d = self.tools.profile_to_ndv(profile)
+        if r == 0 or d == 0:
+            return 0.0
+        f1 = profile[1] if len(profile) > 1 else 0
+        return d + (r - 1) * f1 / r
+
+
+    def Sichel_estimate(self, r: int, profile: List[int]):
+        """
+        Sichel's estimator
+        Uses zero-truncated GIG-Poisson model with parameter solving.
+        """
+        d = self.tools.profile_to_ndv(profile)
+        if r == 0 or d == 0:
+            return 0.0
+        f1 = profile[1] if len(profile) > 1 else 0
+        if f1 == 0 or r == d:
+            return float(d)  # fallback to observed distinct count
+
+        a = (2 * r) / d - np.log(r / f1)
+        b = (2 * f1) / d + np.log(r / f1)
+
+        def eq(g):
+            return (1 + g) * np.log(g) - a * g + b
+
+        candidates = []
+        # Warning.filterwarnings("ignore")
+
+        for init_g in np.linspace((f1 / r) + 1e-5, 0.999999, 20):
+            try:
+                g = float(broyden2(eq, init_g))
+                if not (f1 / r < g < 1):
+                    continue
+                b_hat = g * np.log((r * g) / f1) / (1 - g)
+                c_hat = (1 - g ** 2) / (r * g ** 2)
+                d_sichel = 2 / (b_hat * c_hat)
+                candidates.append(d_sichel)
+            except:
+                continue
+
+
+        if not candidates:
+            return float(d)
+        return min(candidates)
+
+    def Method_of_Movement_estimate(self, r: int, profile: List[int]):
+        """
+        Method of Moments Estimator:
+        Estimates the total number of distinct values D using observed distinct count d and sample size r.
+        Equation: d = D * (1 - exp(-r / D)) => solve for D
+        """
+        d = self.tools.profile_to_ndv(profile)     # profile: freq histogram (e.g., [0, f1, f2, f3, ...])
+        if d == r:
+            return d  # all values are distinct
+
+        def eq(D):
+            return D * (1 - math.exp(-r / D)) - d
+
+        # Try both solvers independently for better robustness
+        solutions = []
+        
+        try:
+            d1 = broyden1(eq, d)
+            solutions.append(d1)
+        except:
+            pass
+        
+        try:
+            d2 = broyden2(eq, d)
+            solutions.append(d2)
+        except:
+            pass
+        
+        # Return best solution if any succeeded, otherwise fallback to observed count
+        return min(solutions) if solutions else d
+
+    def Bootstrap_estimate(self, r: int, profile: List[int]):
+        """
+        Bootstrap Estimator:
+        Estimates the number of distinct values D using a bootstrap-based adjustment.
+        D_boot = d + sum_j (1 - n_j / r)^r
+        """
+        d = self.tools.profile_to_ndv(profile)
+        if d == r:
+            return d  # all values are distinct
+
+        result = d
+        for freq, count in enumerate(profile):
+            if freq == 0:
+                continue
+            result += count * ((1 - freq / r) ** r)
+        return result
+
+    def Horvitz_Thompson_estimate(self, r: int, profile: List[int]):
+        """
+        Horvitz-Thompson Estimator:
+        Estimates the total number of distinct values D using inverse inclusion probabilities.
+        D_HT = sum_i 1 / (1 - (1 - 1/N)^n_i)
+        """
+        N = self.original_num
+        estimate = 0.0
+        for freq, count in enumerate(profile):
+            if freq == 0:
+                continue
+            inclusion_prob = 1.0 - (1.0 - 1.0 / N) ** freq
+            if inclusion_prob <= 0:
+                continue
+            estimate += count / inclusion_prob
+        return estimate
+
+    def Method_of_Movement_v2_estimate(self, r: int, profile: List[int]):
+        """
+            do not cache gamma
+        """
+        n = r
+        d = self.tools.profile_to_ndv(profile)
+        N = self.original_num
+
+        def h_x(x: float, n: int, N: int) -> float:
+            gamma_num_1 = math.lgamma(N - x + 1)
+            gamma_num_2 = math.lgamma(N - n + 1)
+            gamma_denom_1 = math.lgamma(N - x - n + 1)
+            gamma_denom_2 = math.lgamma(N + 1)
+            return math.exp(gamma_num_1 + gamma_num_2 - gamma_denom_1 - gamma_denom_2)
+
+        def f(D: float) -> float:
+            return D * (1 - h_x(N / D, n, N)) - d
+
+        try:
+            root1 = broyden1(f, d)
+            root2 = broyden2(f, d)
+            return min(root1, root2)
+        except Exception:
+            return d
+
+    def Method_of_Movement_v3_estimate(self, r: int, profile: List[int]):
+        n = r
+        d = self.tools.profile_to_ndv(profile)
+        N = self.original_num
+
+        # Step 1: Estimate D_v2 first
+        D_v2 = self.Method_of_Movement_v2_estimate(r, profile)
+        if D_v2 == 0:
+            return d
+        N_tilde = N / D_v2
+
+        # Step 2: Compute gamma_hat_squared (coefficient of variation squared)
+        mean_freq = sum(profile) / len(profile)
+        variance_freq = sum((x - mean_freq) ** 2 for x in profile) / len(profile)
+        gamma_hat_squared = variance_freq / (mean_freq ** 2)
+
+        # Step 3: h(N_tilde)
+        def h_x(x: float, n: int, N: int) -> float:
+            gamma_num_1 = math.lgamma(N - x + 1)
+            gamma_num_2 = math.lgamma(N - n + 1)
+            gamma_denom_1 = math.lgamma(N - x - n + 1)
+            gamma_denom_2 = math.lgamma(N + 1)
+            return math.exp(gamma_num_1 + gamma_num_2 - gamma_denom_1 - gamma_denom_2)
+
+        h_val = h_x(N_tilde, n, N)
+
+        # Step 4: Compute g_n(N_tilde)
+        def g_n(x: float, n: int, N: int) -> float:
+            return sum(1 / (N - x - n + k) for k in range(n))
+
+        g_val = g_n(N_tilde, n, N)
+
+        # Step 5: Compute correction term
+        correction = 0.5 * (N_tilde ** 2) * gamma_hat_squared * D_v2 * h_val * (g_val - g_val ** 2)
+
+        # Final D_v3 estimate
+        denominator = 1 - h_val + correction
+        if denominator == 0:
+            return d
+        return d / denominator
+
+    def Smoothed_Jackknife_estimate(self, r: int, profile: List[int]):
+        n = r
+        d = self.tools.profile_to_ndv(profile)
+        f1 = profile[1] if len(profile) > 1 else 0
+        if f1 == 0 or n == 0:
+            return d
+
+        N = self.original_num
+        d0 = d - f1 / n
+        correction = (N - n + 1) * f1 / (n * N)
+        d_hat_0 = d0 / (1 - correction)
+
+        weights = [1 / i for i in range(1, d + 1)]
+        bias = sum(weights) / d
+
+        d_hat = d_hat_0 / (1 - bias)
+        return d_hat
+    
     def scale_estimate(self, r: int, profile: List[int]):
         """
         e=n/r * d
