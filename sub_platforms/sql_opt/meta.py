@@ -73,7 +73,7 @@ class Column(BaseModel, PydanticDataClassJsonMixin):
 
     def __str__(self):
         return f"{self.db}.{self.table}.{self.name}"
-
+    
 
 class OrderColumn(Column, BaseModel, PydanticDataClassJsonMixin):
     asc: bool = True
@@ -280,6 +280,8 @@ class JoinItem(BaseModel, PydanticDataClassJsonMixin):
 
     def __str__(self):
         return f"{self.left} {self.operation} {self.right}"
+
+
 
 
 # json multi array is a special and more complex function index,

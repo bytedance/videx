@@ -72,7 +72,7 @@ def get_mysql_utils(config: MySQLConnectionConfig):
 
 def get_pg_utils(config: PGConnectionConfig):
     if config.dbtype == DBTYPE.POSTGRESQL:
-        return OpenMySQLUtils(config)
+        return OpenPGUtils(config)
     else:
         raise Exception('not support datasource')
 
