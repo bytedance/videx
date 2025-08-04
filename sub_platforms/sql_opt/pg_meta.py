@@ -30,6 +30,18 @@ class PGTableId(BaseModel, PydanticDataClassJsonMixin):
         else:
             return False
         
+class PGTable(BaseModel, PydanticDataClassJsonMixin):
+    dbname: str
+    table_schema: str
+    table_name: str
+
+    relpages: int 
+    reltuples: float
+    relallvisible: int
+
+    
+
+
 class PGColumn(BaseModel):
     table_catalog: str       #db name               
     table_schema: str        #schema name       

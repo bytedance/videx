@@ -9,7 +9,7 @@ import numpy as np
 from numpy import datetime64
 
 from sub_platforms.sql_opt.videx.videx_mysql_utils import AbstractMySQLUtils
-from sub_platforms.sql_opt.pg_meta import PGTable, PGColumn, PGIndex, IndexColumn, IndexType
+from sub_platforms.sql_opt.pg_meta import PGTable, PGColumn, PGIndex, PGIndexColumn, IndexType
 from sub_platforms.sql_opt.databases.pg.explain_result import PGExplainResult, PGExplainItem
 
 class PGVersion(Enum):
@@ -51,7 +51,7 @@ class PGCommand:
         
         return columns
     
-    def get_table_indexes(self, db_name, table_name) -> List[PGIndex]:
+    def get_table_indexes(self, db_name, table_name,schema_name = 'public') -> List[PGIndex]:
         #we should gurantee that we are in the correct database
         sql = f"""
             SELECT
@@ -69,8 +69,8 @@ class PGCommand:
             JOIN 
                 pg_am a ON c.relam = a.oid
             WHERE 
-                i.indrelid = (SELECT oid as tbname FROM pg_class WHERE relname = '{table_name}' AND relkind = 'r') 
-                AND n.nspname = 'public';
+                i.indrelid = (SELECT oid as tbname FROM pg_class WHERE relname = '{table_name}' AND relkind = 'r'
+                AND n.nspname = {schema_name})
         """
         df = self.pg_util.query_for_dataframe(sql)
         if len(df) == 0:
@@ -95,12 +95,11 @@ class PGCommand:
             index_type = idx_info['index_type'].values[0]
             index.index_type = index_type
 
-            
             index.columns = []
             indexrelid = idx_info['indexrelid'].values[0]
             sql = f"""
                 SELECT 
-                    a.attname 
+                    a.attname as column_name,
                 FROM 
                     pg_attribute a
                 JOIN
@@ -114,17 +113,27 @@ class PGCommand:
             """
             cols_df = self.pg_util.query_for_dataframe(sql)
             for idx,row in cols_df.iterrows():
-                column = IndexColumn()
+                column = PGIndexColumn(row['column_name'],db_name, table_name,schema_name)
+                #TODO: parse expression from tree_expr format to string
+                column.expression = row['expression']
+                column.collation = row['collation']
 
             indexs.append(index)    
-
         return
     
-    def get_table_meta(self, db_name, table_name):
+    def get_table_meta(self, db_name, table_name,schema_name = 'public'):
         # maybe fetch data from pg_class?
+        sql = f"""
+            SELECT * 
+            FROM pg_class c
+            JOIN pg_namespace n ON c.relnamespace = n.oid
+            WHERE c.relname = '{table_name}' AND n.nspname = '{schema_name}'
+        """
         table = PGTable()
+        
         table.columns = self.get_table_columns(db_name, table_name)
         table.indexes = self.get_table_indexes(db_name, table_name)
+
         return
     
     def explain(self, sql: str, format: str = None) -> PGExplainResult:
