@@ -22,10 +22,8 @@ from sub_platforms.sql_opt.videx.videx_utils import load_json_from_file, dump_js
 
 class VidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
     task_id: Optional[str]
-    # dbname->schema_name->table_name -> PGTable
-    meta_dict: Dict[str,Dict[str,Dict[str,PGTable]]]
-    # dbname->schema_name->table_name -> PGTableStatisticsInfo
-    stats_dict: Dict[str,Dict[str,Dict[str,PGTableStatisticsInfo]]]
+    meta_dict: Dict[str,Dict[str,PGTable]]
+    stats_dict: Dict[str,Dict[str,PGTableStatisticsInfo]]
 
     def model_post_init(self, __context: Any) -> None:
         pass
@@ -150,9 +148,9 @@ def construct_videx_task_meta_from_local_files_for_pg(task_id, videx_db,
             return False
         stats_dict = load_json_from_file(stats_file)
 
-    meta_dict = {videx_db:{'public':{}}}
+    meta_dict = {videx_db:{}}
     for table_name,table_dict in stats_dict.items():
-        meta_dict[videx_db]['public'][table_name] = PGTable(
+        meta_dict[videx_db][table_name] = PGTable(
             #TODO
         )
     req_obj = VidexDBTaskStats(

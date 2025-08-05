@@ -613,6 +613,16 @@ def create_videx_env_multi_db(videx_env: Env,
         finally:
             videx_env.set_default_db(videx_default_db)
 
+def create_videx_env_multi_db(videx_env: Env,
+                              meta_dict: dict,
+                              new_engine: str = 'VIDEX',
+                              ):
+    for target_db, table_dict in meta_dict.items():
+        videx_env.execute(f"DROP DATABASE IF EXISTS `{target_db}`")
+        videx_env.execute(f"CREATE DATABASE `{target_db}`")
+
+        
+    pass
 
 def post_to_clear_videx_server_cache(videx_server: str, task_ids: List[str]) -> Response:
     """Send a request to the specified server to clear the specified task IDs.

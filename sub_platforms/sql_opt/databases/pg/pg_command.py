@@ -139,6 +139,7 @@ class PGCommand:
         table.columns = self.get_table_columns(db_name, table_name)
         table.indexes = self.get_table_indexes(db_name, table_name)
         mapping_index_columns(table)
+
         return table
     
     def explain(self, sql: str, format: str = None) -> PGExplainResult:
@@ -146,4 +147,3 @@ class PGCommand:
     
     def explain_for_table(self, sql: str) -> List[PGExplainItem]:
         return NotImplementedError("This method is not implemented in this context.")
-    
