@@ -15,8 +15,12 @@ from sub_platforms.sql_opt.videx import videx_logging
 from sub_platforms.sql_opt.videx.videx_metadata import fetch_all_meta_for_videx, \
     construct_videx_task_meta_from_local_files, fetch_all_meta_with_one_file
 from sub_platforms.sql_opt.videx.videx_service import create_videx_env_multi_db, \
-    post_add_videx_meta
+    post_add_videx_meta,create_videx_env_multi_db_for_pg
 from sub_platforms.sql_opt.videx.videx_utils import VIDEX_IP_WHITE_LIST
+
+from sub_platforms.sql_opt.videx.videx_pg_metadata import fetch_all_meta_with_one_file_for_pg, \
+    construct_videx_task_meta_from_local_files_for_pg
+
 
 
 def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port):
@@ -168,12 +172,13 @@ if __name__ == "__main__":
         # TODO fetch ndv and histogram may be costly, if partial_fetch, we skip fetching ndv and histogram
         if args.fetch_method == 'partial_fetch':
             pass  # more tests are required before supporting it
-        files = fetch_all_meta_with_one_file(meta_path=meta_path,
+        if db_type == "mysql":
+            files = fetch_all_meta_with_one_file(meta_path=meta_path,
                                              env=target_env, target_db=target_db, all_table_names=all_table_names,
                                              n_buckets=16, hist_force=True,
                                              hist_mem_size=200000000, drop_hist_after_fetch=True)
-        stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
-        meta_request = construct_videx_task_meta_from_local_files(task_id=args.task_id,
+            stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
+            meta_request = construct_videx_task_meta_from_local_files(task_id=args.task_id,
                                                                   videx_db=videx_db,
                                                                   stats_file=stats_file_dict,
                                                                   hist_file=hist_file_dict,
@@ -183,6 +188,17 @@ if __name__ == "__main__":
                                                                   gt_req_resp_file=None,
                                                                   raise_error=True,
                                                                   )
+        elif db_type == "pg":
+            files = fetch_all_meta_with_one_file_for_pg(
+                meta_path=meta_path, env=target_env, target_db=target_db, all_table_names=all_table_names
+            )
+            stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
+            meta_request = construct_videx_task_meta_from_local_files_for_pg(task_id=args.task_id,
+                                                                             videx_db=videx_db,
+                                                                             stats_file=stats_file_dict,
+                                                                             raise_error=True
+                                                                             )
+
     elif args.fetch_method == 'sampling':
         # We will introduce the sampling-based method soon.
         # This method will generate metadata from the sample data.
@@ -193,10 +209,14 @@ if __name__ == "__main__":
                                   f"only support `analyze`, `sampling`.")
 
     # step 3: create tables into VIDEX-MySQL, post metadata and statistics to VIDEX-Server
-    # 向 VIDEX-MySQL 中建表
-    create_videx_env_multi_db(videx_env, meta_dict=meta_request.meta_dict, )
-    # 向 VIDEX-Server 中导入数据
-    response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
+    if db_type == "mysql":
+        # 向 VIDEX-MySQL 中建表
+        create_videx_env_multi_db(videx_env, meta_dict=meta_request.meta_dict, )
+        # 向 VIDEX-Server 中导入数据
+        response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
+    elif db_type == "pg":
+        create_videx_env_multi_db_for_pg(videx_env, meta_dict=meta_request.meta_dict, )
+        response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
     assert response.status_code == 200
 
     logging.info(f"metadata file is {meta_path}")

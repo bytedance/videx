@@ -11,6 +11,7 @@ from numpy import datetime64
 from sub_platforms.sql_opt.videx.videx_mysql_utils import AbstractMySQLUtils
 from sub_platforms.sql_opt.pg_meta import PGTable, PGColumn, PGIndex, PGIndexColumn, IndexType
 from sub_platforms.sql_opt.databases.pg.explain_result import PGExplainResult, PGExplainItem
+from sub_platforms.sql_opt.databases.pg.common_operation import mapping_index_columns
 
 class PGVersion(Enum):
     pass
@@ -30,7 +31,7 @@ class PGCommand:
         self.pg_util = pg_util
         self.version = version
 
-    def get_table_columns(self, db_name, table_name) -> List[PGColumn]:
+    def get_table_columns(self, db_name, table_name, schema_name = 'public') -> List[PGColumn]:
         sql = f"""
             select * from information_schema.columns 
             where table_catalog = '{db_name}' and table_name = '{table_name}'
@@ -48,7 +49,6 @@ class PGCommand:
             column.column_default = row[5]
             column.is_nullable = row[6]
             column.data_type = row[7]
-        
         return columns
     
     def get_table_indexes(self, db_name, table_name,schema_name = 'public') -> List[PGIndex]:
@@ -115,30 +115,35 @@ class PGCommand:
             for idx,row in cols_df.iterrows():
                 column = PGIndexColumn(row['column_name'],db_name, table_name,schema_name)
                 #TODO: parse expression from tree_expr format to string
-                column.expression = row['expression']
-                column.collation = row['collation']
-
+                column.expression = None
+                column.collation = 'asc'
+                index.columns.append(column)
             indexs.append(index)    
-        return
+        return indexs
     
     def get_table_meta(self, db_name, table_name,schema_name = 'public'):
-        # maybe fetch data from pg_class?
         sql = f"""
-            SELECT * 
+            SELECT relpages,reltuples, relallvisible
             FROM pg_class c
             JOIN pg_namespace n ON c.relnamespace = n.oid
             WHERE c.relname = '{table_name}' AND n.nspname = '{schema_name}'
         """
+        df = self.pg_util.query_for_dataframe(sql)
         table = PGTable()
-        
+        table.dbname = db_name
+        table.schema_name = schema_name
+        table.table_name = table_name
+        table.relpages = df['relpages'].values[0]
+        table.reltuples = df['reltuples'].values[0]
+        table.relallvisible = df['relallvisible'].values[0]
         table.columns = self.get_table_columns(db_name, table_name)
         table.indexes = self.get_table_indexes(db_name, table_name)
-
-        return
+        mapping_index_columns(table)
+        return table
     
     def explain(self, sql: str, format: str = None) -> PGExplainResult:
-        return
+        return NotImplementedError("This method is not implemented in this context.")
     
     def explain_for_table(self, sql: str) -> List[PGExplainItem]:
-        return
+        return NotImplementedError("This method is not implemented in this context.")
     

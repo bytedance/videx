@@ -34,13 +34,20 @@ class PGTable(BaseModel, PydanticDataClassJsonMixin):
     dbname: str
     table_schema: str
     table_name: str
+    #TODO: more infos ...
+    relpages: Optional[int] = None
+    reltuples: Optional[int] = None
+    relallvisible: Optional[int] = None
 
-    relpages: int 
-    reltuples: float
-    relallvisible: int
-
+    def model_post_init(self,__context: Any) -> None:
+        return NotImplementedError("This method is not implemented in this context.")
     
+    @property
+    def table_id(self) -> PGTableId:
+        return PGTableId(table_catalog=self.dbname, table_schema=self.table_schema, table_name=self.table_name)
 
+    def support_optimize(self):
+        return NotImplementedError("This method is not implemented in this context.")
 
 class PGColumn(BaseModel):
     table_catalog: str       #db name               
