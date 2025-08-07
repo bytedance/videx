@@ -1008,6 +1008,30 @@ def get_column_data_type(column_type: str):
         data_type = 'json'
     return data_type
 
+def pg_serialize_schema_table(schema: str, table: str) -> str:
+    """
+    convert schema_name and table_name to 'schema.table'
+    """
+    if not schema or not table:
+        raise ValueError("Schema and table names must be non-empty.")
+    
+    return f"{schema.strip()}.{table.strip()}"
+
+def pg_deserialize_schema_table(full_name: str) -> Tuple[str, str]:
+    """
+    parse 'schema.table' to (schema, table)。
+    """
+    if '.' not in full_name:
+        raise ValueError(f"Invalid format: '{full_name}'. Expected 'schema.table' format.")
+    
+    parts = full_name.split('.', 1)
+    schema = parts[0].strip()
+    table = parts[1].strip()
+    
+    if not schema or not table:
+        raise ValueError(f"Schema or table is empty in: '{full_name}'")
+    
+    return schema, table
 
 if __name__ == '__main__':
     pass

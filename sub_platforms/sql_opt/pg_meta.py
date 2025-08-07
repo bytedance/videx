@@ -30,24 +30,6 @@ class PGTableId(BaseModel, PydanticDataClassJsonMixin):
         else:
             return False
         
-class PGTable(BaseModel, PydanticDataClassJsonMixin):
-    dbname: str
-    table_schema: str
-    table_name: str
-    #TODO: more infos ...
-    relpages: Optional[int] = None
-    reltuples: Optional[int] = None
-    relallvisible: Optional[int] = None
-
-    def model_post_init(self,__context: Any) -> None:
-        return NotImplementedError("This method is not implemented in this context.")
-    
-    @property
-    def table_id(self) -> PGTableId:
-        return PGTableId(table_catalog=self.dbname, table_schema=self.table_schema, table_name=self.table_name)
-
-    def support_optimize(self):
-        return NotImplementedError("This method is not implemented in this context.")
 
 class PGColumn(BaseModel):
     table_catalog: str       #db name               
@@ -181,5 +163,26 @@ class PGIndex(IndexBasicInfo, BaseModel, PydanticDataClassJsonMixin):
     def table(self):
         return self.table_name
     
+class PGTable(BaseModel, PydanticDataClassJsonMixin):
+    dbname: str
+    table_schema: str
+    table_name: str
+    #TODO: more infos ...
+    relpages: Optional[int] = None
+    reltuples: Optional[int] = None
+    relallvisible: Optional[int] = None
+    ddl: Optional[str] = None
+    columns: Optional[List[PGColumn]] = Field(default_factory=list)
+    indexes: Optional[List[PGIndex]] = Field(default_factory=list)
+    def model_post_init(self,__context: Any) -> None:
+        return NotImplementedError("This method is not implemented in this context.")
+    
+    @property
+    def table_id(self) -> PGTableId:
+        return PGTableId(table_catalog=self.dbname, table_schema=self.table_schema, table_name=self.table_name)
+
+    def support_optimize(self):
+        return NotImplementedError("This method is not implemented in this context.")
+
 class PGOpTypeName(Enum):
     pass

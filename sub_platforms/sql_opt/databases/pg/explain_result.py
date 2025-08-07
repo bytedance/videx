@@ -7,5 +7,5 @@ from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMix
 class PGExplainItem(BaseModel, PydanticDataClassJsonMixin):
     pass
 
-class MySQLExplainResult(BaseModel, PydanticDataClassJsonMixin):
+class PGExplainResult(BaseModel, PydanticDataClassJsonMixin):
     pass

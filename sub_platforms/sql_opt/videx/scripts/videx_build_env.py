@@ -130,7 +130,7 @@ if __name__ == "__main__":
         target_env = OpenMySQLEnv(ip=target_ip, port=target_port, usr=target_user, pwd=target_pwd, db_name=target_db,
                               read_timeout=300, write_timeout=300, connect_timeout=10)
     elif db_type == "pg":
-        target_env = OpenPGEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=videx_db,
+        target_env = OpenPGEnv(ip=target_ip, port=target_port, usr=target_user, pwd=target_pwd, db_name=target_db,
                               read_timeout=300, write_timeout=300, connect_timeout=10)
     
     try:
@@ -189,9 +189,8 @@ if __name__ == "__main__":
                                                                   raise_error=True,
                                                                   )
         elif db_type == "pg":
-            files = fetch_all_meta_with_one_file_for_pg(
-                meta_path=meta_path, env=target_env, target_db=target_db, all_table_names=all_table_names
-            )
+            files = fetch_all_meta_with_one_file_for_pg(meta_path=meta_path, 
+                                                        env=target_env, target_db=target_db, all_table_names=all_table_names)
             stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
             meta_request = construct_videx_task_meta_from_local_files_for_pg(task_id=args.task_id,
                                                                              videx_db=videx_db,
@@ -216,8 +215,8 @@ if __name__ == "__main__":
         response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
     elif db_type == "pg":
         create_videx_env_multi_db_for_pg(videx_env, meta_dict=meta_request.meta_dict, )
-        response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
-    assert response.status_code == 200
+        #response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
+    #assert response.status_code == 200
 
     logging.info(f"metadata file is {meta_path}")
     logging.info(get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port))

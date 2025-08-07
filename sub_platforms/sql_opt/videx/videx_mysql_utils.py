@@ -9,6 +9,8 @@ import traceback
 import urllib.parse
 from enum import Enum
 from typing import Optional
+import subprocess
+import os
 
 import pandas as pd
 from dbutils.persistent_db import PersistentDB
@@ -267,9 +269,10 @@ class OpenPGUtils(AbstractMySQLUtils):
         self.port = config.port
         self.user = config.user
         self.password = config.pwd
+        
 
     def get_connection(self):
-        return psycopg2.connect(
+        conn = psycopg2.connect(
             user=self.user,
             password=self.password,
             dbname=self.database,
@@ -278,6 +281,8 @@ class OpenPGUtils(AbstractMySQLUtils):
             connect_timeout=self.connect_timeout,
             options=f'-c client_encoding={self.charset or "utf8"}'
         )
+        conn.autocommit = True
+        return conn
 
     def get_sqlalchemy_engine(self, dbname: str = None):
         dbname = dbname if dbname is not None else self.database
@@ -296,7 +301,46 @@ class OpenPGUtils(AbstractMySQLUtils):
 
     def __str__(self):
         return self.__repr__()
+    
+    def execute_query(self, sql: str, params: list = None):
+        if self.pool is None:
+            self.pool = self.get_shared_pool()
+        with self.pool.connection() as c:
+            with c.cursor() as cursor:
+                cursor.execute(sql, params)
+                if cursor.rowcount > 0:
+                    return cursor.fetchall()
+                else:
+                    return None
+    def get_user(self):
+        return self.user
+    
+    def pg_dump(self, db_name, schema_name, table_name):
+        env = os.environ.copy()
+        env["PGPASSWORD"] = self.password
 
+        cmd = [
+            "pg_dump",
+            "-U", self.user,
+            "--schema-only",
+            "--no-owner",
+            "--no-privileges",
+            "--no-comments",
+            "-d", db_name,
+            "-n", schema_name,
+            "-t", table_name,
+            "-p", str(self.port),
+            "-h", self.host,
+        ]
+        try:
+            result = subprocess.run(cmd, env=env, stderr=subprocess.PIPE, text=True)
+            sql_text = result.stdout
+            print(sql_text)
+            return sql_text
+        except subprocess.CalledProcessError as e:
+                logging.error(f"pg_dump error:, {e.stderr}")
+                raise e
+        
 
 def _parse_col_names(cursor):
     col_names = []

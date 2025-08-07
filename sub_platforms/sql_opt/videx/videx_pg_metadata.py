@@ -13,14 +13,14 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, Field
 
-from sub_platforms.sql_opt.column_statastics.statistics_info import PGTableStatisticsInfo
+from sub_platforms.sql_opt.column_statastics.statistics_info_pg import PGTableStatisticsInfo
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 from sub_platforms.sql_opt.env.rds_env import Env
-from sub_platforms.sql_opt.meta import PGTable
+from sub_platforms.sql_opt.pg_meta import PGTable,PGColumn, PGIndex
 from sub_platforms.sql_opt.videx.videx_utils import load_json_from_file, dump_json_to_file, GT_Table_Return, \
-    target_env_available_for_videx
+    target_env_available_for_videx,pg_serialize_schema_table
 
-class VidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
+class PGVidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
     task_id: Optional[str]
     meta_dict: Dict[str,Dict[str,PGTable]]
     stats_dict: Dict[str,Dict[str,PGTableStatisticsInfo]]
@@ -54,8 +54,8 @@ class VidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
     def to_key(task_id: str) -> str:
         return f"{task_id}"
     
-    def merge_with(self, other: 'VidexDBTaskStats', inplace: bool = False) -> Optional['VidexDBTaskStats']:
-        pass
+    def merge_with(self, other: 'PGVidexDBTaskStats', inplace: bool = False) -> Optional['PGVidexDBTaskStats']:
+        return NotImplementedError("merge_with not implemented yet.")
 
 def fetch_all_meta_with_one_file_for_pg(meta_path: Union[str, dict],
                                  env: Env, target_db: str, all_table_names: List[str] = None
@@ -110,25 +110,26 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
     Returns:
         lower table -> rows (to construct VidexTableStats), 不包含 db 层
     """
-    # part 1: basic
-    sql = """
+    # part 1: fetch all table from information_schema.TABLES (view)
+    sql = f"""
         SELECT table_catalog,table_schema,table_name,table_type,
         self_referencing_column_name,reference_generation,user_defined_type_catalog,
         user_defined_type_schema,user_defined_type_name,is_insertable_into,is_typed,
-        commit_action FROM information_schema.TABLES WHERE table_catalog = '%s 
-        && table_schema NOT IN ('pg_catalog', 'information_schema')
-    """ % target_dbname
+        commit_action FROM information_schema.TABLES WHERE table_catalog = '{target_dbname}'
+        AND table_schema NOT IN ('pg_catalog', 'information_schema')
+    """
 
     basic_list: pd.DataFrame = env.query_for_dataframe(sql).to_dict(orient='records')
     res_dict = {}
-
     for row in basic_list:
         table_name = row['table_name'].lower()
-        res_dict[table_name] = row
+        schema_name = row['table_schema'].lower()
+        schema_table_name = pg_serialize_schema_table(schema_name, table_name)
+        res_dict[schema_table_name] = row
 
-        table_obj: PGTable = env.get_table_meta(target_dbname,row["table_name"],row["table_schema"])
-        res_dict[table_name]['columns'] = [json.loads(c.to_json()) for c in table_obj.columns]
-        res_dict[table_name]['indexes'] = [json.loads(i.to_json()) for i in table_obj.indexes]
+        table_obj: PGTable = env.get_table_meta(target_dbname,schema_table_name)
+        res_dict[schema_table_name]['columns'] = [json.loads(c.to_json()) for c in table_obj.columns]
+        res_dict[schema_table_name]['indexes'] = [json.loads(i.to_json()) for i in table_obj.indexes]
 
     res_dict = {k.lower(): v for k, v in res_dict.items()}
     return res_dict
@@ -136,7 +137,7 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
 def construct_videx_task_meta_from_local_files_for_pg(task_id, videx_db,
                                                stats_file: Union[str, dict],
                                                raise_error: bool = False
-                                              ) -> VidexDBTaskStats:
+                                              ) -> PGVidexDBTaskStats:
     if isinstance(stats_file, dict):
         stats_dict = stats_file
     else:
@@ -150,10 +151,18 @@ def construct_videx_task_meta_from_local_files_for_pg(task_id, videx_db,
 
     meta_dict = {videx_db:{}}
     for table_name,table_dict in stats_dict.items():
-        meta_dict[videx_db][table_name] = PGTable(
-            #TODO
+        #table_name <- format: [schema.table]
+        meta_dict[videx_db.lower()][table_name.lower()] = PGTable(
+            dbname = table_dict['table_catalog'],
+            table_schema = table_dict['table_schema'],
+            table_name = table_dict['table_name'],
+            # relpages = table_dict['relpages'],
+            # reltuples = table_dict['reltuples'],
+            # relallvisible = table_dict['relallvisible'],
+            columns=[PGColumn.from_dict(col_meta_dict) for col_meta_dict in table_dict.get('columns', [])],
+            indexes=[PGIndex.from_dict(index_meta_dict) for index_meta_dict in table_dict.get('indexes', [])],
         )
-    req_obj = VidexDBTaskStats(
+    req_obj = PGVidexDBTaskStats(
         task_id=task_id,
         meta_dict=meta_dict,
         stats_dict={}

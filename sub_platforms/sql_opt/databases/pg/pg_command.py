@@ -14,10 +14,15 @@ from sub_platforms.sql_opt.databases.pg.explain_result import PGExplainResult, P
 from sub_platforms.sql_opt.databases.pg.common_operation import mapping_index_columns
 
 class PGVersion(Enum):
+    PG_17 = 'pg_17'
+    PG_ELSE = 'pg_else'
     pass
 
-def get_mysql_version(mysql_util: AbstractMySQLUtils):
-    return
+def get_pg_version(pg_util: AbstractMySQLUtils):
+    sql = "SHOW server_version;"
+    df = pg_util.query_for_dataframe(sql)
+    version_str = df['server_version'].values[0]
+    return PGVersion.PG_17 if version_str.startswith('17') else PGVersion.PG_ELSE
 
 def datetime64_to_datetime(date_obj):
     if date_obj is None:
@@ -40,15 +45,16 @@ class PGCommand:
         columns = []
         np = df.to_numpy()
         for row in np:
-            column = PGColumn()
-            column.table_catalog = row[0]
-            column.table_schema = row[1]
-            column.table_name = row[2]
-            column.column_name = row[3]
-            column.ordinal_position = row[4]
-            column.column_default = row[5]
-            column.is_nullable = row[6]
-            column.data_type = row[7]
+            column = PGColumn(
+                table_catalog = row[0],
+                table_schema = row[1],
+                table_name = row[2],
+                column_name = row[3],
+                ordinal_position = row[4],
+                column_default = row[5],
+                is_nullable = row[6],
+                data_type = row[7]
+            )
         return columns
     
     def get_table_indexes(self, db_name, table_name,schema_name = 'public') -> List[PGIndex]:
@@ -70,7 +76,7 @@ class PGCommand:
                 pg_am a ON c.relam = a.oid
             WHERE 
                 i.indrelid = (SELECT oid as tbname FROM pg_class WHERE relname = '{table_name}' AND relkind = 'r'
-                AND n.nspname = {schema_name})
+                AND n.nspname = '{schema_name}')
         """
         df = self.pg_util.query_for_dataframe(sql)
         if len(df) == 0:
@@ -121,7 +127,9 @@ class PGCommand:
             indexs.append(index)    
         return indexs
     
-    def get_table_meta(self, db_name, table_name,schema_name = 'public'):
+    def get_table_meta(self, db_name, schema_table_name):
+        from sub_platforms.sql_opt.videx.videx_utils import pg_deserialize_schema_table
+        schema_name,table_name = pg_deserialize_schema_table(schema_table_name)
         sql = f"""
             SELECT relpages,reltuples, relallvisible
             FROM pg_class c
@@ -129,17 +137,19 @@ class PGCommand:
             WHERE c.relname = '{table_name}' AND n.nspname = '{schema_name}'
         """
         df = self.pg_util.query_for_dataframe(sql)
-        table = PGTable()
-        table.dbname = db_name
-        table.schema_name = schema_name
-        table.table_name = table_name
-        table.relpages = df['relpages'].values[0]
-        table.reltuples = df['reltuples'].values[0]
-        table.relallvisible = df['relallvisible'].values[0]
-        table.columns = self.get_table_columns(db_name, table_name)
-        table.indexes = self.get_table_indexes(db_name, table_name)
+        table = PGTable(
+            dbname = db_name,
+            table_schema = schema_name,
+            table_name = table_name,
+            relpages = df['relpages'].values[0],
+            reltuples = df['reltuples'].values[0],
+            relallvisible = df['relallvisible'].values[0],
+            columns = self.get_table_columns(db_name, table_name),
+            indexes = self.get_table_indexes(db_name, table_name)
+        )
         mapping_index_columns(table)
 
+        dump_text = self.pg_util.pg_dump(db_name,schema_name,table_name)
         return table
     
     def explain(self, sql: str, format: str = None) -> PGExplainResult:
