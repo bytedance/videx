@@ -618,7 +618,7 @@ def create_videx_env_multi_db_for_pg(videx_env: Env,
                               new_engine: str = 'VIDEX',
                               ):
     for target_db, table_dict in meta_dict.items():
-        #In Postgresql, you cannot drop a database if you are connected to it.
+        #TODO: In Postgresql, you cannot drop a database if you are connected to it.
         #videx_env.execute(f"DROP DATABASE IF EXISTS {target_db}")
         #videx_env.execute(f"CREATE DATABASE {target_db}")
         videx_default_db = videx_env.default_db
@@ -627,9 +627,12 @@ def create_videx_env_multi_db_for_pg(videx_env: Env,
             print(f"taget_dadata: {target_db}, table_size: {len(table_dict)}")
             for table in table_dict.values():
                 dump_text = table.ddl
+                pattern = r'(CREATE TABLE\s+[\w\.]+\s*\(\s*.*?\s*\))\s*;'
+                replacement = rf'\1 USING {new_engine};'
+                videx_dump_text = re.sub(pattern, replacement, dump_text, flags=re.DOTALL)
+                videx_env.query_for_dataframe(videx_dump_text)
         finally:
             videx_env.set_default_db(videx_default_db)
-    pass
 
 def post_to_clear_videx_server_cache(videx_server: str, task_ids: List[str]) -> Response:
     """Send a request to the specified server to clear the specified task IDs.

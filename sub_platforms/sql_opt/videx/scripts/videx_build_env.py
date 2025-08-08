@@ -215,7 +215,7 @@ if __name__ == "__main__":
         response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
     elif db_type == "pg":
         create_videx_env_multi_db_for_pg(videx_env, meta_dict=meta_request.meta_dict, )
-        #response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
+        response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
     #assert response.status_code == 200
 
     logging.info(f"metadata file is {meta_path}")

@@ -129,6 +129,7 @@ class PGCommand:
     
     def get_table_meta(self, db_name, schema_table_name):
         from sub_platforms.sql_opt.videx.videx_utils import pg_deserialize_schema_table
+        dump_text = self.pg_util.pg_dump(db_name,schema_name,table_name)
         schema_name,table_name = pg_deserialize_schema_table(schema_table_name)
         sql = f"""
             SELECT relpages,reltuples, relallvisible
@@ -145,11 +146,10 @@ class PGCommand:
             reltuples = df['reltuples'].values[0],
             relallvisible = df['relallvisible'].values[0],
             columns = self.get_table_columns(db_name, table_name),
-            indexes = self.get_table_indexes(db_name, table_name)
+            indexes = self.get_table_indexes(db_name, table_name),
+            ddl = dump_text
         )
         mapping_index_columns(table)
-
-        dump_text = self.pg_util.pg_dump(db_name,schema_name,table_name)
         return table
     
     def explain(self, sql: str, format: str = None) -> PGExplainResult:

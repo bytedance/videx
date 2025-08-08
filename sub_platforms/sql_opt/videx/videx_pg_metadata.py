@@ -81,6 +81,9 @@ def fetch_all_meta_with_one_file_for_pg(meta_path: Union[str, dict],
 def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str] = None,
                              result_dir: str = None) -> Tuple[dict, dict, dict, dict]:
     stats_file = f'videx_pg_{target_db}_info_stats.json'
+    statistic_file = f'videx_pg_{target_db}_info_statistics.json'
+    statistic_ext_file = f'videx_pg_{target_db}_info_statistics_ext.json'
+
     # fetch meta data
     if result_dir is not None and os.path.exists(os.path.join(result_dir, stats_file)):
         return NotImplementedError("Fetching from existing file is not supported in this context.")
@@ -93,6 +96,12 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
         stats_dict = {k: v for k, v in stats_dict.items() if k.lower() in set(t.lower() for t in all_table_names)}
     
     #TODO: pg_statistic & pg_statistic_ext
+    if result_dir is not None and os.path.exists(os.path.join(result_dir, statistic_file)): 
+        return NotImplementedError("Fetching from existing file is not supported in this context.")
+    else:
+       statistic_dict = {}
+
+
 
     if result_dir is not None:
        os.makedirs(result_dir, exist_ok=True)
@@ -128,11 +137,17 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
         res_dict[schema_table_name] = row
 
         table_obj: PGTable = env.get_table_meta(target_dbname,schema_table_name)
+        res_dict[schema_table_name]['reltuples'] = table_obj.reltuples
+        res_dict[schema_table_name]['relpages'] = table_obj.relpages
+        res_dict[schema_table_name]['relallvisible'] = table_obj.relallvisible
         res_dict[schema_table_name]['columns'] = [json.loads(c.to_json()) for c in table_obj.columns]
         res_dict[schema_table_name]['indexes'] = [json.loads(i.to_json()) for i in table_obj.indexes]
 
     res_dict = {k.lower(): v for k, v in res_dict.items()}
     return res_dict
+
+def fetch_pg_statistics(env: Env, target_dbname: str) -> Dict[str, dict]:
+    pass
 
 def construct_videx_task_meta_from_local_files_for_pg(task_id, videx_db,
                                                stats_file: Union[str, dict],
@@ -156,9 +171,9 @@ def construct_videx_task_meta_from_local_files_for_pg(task_id, videx_db,
             dbname = table_dict['table_catalog'],
             table_schema = table_dict['table_schema'],
             table_name = table_dict['table_name'],
-            # relpages = table_dict['relpages'],
-            # reltuples = table_dict['reltuples'],
-            # relallvisible = table_dict['relallvisible'],
+            relpages = table_dict['relpages'],
+            reltuples = table_dict['reltuples'],
+            relallvisible = table_dict['relallvisible'],
             columns=[PGColumn.from_dict(col_meta_dict) for col_meta_dict in table_dict.get('columns', [])],
             indexes=[PGIndex.from_dict(index_meta_dict) for index_meta_dict in table_dict.get('indexes', [])],
         )
