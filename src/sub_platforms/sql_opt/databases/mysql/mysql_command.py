@@ -24,12 +24,21 @@ from sub_platforms.sql_opt.sql_opt_utils.sqlbrain_constants import UNSUPPORTED_M
 class MySQLVersion(Enum):
     MySQL_57 = 'mysql5.7'
     MySQL_8 = 'mysql8.0'
+    MariaDB_11_8 = 'mariadb11.8'
 
     @staticmethod
     def get_version_enum(version: str):
-        if version is None:
-            version = ""
-        return MySQLVersion.MySQL_8 if (version.startswith("8") or version == MySQLVersion.MySQL_8.value) else MySQLVersion.MySQL_57
+        if version.startswith("8"):
+            return MySQLVersion.MySQL_8
+        elif version.startswith("5"):
+            return MySQLVersion.MySQL_57
+        elif "mariadb" in version.lower():
+            return MySQLVersion.MariaDB_11_8
+        return MySQLVersion.MySQL_57
+
+    @staticmethod
+    def get_all_versions():
+        return list(MySQLVersion)
 
     def __str__(self):
         return self.value
@@ -43,6 +52,8 @@ def get_mysql_version(mysql_util: AbstractMySQLUtils):
     version_str = df['Value'].values[0]
     if version_str.startswith('8.0'):
         return MySQLVersion.MySQL_8
+    elif "mariadb" in version_str.lower():
+        return MySQLVersion.MariaDB_11_8
     return MySQLVersion.MySQL_57
 
 
@@ -99,24 +110,28 @@ class MySQLCommand:
     def get_table_indexes(self, db_name, table_name) -> List[Index]:
         if self.version == MySQLVersion.MySQL_8:
             sql = f"""
-                select table_schema as dbname, table_name as table_name, index_name as index_name, 
+                    select table_schema as dbname, table_name as table_name, index_name as index_name, 
                             non_unique as non_unique, seq_in_index as seq_in_index,
                             column_name as column_name, cardinality as cardinality,
                             sub_part as sub_part, is_visible as is_visible,
                             expression as expression, collation as collation, index_type as index_type
-                from information_schema.statistics
-                where table_schema = '{db_name}' and table_name='{table_name}'
-            """
-        else:
+                    from information_schema.statistics
+                    where table_schema = '{db_name}' and table_name='{table_name}'
+                """
+        elif self.version == MySQLVersion.MariaDB_11_8 or self.version == MySQLVersion.MySQL_57:
             sql = f"""
-                        select table_schema as dbname, table_name as table_name, index_name as index_name, 
+                    select table_schema as dbname, table_name as table_name, index_name as index_name, 
                             non_unique as non_unique, seq_in_index as seq_in_index,
-                            column_name as column_name, cardinality as cardinality, 
-                            sub_part as sub_part, 'YES' as is_visible, 
+                            column_name as column_name, cardinality as cardinality,
+                            sub_part as sub_part, 'YES' as is_visible,
                             'NULL' as expression, collation as collation, index_type as index_type
-                        from information_schema.statistics
-                        where table_schema = '{db_name}' and table_name='{table_name}'
-                    """
+                    from information_schema.statistics
+                    where table_schema = '{db_name}' and table_name='{table_name}'
+                """
+        else:
+            logging.error(f"Unsupported MySQL version: {self.version}")
+            return []
+
         df = self.mysql_util.query_for_dataframe(sql)
         if len(df) == 0:
             return []
