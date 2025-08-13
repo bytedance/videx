@@ -13,6 +13,7 @@ from estndv import ndvEstimator
 from pandas import DataFrame
 
 from adandv_model_infer import AdaNDVPredictor, AdaNDVConfig
+from plm4ndv_model_infer import PLM4NDVPredictor
 
 from sub_platforms.sql_opt.videx.videx_utils import safe_tolist
 
@@ -121,6 +122,7 @@ class NDVEstimator:
         self.original_num = original_num # 原表行数
         self.tools = NEVUtils()
         self.ada_model = None
+        self.plm4ndv_model = None
 
     def estimator(self, r: int, profile: List[int], method: str = 'GEE'):
         """
@@ -170,6 +172,11 @@ class NDVEstimator:
                 )
                 self.ada_model = AdaNDVPredictor(config)
             ndv = self.ada_estimate(r, profile)
+        elif method == 'PLM4NDV':
+            if self.plm4ndv_model is None:
+                model_path = "src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth"
+                self.plm4ndv_model = PLM4NDVPredictor(model_path=model_path)
+            ndv = self.plm4ndv_estimate(r, profile)
         else:
             raise ValueError(f"Unsupported NDV estimation method: {method}")
         return ndv
@@ -193,6 +200,24 @@ class NDVEstimator:
 
         ndv = self.ada_model.predict(profile, estimate_list)
         return ndv
+    
+    def plm4ndv_estimate(self, r: int, profile: List[int]):
+        """
+        PLM4NDV估计方法
+        这个方法需要额外的列信息，这里提供一个基础实现,实际使用时需要传入完整的列信息
+        """
+        # 这里需要实际的列信息，暂时返回一个fallback值
+        d = self.tools.profile_to_ndv(profile)
+        if r == 0 or d == 0:
+            return 0.0
+         
+        # 如果没有PLM4NDV模型，使用fallback方法
+        if self.plm4ndv_model is None:
+            return self.scale_estimate(r, profile)
+        
+        # 这里需要实际的列信息来调用PLM4NDV
+        # 暂时返回scale估计的结果
+        return self.scale_estimate(r, profile)
     
 
     def estimate(self, all_sampled_data: DataFrame) -> Dict[str, float]:
