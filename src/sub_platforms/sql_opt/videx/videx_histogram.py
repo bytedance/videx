@@ -493,12 +493,11 @@ def update_histogram(env: Env, dbname: str, table_name: str, col_name: str,
         logging.debug(sql)
         cursor.execute(sql)
         res = cursor.fetchone()
-
         if res is not None and len(res) == 4:
             if 'Histogram statistics created for column' in res[3]:
                 return True
         conn.commit()
-    
+
     raise Exception(f"meet error when query: {res}")
 
 
@@ -516,7 +515,6 @@ def drop_histogram(env: Env, dbname: str, table_name: str, col_name: str) -> boo
     sql = f"ANALYZE TABLE `{dbname}`.`{table_name}` DROP HISTOGRAM ON {col_name};"
     logging.debug(sql)
     res = env.query_for_dataframe(sql)
-
     if res is not None and len(res) == 1:
         msg = res.iloc[0].to_dict().get('Msg_text')
         return 'Histogram statistics removed for column' in msg

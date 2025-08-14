@@ -371,7 +371,6 @@ def fetch_ndv_multi_col_gt(env: Env, dbname: str, table_name: str = None) -> Dic
           f"where database_name='{dbname}' and stat_name like 'n_diff%'"
     if table_name:
         sql += f" and table_name = '{table_name}' "
-
     df_res = env.query_for_dataframe(sql)
 
     res = defaultdict(lambda: defaultdict(dict))
@@ -409,8 +408,6 @@ def fetch_ndv_single(env: Env, target_db: str, all_table_names: List[str]) \
             except Exception as e:
                 logging.error(f"fetch NDV error on {target_db}.{table_name}.{col}: {e}")
                 ndv = INVALID_VALUE
-            
-            logging.info(f"fetch NDV for {table_name}.{col}: {int(np.squeeze(ndv))}")
 
             res_tables[str(table_name).lower()][col.name] = int(np.squeeze(ndv))
     return res_tables
