@@ -459,11 +459,7 @@ def query_histogram(env: Env, dbname: str, table_name: str, col_name: str) -> Un
     """
     sql = f"SELECT HISTOGRAM FROM information_schema.column_statistics " \
           f"WHERE SCHEMA_NAME = '{dbname}' AND TABLE_NAME = '{table_name}' AND COLUMN_NAME ='{col_name}'"
-    try:
-        res = env.query_for_dataframe(sql)
-    except Exception as e:
-        logging.error(f"query_histogram error on {dbname}.{table_name}.{col_name}: {e}")
-        return None
+    res = env.query_for_dataframe(sql)
     if len(res) == 0:
         return None
     assert len(res) == 1 and 'HISTOGRAM' in res.iloc[0].to_dict(), f"Invalid result from query_histogram: {res}"
@@ -490,27 +486,20 @@ def update_histogram(env: Env, dbname: str, table_name: str, col_name: str,
     n_buckets = max(1, min(1024, int(n_buckets)))
 
     conn = env.mysql_util.get_connection()
-    try:
-        with conn.cursor() as cursor:
-            if hist_mem_size is not None:
-                try:
-                    cursor.execute(f'SET histogram_generation_max_mem_size={hist_mem_size};')
-                except Exception as e:
-                    logging.error(f"set histogram_generation_max_mem_size error on {dbname}.{table_name}.{col_name}: {e}")
+    with conn.cursor() as cursor:
+        if hist_mem_size is not None:
+            cursor.execute(f'SET histogram_generation_max_mem_size={hist_mem_size};')
+        sql = f"ANALYZE TABLE `{dbname}`.`{table_name}` UPDATE HISTOGRAM ON {col_name} WITH {n_buckets} BUCKETS;"
+        logging.debug(sql)
+        cursor.execute(sql)
+        res = cursor.fetchone()
 
-            sql = f"ANALYZE TABLE `{dbname}`.`{table_name}` UPDATE HISTOGRAM ON {col_name} WITH {n_buckets} BUCKETS;"
-            logging.debug(sql)
-            cursor.execute(sql)
-            res = cursor.fetchone()
-            if res is not None and len(res) == 4:
-                if 'Histogram statistics created for column' in res[3]:
-                    return True
-                conn.commit()
-            
-            return True
-    except Exception as e:
-        logging.error(f"update histogram error on {dbname}.{table_name}.{col_name}: {e}")
-        return False
+        if res is not None and len(res) == 4:
+            if 'Histogram statistics created for column' in res[3]:
+                return True
+        conn.commit()
+    
+    raise Exception(f"meet error when query: {res}")
 
 
 def drop_histogram(env: Env, dbname: str, table_name: str, col_name: str) -> bool:
@@ -524,13 +513,9 @@ def drop_histogram(env: Env, dbname: str, table_name: str, col_name: str) -> boo
     Returns:
 
     """
-    try:
-        sql = f"ANALYZE TABLE `{dbname}`.`{table_name}` DROP HISTOGRAM ON {col_name};"
-        logging.debug(sql)
-        res = env.query_for_dataframe(sql)
-    except Exception as e:
-        logging.error(f"drop histogram error on {dbname}.{table_name}.{col_name}: {e}")
-        return False
+    sql = f"ANALYZE TABLE `{dbname}`.`{table_name}` DROP HISTOGRAM ON {col_name};"
+    logging.debug(sql)
+    res = env.query_for_dataframe(sql)
 
     if res is not None and len(res) == 1:
         msg = res.iloc[0].to_dict().get('Msg_text')
@@ -849,7 +834,6 @@ def fetch_col_histogram(env: Env, dbname: str, table_name: str, col_name: str, n
     """
     if not force:
         hist: HistogramStats = query_histogram(env, dbname, table_name, col_name)
-        logging.info(f"query_histogram result: {hist}")
         if hist is not None:
             if len(hist.buckets) == n_buckets:
                 return hist
@@ -881,11 +865,7 @@ def query_histogram_mariadb(env: Env, dbname: str, table_name: str, col_name: st
     """
     sql = f"SELECT JSON_PRETTY(CONVERT(histogram USING utf8mb4)) AS HISTOGRAM " \
           f"FROM mysql.column_stats WHERE db_name = '{dbname}' AND table_name = '{table_name}' AND column_name = '{col_name}';"
-    try:
-        res = env.query_for_dataframe(sql)
-    except Exception as e:
-        logging.error(f"query histogram failed for {dbname=}, {table_name=}, {col_name=}, {e=}")
-        return None
+    res = env.query_for_dataframe(sql)
     if len(res) == 0:
         return None
     
@@ -897,11 +877,7 @@ def query_histogram_mariadb(env: Env, dbname: str, table_name: str, col_name: st
         logging.warning(f"HISTOGRAM is None, force generate histogram for {dbname=}, {table_name=}, {col_name=}")
         return force_generate_histogram_by_sdc_for_col(env, dbname, table_name, col_name, n_buckets)
     
-    try:
-        hist_dict = json.loads(histogram_value)
-    except (json.JSONDecodeError, TypeError) as e:
-        logging.error(f"Failed to parse HISTOGRAM JSON for {dbname=}, {table_name=}, {col_name=}: {e}")
-        return None
+    hist_dict = json.loads(histogram_value)
     
     return HistogramStats.init_from_mariadb_json(env, dbname, table_name, col_name, hist_dict)
 
@@ -913,33 +889,24 @@ def update_histogram_mariadb(env: Env, dbname: str, table_name: str, n_buckets: 
 
     conn = env.mysql_util.get_connection()
     with conn.cursor() as cursor:
-        try:
-            cursor.execute(f"SET histogram_size = {n_buckets};")
-        except Exception as e:
-            logging.error(f"set histogram_size failed for {dbname=}, {table_name=}, {e=}")
-            return False
-            
-        try:
-            cursor.execute(f"ANALYZE TABLE `{dbname}`.`{table_name}` PERSISTENT FOR ALL;")
-        except Exception as e:
-            logging.error(f"analyze table failed for {dbname=}, {table_name=}, {e=}")
-            return False
-            
+        cursor.execute(f"SET histogram_size = {n_buckets};")
+        cursor.execute(f"ANALYZE TABLE `{dbname}`.`{table_name}` PERSISTENT FOR ALL;")
         conn.commit()
         return True
+
+    raise Exception(f"meet error when query: {res}")
 
 def drop_histogram_mariadb(env: Env, dbname: str) -> bool:
     """
     drop histogram for a column in mariadb
     """
-    try:
-        sql = f"DELETE FROM mysql.column_stats WHERE db_name = '{dbname}';"
-        # Use execute_query instead of query_for_dataframe, because DELETE statement does not need to return data
-        env.mysql_util.execute_query(sql)
+    sql = f"DELETE FROM mysql.column_stats WHERE db_name = '{dbname}';"
+    # Use execute_query instead of query_for_dataframe, because DELETE statement does not need to return data
+    res = env.mysql_util.execute_query(sql)
+
+    if res is not None and len(res) == 1:
         return True
-    except Exception as e:
-        logging.error(f"drop histogram failed for {dbname=}, {e=}")
-        return False
+    return False
 
 def generate_fetch_histogram_mariadb(env: Env, target_db: str, all_table_names: List[str],
                                      n_buckets: int, force: bool,

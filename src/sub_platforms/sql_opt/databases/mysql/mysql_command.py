@@ -28,17 +28,13 @@ class MySQLVersion(Enum):
 
     @staticmethod
     def get_version_enum(version: str):
-        if version.startswith("8"):
+        if "mariadb" in version.lower():
+            return MySQLVersion.MariaDB_11_8
+        elif version.startswith("8"):
             return MySQLVersion.MySQL_8
         elif version.startswith("5"):
             return MySQLVersion.MySQL_57
-        elif "mariadb" in version.lower():
-            return MySQLVersion.MariaDB_11_8
         return MySQLVersion.MySQL_57
-
-    @staticmethod
-    def get_all_versions():
-        return list(MySQLVersion)
 
     def __str__(self):
         return self.value
@@ -50,10 +46,12 @@ def get_mysql_version(mysql_util: AbstractMySQLUtils):
     if len(df) == 0:
         return MySQLVersion.MySQL_57
     version_str = df['Value'].values[0]
-    if version_str.startswith('8.0'):
-        return MySQLVersion.MySQL_8
-    elif "mariadb" in version_str.lower():
+    if "mariadb" in version_str.lower():
         return MySQLVersion.MariaDB_11_8
+    elif version_str.startswith('8'):
+        return MySQLVersion.MySQL_8
+    elif version_str.startswith('5'):
+        return MySQLVersion.MySQL_57
     return MySQLVersion.MySQL_57
 
 

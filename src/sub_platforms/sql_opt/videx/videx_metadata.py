@@ -372,11 +372,7 @@ def fetch_ndv_multi_col_gt(env: Env, dbname: str, table_name: str = None) -> Dic
     if table_name:
         sql += f" and table_name = '{table_name}' "
 
-    try:
-        df_res = env.query_for_dataframe(sql)
-    except Exception as e:
-        logging.error(f"fetch ndv_multi_col_gt error on {dbname}.{table_name}: {e}")
-        return {}
+    df_res = env.query_for_dataframe(sql)
 
     res = defaultdict(lambda: defaultdict(dict))
 
@@ -452,11 +448,7 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
         WHERE table_schema = '%s' and ENGINE = 'InnoDB'
     """ % target_dbname
 
-    try:
-        basic_list: pd.DataFrame = env.query_for_dataframe(sql).to_dict(orient='records')
-    except Exception as e:
-        logging.error(f"fetch basic_list error on {target_dbname}: {e}")
-        basic_list = []
+    basic_list: pd.DataFrame = env.query_for_dataframe(sql).to_dict(orient='records')
     res_dict = {}
 
     # Convert datetime objects to unix timestamp
@@ -480,12 +472,7 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
         select TABLE_NAME, N_ROWS,CLUSTERED_INDEX_SIZE, SUM_OF_OTHER_INDEX_SIZES 
         from `mysql`.`innodb_table_stats` where database_name='%s';
     """ % target_dbname
-    try:
-        innodb_table_stats_list = env.query_for_dataframe(sql).to_dict(orient='records')
-    except Exception as e:
-        logging.error(f"fetch innodb_table_stats_list error on {target_dbname}: {e}")
-        innodb_table_stats_list = []
-
+    innodb_table_stats_list = env.query_for_dataframe(sql).to_dict(orient='records')
     for row in innodb_table_stats_list:
         table_name = str(row["TABLE_NAME"]).lower()
         if table_name not in res_dict:
@@ -546,11 +533,7 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
         ORDER BY table_name, index_name;
     """.format(target_dbname, target_dbname)
 
-    try:
-        data_table_in_mem: pd.DataFrame = env.query_for_dataframe(sql)
-    except Exception as e:
-        logging.error(f"fetch data_table_in_mem error on {target_dbname}: {e}")
-        data_table_in_mem = pd.DataFrame()
+    data_table_in_mem: pd.DataFrame = env.query_for_dataframe(sql)
 
     for (db_name, table_name,), df_table in data_table_in_mem.groupby(['db_name', 'table_name']):
         table_name = str(table_name).lower()
@@ -621,11 +604,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
     if result_dir is not None and os.path.exists(os.path.join(result_dir, stats_file)):
         stats_dict = load_json_from_file(os.path.join(result_dir, stats_file))
     else:
-        try:
-            stats_dict = fetch_information_schema(env, target_db)
-        except Exception as e:
-            logging.error(f"fetch information_schema error on {target_db}: {e}")
-            stats_dict = {}
+        stats_dict = fetch_information_schema(env, target_db)
 
     if all_table_names is None or len(all_table_names) == 0:
         all_table_names = list(stats_dict.keys())
@@ -641,11 +620,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
     if len(miss_ndv_tables) > 0:
         logging.info(f"fetch meta for videx: {ndv_single_file = } not found in {result_dir = }, or exist ndv single "
                      f"is not enough.fetch it: {sorted(ndv_single_dict.keys()) = } {miss_ndv_tables=}")
-        try:
-            tmp_ndv_single_dict = fetch_ndv_single(env, target_db, miss_ndv_tables)
-        except Exception as e:
-            logging.error(f"fetch ndv_single_dict error on {target_db}: {e}")
-            tmp_ndv_single_dict = {}
+        tmp_ndv_single_dict = fetch_ndv_single(env, target_db, miss_ndv_tables)
         ndv_single_dict.update(tmp_ndv_single_dict)
 
     # <<<<<<<<<<<<<<< ndv_single_dict end <<<<<<<<<<<<<<<<
@@ -667,8 +642,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
     if len(miss_hist_tables) > 0:
         logging.info(f"fetch meta for videx: {hist_file=} not found in {result_dir=}, or exist hist is not enough."
                      f"fetch it. {sorted(hist_dict.keys())=} {miss_hist_tables=}")
-        try:
-            tmp_hist_dict = generate_fetch_histogram(env, target_db, miss_hist_tables,
+        tmp_hist_dict = generate_fetch_histogram(env, target_db, miss_hist_tables,
                                                  n_buckets=n_buckets,
                                                  force=hist_force,
                                                  drop_hist_after_fetch=drop_hist_after_fetch,
@@ -676,9 +650,6 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
                                                  hist_mem_size=hist_mem_size,
                                                  ndv_single_dict=ndv_single_dict,
                                                  )
-        except Exception as e:
-            logging.error(f"fetch histogram error on {target_db}: {e}")
-            tmp_hist_dict = {}
         hist_dict.update(tmp_hist_dict)
 
     # <<<<<<<<<<<<<<< hist dict end <<<<<<<<<<<<<<<<
@@ -687,11 +658,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
     if result_dir is not None and os.path.exists(os.path.join(result_dir, ndv_mulcol_file)):
         ndv_mulcol_dict = load_json_from_file(os.path.join(result_dir, ndv_mulcol_file))
     else:
-        try:
-            ndv_mulcol_dict = fetch_ndv_multi_col_gt(env, target_db)
-        except Exception as e:
-            logging.error(f"fetch ndv_mulcol_dict error on {target_db}: {e}")
-            ndv_mulcol_dict = {}
+        ndv_mulcol_dict = fetch_ndv_multi_col_gt(env, target_db)
     # <<<<<<<<<<<<<<< ndv_mulcol_dict end <<<<<<<<<<<<<<<<
 
     logging.info(f"fetch result: {all_table_names=}, {result_dir=}")
