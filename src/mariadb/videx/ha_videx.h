@@ -20,22 +20,9 @@
 	along with this program; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301  USA */
 
-/** @file ha_videx.h
-
-	@brief
-	The ha_videx engine is a stubbed storage engine for example purposes only;
-	it does nothing at this point. Its purpose is to provide a source
-	code illustration of how to begin writing new storage engines; see also
-	/storage/videx/ha_videx.cc.
-
-	@note
-	Please read ha_videx.cc before reading this file.
-	Reminder: The videx storage engine implements all methods that are
-	*required* to be implemented. For a full list of all methods that you can
-	implement, see handler.h.
-
-	@see
-	/sql/handler.h and /storage/videx/ha_videx.cc
+/**
+VIDEX storage engine header.
+See also `storage/videx/ha_videx.cc` and `sql/handler.h`.
 */
 
 #include "my_global.h"                   /* ulonglong */
@@ -49,14 +36,14 @@
 #include "scope.h"
 #include <my_service_manager.h>
 #include "videx_json_item.h"
+#include "videx_log_utils.h"
+#include <replication.h>
+#include <curl/curl.h>
 
-/** @brief
-	videx_share is a class that will be shared among all open handlers.
-	This videx implements the minimum of what you will probably need.
-*/
+/** Shared state used by all open VIDEX handlers. */
 class videx_share : public Handler_share {
 public:
-	mysql_mutex_t mutex; // ??? new in mariadb
+	mysql_mutex_t mutex;
 	THR_LOCK lock;
 	videx_share();
 	~videx_share()
@@ -66,29 +53,16 @@ public:
 	}
 };
 
-// namespace dd
-
-/** @brief
-	Class definition for the storage engine
-*/
+/** Storage engine class. */
 class ha_videx: public handler
 {
-	THR_LOCK_DATA lock;      ///< MariaDB lock
-	videx_share *share;    ///< Shared lock info
-	videx_share *get_share(); ///< Get the share
-	// ha_rows index_next_cnt;
+	THR_LOCK_DATA lock;
+	videx_share *share;
+	videx_share *get_share();
 
 public:
 	ha_videx(handlerton* hton, TABLE_SHARE* table_arg);
 	~ha_videx() override;
-
-	/** @return the transaction that last modified the table definition
-		@see dict_table_t::def_trx_id */
-	ulonglong table_version() const override;
-
-	/** Get the row type from the storage engine.  If this method returns
-		ROW_TYPE_NOT_USED, the information in HA_CREATE_INFO should be used. */
-	enum row_type get_row_type() const override;
 
 	const char* table_type() const override;
 
@@ -121,10 +95,6 @@ public:
 	int update_row(const uchar * old_data, const uchar * new_data) override;
 
 	int delete_row(const uchar * buf) override;
-
-	bool was_semi_consistent_read() override; // ???
-
-	void try_semi_consistent_read(bool yes) override; // ???
 
 	void unlock_row() override;
 
@@ -166,23 +136,16 @@ public:
 		page_range*             pages) override;
 
 	ha_rows estimate_rows_upper_bound() override;
+
 	int create(
 		const char*		name,
 		TABLE*			form,
 		HA_CREATE_INFO*		create_info) override;
 
-	// int truncate() override;
-
 	int delete_table(const char *name) override;
 
 	int rename_table(const char* from, const char* to) override;
 
-	/** Initialize multi range read @see DsMrr_impl::dsmrr_init
-		@param seq
-		@param seq_init_param
-		@param n_ranges
-		@param mode
-		@param buf */
 	int multi_range_read_init(
 		RANGE_SEQ_IF*		seq,
 		void*			seq_init_param,
@@ -190,20 +153,8 @@ public:
 		uint			mode,
 		HANDLER_BUFFER*		buf) override;
 
-	/** Process next multi range read @see DsMrr_impl::dsmrr_next
-		@param range_info */
 	int multi_range_read_next(range_id_t *range_info) override;
 
-	/** Initialize multi range read and get information.
-		@see ha_myisam::multi_range_read_info_const
-		@see DsMrr_impl::dsmrr_info_const
-		@param keyno
-		@param seq
-		@param seq_init_param
-		@param n_ranges
-		@param bufsz
-		@param flags
-		@param cost */
 	ha_rows multi_range_read_info_const(
 		uint			keyno,
 		RANGE_SEQ_IF*		seq,
@@ -214,25 +165,12 @@ public:
 		ha_rows                 limit,
 		Cost_estimate*		cost) override;
 
-	/** Initialize multi range read and get information.
-		@see DsMrr_impl::dsmrr_info
-		@param keyno
-		@param seq
-		@param seq_init_param
-		@param n_ranges
-		@param bufsz
-		@param flags
-		@param cost */
 	ha_rows multi_range_read_info(uint keyno, uint n_ranges, uint keys,
 		uint key_parts, uint* bufsz, uint* flags,
 		Cost_estimate* cost) override;
 
 	int multi_range_read_explain_info(uint mrr_mode, char *str, size_t size) override;
 
-	/** Attempt to push down an index condition.
-		@param[in] keyno MySQL key number
-		@param[in] idx_cond Index condition to be checked
-		@return idx_cond if pushed; NULL if not pushed */
 	Item* idx_cond_push(uint keyno, Item* idx_cond) override;
   
 	int info_low(uint flag, bool is_analyze);
@@ -246,6 +184,9 @@ public:
 
 	/** Flags that specificy the handler instance (table) capability. */
 	Table_flags m_int_table_flags;
+
+	/** Index into the server's primary key meta-data table->key_info{} */
+	uint m_primary_key;
 
 	/** this is set to 1 when we are starting a table scan but have
 	not yet fetched any row, else false */

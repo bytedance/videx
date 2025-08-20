@@ -51,7 +51,6 @@ inline bool videx_contains_key(const VidexStringMap &myMap, const std::string &k
 int videx_parse_simple_json(const std::string &json, int &code, std::string &message,
                       std::map<std::string, std::string> &data_dict);
 
-
 std::string videx_escape_double_quotes(const std::string &input,
                                size_t len = std::string::npos);
 
@@ -65,11 +64,9 @@ public:
     VidexJsonItem()
             : item_type("empty"), depth(0) {}
 
-    /// specify item_type
     VidexJsonItem(const std::string &item_type, int depth)
             : item_type(item_type), depth(depth) {}
 
-    /// create a new VidexJsonItem，插入data，然后返回这个VidexJsonItem的引用
     VidexJsonItem *create(const std::string &new_item_type) {
         data.push_back(VidexJsonItem(new_item_type, depth + 1));
         return &data.back();
@@ -82,7 +79,6 @@ public:
         return &data.back();
     }
 
-    /// add to properties
     void add_property(const std::string &key, const std::string &value) {
         properties[key] = videx_escape_double_quotes(value);
     }
@@ -112,9 +108,9 @@ public:
         }
     }
 
-    template<typename V>
     // Except for string which might be empty and needs to be converted to NULL separately,
     // all other values can be handled using this function.
+    template<typename V>
     void add_property_nonan(const std::string &key, V value) {
         std::stringstream ss;
         ss << value;
@@ -152,8 +148,8 @@ public:
 };
 
 /**
- * construct a basic request, and other parameters can be conveniently added externally.
-*/
+construct a basic request, and other parameters can be conveniently added externally. */
+
 inline VidexJsonItem construct_request(const std::string &db_name,
                                        const std::string &table_name,
                                        const std::string &function,

@@ -22,8 +22,6 @@
 
 #include "videx_json_item.h"
 
-//test
-
 /**
  * A simple parsing function is written here instead,
  * since rapid_json always encounters strange segmentation faults across platforms,
@@ -71,13 +69,12 @@ int videx_parse_simple_json(const std::string &json, int &code, std::string &mes
             std::string key = line.substr(0, colon_pos);
             std::string value = line.substr(colon_pos + 1);
 
-            // clean key 和 value
+            // clean key and value
             auto trim_quotes_and_space = [](std::string &str) {
-                // Trim whitespace and surrounding quotes
                 size_t first = str.find_first_not_of(" \t\n\"");
                 size_t last = str.find_last_not_of(" \t\n\"");
                 if (first == std::string::npos || last == std::string::npos) {
-                    str.clear(); // All whitespace or empty
+                    str.clear();
                 } else {
                     str = str.substr(first, last - first + 1);
                 }
@@ -108,31 +105,24 @@ int videx_parse_simple_json(const std::string &json, int &code, std::string &mes
 std::string videx_escape_double_quotes(const std::string &input, size_t len) {
     if (len == std::string::npos) len = input.length();
 
-    //  if (len > input.length()) {
-    //    throw std::invalid_argument("Length exceeds input string size");
-    //  }
-
     std::string output = input.substr(0, len);
     size_t pos = output.find('\\');
     while (pos != std::string::npos) {
         output.replace(pos, 1, "\\\\");
         pos = output.find('\\', pos + 2);
     }
-    // replace "
     pos = output.find('\"');
     while (pos != std::string::npos) {
         output.replace(pos, 1, "\\\"");
         pos = output.find('\"', pos + 2);
     }
 
-    // replace \n with space
     pos = output.find('\n');
     while (pos != std::string::npos) {
         output.replace(pos, 1, " ");
         pos = output.find('\n', pos + 1);
     }
 
-    // replace \t with space
     pos = output.find('\t');
     while (pos != std::string::npos) {
         output.replace(pos, 1, " ");
