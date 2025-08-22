@@ -102,12 +102,13 @@ cd /root/mariadb_server/mysql_build_output/build
 ```bash
 cd /root/mariadb_server/mysql_build_output/build
 ./sql/mariadbd \
-    --defaults-file=/root/mariadb_server/mysql_build_output/etc/my.cnf --user=root
+    --defaults-file=/root/mariadb_server/mysql_build_output/etc/mariadb_my.cnf --user=root
 ```
 
 ## 6. Create New User
 
 ```bash
+cd /root/mariadb_server/mysql_build_output/build
 ./client/mariadb -h127.0.0.1 -uroot -P13308 -e "
 CREATE USER 'videx'@'%' IDENTIFIED BY 'password';
 GRANT ALL ON *.* TO 'videx'@'%';
@@ -145,7 +146,7 @@ MTR_BINDIR=/root/mariadb_server/mysql_build_output/build \
 ```bash
 cd /root/mariadb_server/mysql-test
 MTR_BINDIR=/root/mariadb_server/mysql_build_output/build \
-  ./mariadb-test-run.pl --suite=videx create-table-and-index
+  ./mariadb-test-run.pl --suite=videx --do-test=create-table-and-index
 ```
 
 Optional: record expected result files on the first run
