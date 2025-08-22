@@ -47,9 +47,9 @@ class VidexModelInnoDB(VidexModelBase):
         self.ndv_model = None
         self.df_sample_raw = None
         self.loading_ndv_model()
-        self.cardinality_dict = dict()
-        self.cardinality_dict["C_NATIONKEY = 15"] = 58
-        self.cardinality_dict["'1995-01-01' <= O_ORDERDATE <= '1996-12-31'"] = 4509
+        self.inject_cardinality_dict = dict()
+        # self.inject_cardinality_dict["C_NATIONKEY = 15"] = 58
+        # self.inject_cardinality_dict["'1995-01-01' <= O_ORDERDATE <= '1996-12-31'"] = 4509
 
     def loading_ndv_model(self):
         if self.table_stats and self.table_stats.sample_file_info is not None:
@@ -71,8 +71,8 @@ class VidexModelInnoDB(VidexModelBase):
 
     def cardinality(self, idx_range_cond: IndexRangeCond) -> int:
         condition_str = idx_range_cond.ranges_to_str()
-        if condition_str in self.cardinality_dict:
-            return self.cardinality_dict[condition_str]
+        if condition_str in self.inject_cardinality_dict:
+            return self.inject_cardinality_dict[condition_str]
 
         debug_msg = f"{idx_range_cond=}," \
                     f"idx_gt_pair_dict={json.dumps(self.table_stats.gt_return.idx_gt_pair_dict)}"
