@@ -1,0 +1,25 @@
+EXPLAIN
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 49.81351163,
+    "filesort": {
+      "sort_key": "lineitem.L_RETURNFLAG, lineitem.L_LINESTATUS",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "lineitem",
+              "access_type": "ALL",
+              "loops": 1,
+              "rows": 59138,
+              "cost": 10.1700672,
+              "filtered": 100,
+              "attached_condition": "lineitem.L_SHIPDATE <= <cache>(str_to_date('1998-12-01','%Y-%m-%d') - interval 74 day)"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,2295 @@
+*************************** 1. row ***************************
+trace: {
+  "steps": [
+    {
+      "join_preparation": {
+        "select_id": 1,
+        "steps": [
+          {
+            "derived": {
+              "table": "profit",
+              "select_id": 2,
+              "algorithm": "merged"
+            }
+          },
+          {
+            "join_preparation": {
+              "select_id": 2,
+              "steps": [
+                {
+                  "expanded_query": "/* select#2 */ select nation.N_NAME AS nation,extract(year from orders.O_ORDERDATE) AS o_year,lineitem.L_EXTENDEDPRICE * (1 - lineitem.L_DISCOUNT) - partsupp.PS_SUPPLYCOST * lineitem.L_QUANTITY AS amount from part join supplier join lineitem join partsupp join orders join nation where supplier.S_SUPPKEY = lineitem.L_SUPPKEY and partsupp.PS_SUPPKEY = lineitem.L_SUPPKEY and partsupp.PS_PARTKEY = lineitem.L_PARTKEY and part.P_PARTKEY = lineitem.L_PARTKEY and orders.O_ORDERKEY = lineitem.L_ORDERKEY and supplier.S_NATIONKEY = nation.N_NATIONKEY and part.P_NAME like '%medium%'"
+                }
+              ]
+            }
+          },
+          {
+            "expanded_query": "/* select#1 */ select profit.nation AS nation,profit.o_year AS o_year,sum(profit.amount) AS sum_profit from (/* select#2 */ select nation.N_NAME AS nation,extract(year from orders.O_ORDERDATE) AS o_year,lineitem.L_EXTENDEDPRICE * (1 - lineitem.L_DISCOUNT) - partsupp.PS_SUPPLYCOST * lineitem.L_QUANTITY AS amount from part join supplier join lineitem join partsupp join orders join nation where supplier.S_SUPPKEY = lineitem.L_SUPPKEY and partsupp.PS_SUPPKEY = lineitem.L_SUPPKEY and partsupp.PS_PARTKEY = lineitem.L_PARTKEY and part.P_PARTKEY = lineitem.L_PARTKEY and orders.O_ORDERKEY = lineitem.L_ORDERKEY and supplier.S_NATIONKEY = nation.N_NATIONKEY and part.P_NAME like '%medium%') profit group by profit.nation,profit.o_year order by profit.nation,profit.o_year desc"
+          }
+        ]
+      }
+    },
+    {
+      "join_optimization": {
+        "select_id": 1,
+        "steps": [
+          {
+            "condition_processing": {
+              "condition": "WHERE",
+              "original_condition": "supplier.S_SUPPKEY = lineitem.L_SUPPKEY and partsupp.PS_SUPPKEY = lineitem.L_SUPPKEY and partsupp.PS_PARTKEY = lineitem.L_PARTKEY and part.P_PARTKEY = lineitem.L_PARTKEY and orders.O_ORDERKEY = lineitem.L_ORDERKEY and supplier.S_NATIONKEY = nation.N_NATIONKEY and part.P_NAME like '%medium%'",
+              "steps": [
+                {
+                  "transformation": "equality_propagation",
+                  "resulting_condition": "part.P_NAME like '%medium%' and multiple equal(supplier.S_SUPPKEY, lineitem.L_SUPPKEY, partsupp.PS_SUPPKEY) and multiple equal(partsupp.PS_PARTKEY, lineitem.L_PARTKEY, part.P_PARTKEY) and multiple equal(orders.O_ORDERKEY, lineitem.L_ORDERKEY) and multiple equal(supplier.S_NATIONKEY, nation.N_NATIONKEY)"
+                },
+                {
+                  "transformation": "constant_propagation",
+                  "resulting_condition": "part.P_NAME like '%medium%' and multiple equal(supplier.S_SUPPKEY, lineitem.L_SUPPKEY, partsupp.PS_SUPPKEY) and multiple equal(partsupp.PS_PARTKEY, lineitem.L_PARTKEY, part.P_PARTKEY) and multiple equal(orders.O_ORDERKEY, lineitem.L_ORDERKEY) and multiple equal(supplier.S_NATIONKEY, nation.N_NATIONKEY)"
+                },
+                {
+                  "transformation": "trivial_condition_removal",
+                  "resulting_condition": "part.P_NAME like '%medium%' and multiple equal(supplier.S_SUPPKEY, lineitem.L_SUPPKEY, partsupp.PS_SUPPKEY) and multiple equal(partsupp.PS_PARTKEY, lineitem.L_PARTKEY, part.P_PARTKEY) and multiple equal(orders.O_ORDERKEY, lineitem.L_ORDERKEY) and multiple equal(supplier.S_NATIONKEY, nation.N_NATIONKEY)"
+                }
+              ]
+            }
+          },
+          {
+            "table_dependencies": [
+              {
+                "table": "part",
+                "row_may_be_null": false,
+                "map_bit": 0,
+                "depends_on_map_bits": []
+              },
+              {
+                "table": "supplier",
+                "row_may_be_null": false,
+                "map_bit": 1,
+                "depends_on_map_bits": []
+              },
+              {
+                "table": "lineitem",
+                "row_may_be_null": false,
+                "map_bit": 2,
+                "depends_on_map_bits": []
+              },
+              {
+                "table": "partsupp",
+                "row_may_be_null": false,
+                "map_bit": 3,
+                "depends_on_map_bits": []
+              },
+              {
+                "table": "orders",
+                "row_may_be_null": false,
+                "map_bit": 4,
+                "depends_on_map_bits": []
+              },
+              {
+                "table": "nation",
+                "row_may_be_null": false,
+                "map_bit": 5,
+                "depends_on_map_bits": []
+              }
+            ]
+          },
+          {
+            "ref_optimizer_key_uses": [
+              {
+                "table": "part",
+                "index": "PRIMARY",
+                "field": "P_PARTKEY",
+                "equals": "partsupp.PS_PARTKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "part",
+                "index": "PRIMARY",
+                "field": "P_PARTKEY",
+                "equals": "lineitem.L_PARTKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "supplier",
+                "index": "PRIMARY",
+                "field": "S_SUPPKEY",
+                "equals": "lineitem.L_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "supplier",
+                "index": "PRIMARY",
+                "field": "S_SUPPKEY",
+                "equals": "partsupp.PS_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "supplier",
+                "index": "SUPPLIER_FK1",
+                "field": "S_NATIONKEY",
+                "equals": "nation.N_NATIONKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "supplier",
+                "index": "SUPPLIER_FK1",
+                "field": "S_SUPPKEY",
+                "equals": "lineitem.L_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "supplier",
+                "index": "SUPPLIER_FK1",
+                "field": "S_SUPPKEY",
+                "equals": "partsupp.PS_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "supplier",
+                "index": "idx_S_NATIONKEY_S_SUPPKEY_S_NAME",
+                "field": "S_NATIONKEY",
+                "equals": "nation.N_NATIONKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "supplier",
+                "index": "idx_S_NATIONKEY_S_SUPPKEY_S_NAME",
+                "field": "S_SUPPKEY",
+                "equals": "partsupp.PS_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "supplier",
+                "index": "idx_S_NATIONKEY_S_SUPPKEY_S_NAME",
+                "field": "S_SUPPKEY",
+                "equals": "lineitem.L_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "lineitem",
+                "index": "LINEITEM_UK1",
+                "field": "L_ORDERKEY",
+                "equals": "orders.O_ORDERKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "lineitem",
+                "index": "LINEITEM_FK1",
+                "field": "L_ORDERKEY",
+                "equals": "orders.O_ORDERKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "lineitem",
+                "index": "LINEITEM_FK2",
+                "field": "L_PARTKEY",
+                "equals": "part.P_PARTKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "lineitem",
+                "index": "LINEITEM_FK2",
+                "field": "L_PARTKEY",
+                "equals": "partsupp.PS_PARTKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "lineitem",
+                "index": "LINEITEM_FK2",
+                "field": "L_SUPPKEY",
+                "equals": "partsupp.PS_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "lineitem",
+                "index": "LINEITEM_FK2",
+                "field": "L_SUPPKEY",
+                "equals": "supplier.S_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "partsupp",
+                "index": "PARTSUPP_UK1",
+                "field": "PS_PARTKEY",
+                "equals": "part.P_PARTKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "partsupp",
+                "index": "PARTSUPP_UK1",
+                "field": "PS_PARTKEY",
+                "equals": "lineitem.L_PARTKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "partsupp",
+                "index": "PARTSUPP_UK1",
+                "field": "PS_SUPPKEY",
+                "equals": "supplier.S_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "partsupp",
+                "index": "PARTSUPP_UK1",
+                "field": "PS_SUPPKEY",
+                "equals": "lineitem.L_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "partsupp",
+                "index": "PARTSUPP_FK1",
+                "field": "PS_SUPPKEY",
+                "equals": "lineitem.L_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "partsupp",
+                "index": "PARTSUPP_FK1",
+                "field": "PS_SUPPKEY",
+                "equals": "supplier.S_SUPPKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "partsupp",
+                "index": "PARTSUPP_FK2",
+                "field": "PS_PARTKEY",
+                "equals": "part.P_PARTKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "partsupp",
+                "index": "PARTSUPP_FK2",
+                "field": "PS_PARTKEY",
+                "equals": "lineitem.L_PARTKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "orders",
+                "index": "PRIMARY",
+                "field": "O_ORDERKEY",
+                "equals": "lineitem.L_ORDERKEY",
+                "null_rejecting": false
+              },
+              {
+                "table": "nation",
+                "index": "PRIMARY",
+                "field": "N_NATIONKEY",
+                "equals": "supplier.S_NATIONKEY",
+                "null_rejecting": false
+              }
+            ]
+          },
+          {
+            "rows_estimation": [
+              {
+                "table": "part",
+                "table_scan": {
+                  "rows": 2080,
+                  "read_cost": 0.3012856,
+                  "read_and_compare_cost": 0.3678456
+                }
+              },
+              {
+                "table": "supplier",
+                "table_scan": {
+                  "rows": 100,
+                  "read_cost": 0.01811442,
+                  "read_and_compare_cost": 0.02131442
+                }
+              },
+              {
+                "table": "lineitem",
+                "table_scan": {
+                  "rows": 59138,
+                  "read_cost": 8.2776512,
+                  "read_and_compare_cost": 10.1700672
+                }
+              },
+              {
+                "table": "partsupp",
+                "table_scan": {
+                  "rows": 7950,
+                  "read_cost": 1.1343656,
+                  "read_and_compare_cost": 1.3887656
+                }
+              },
+              {
+                "table": "orders",
+                "table_scan": {
+                  "rows": 14950,
+                  "read_cost": 2.1060728,
+                  "read_and_compare_cost": 2.5844728
+                }
+              },
+              {
+                "table": "nation",
+                "table_scan": {
+                  "rows": 25,
+                  "read_cost": 0.0141298,
+                  "read_and_compare_cost": 0.0149298
+                }
+              }
+            ]
+          },
+          {
+            "considered_execution_plans": [
+              {
+                "plan_prefix": "",
+                "get_costs_for_tables": [
+                  {
+                    "best_access_path": {
+                      "table": "nation",
+                      "plan_details": {
+                        "record_count": 1
+                      },
+                      "considered_access_paths": [
+                        {
+                          "access_type": "scan",
+                          "rows": 25,
+                          "rows_after_filter": 25,
+                          "rows_out": 25,
+                          "cost": 0.0149298,
+                          "index_only": false,
+                          "chosen": true
+                        }
+                      ],
+                      "chosen_access_method": {
+                        "type": "scan",
+                        "rows_read": 25,
+                        "rows_out": 25,
+                        "cost": 0.0149298,
+                        "uses_join_buffering": false
+                      }
+                    }
+                  },
+                  {
+                    "best_access_path": {
+                      "table": "supplier",
+                      "plan_details": {
+                        "record_count": 1
+                      },
+                      "considered_access_paths": [
+                        {
+                          "access_type": "scan",
+                          "rows": 100,
+                          "rows_after_filter": 100,
+                          "rows_out": 100,
+                          "cost": 0.02131442,
+                          "index_only": true,
+                          "chosen": true
+                        }
+                      ],
+                      "chosen_access_method": {
+                        "type": "scan",
+                        "rows_read": 100,
+                        "rows_out": 100,
+                        "cost": 0.02131442,
+                        "uses_join_buffering": false
+                      }
+                    }
+                  },
+                  {
+                    "best_access_path": {
+                      "table": "part",
+                      "plan_details": {
+                        "record_count": 1
+                      },
+                      "considered_access_paths": [
+                        {
+                          "access_type": "scan",
+                          "rows": 2080,
+                          "rows_after_filter": 2080,
+                          "rows_out": 2080,
+                          "cost": 0.3678456,
+                          "index_only": false,
+                          "chosen": true
+                        }
+                      ],
+                      "chosen_access_method": {
+                        "type": "scan",
+                        "rows_read": 2080,
+                        "rows_out": 2080,
+                        "cost": 0.3678456,
+                        "uses_join_buffering": false
+                      }
+                    }
+                  },
+                  {
+                    "best_access_path": {
+                      "table": "partsupp",
+                      "plan_details": {
+                        "record_count": 1
+                      },
+                      "considered_access_paths": [
+                        {
+                          "access_type": "scan",
+                          "rows": 7950,
+                          "rows_after_filter": 7950,
+                          "rows_out": 7950,
+                          "cost": 1.3887656,
+                          "index_only": false,
+                          "chosen": true
+                        }
+                      ],
+                      "chosen_access_method": {
+                        "type": "scan",
+                        "rows_read": 7950,
+                        "rows_out": 7950,
+                        "cost": 1.3887656,
+                        "uses_join_buffering": false
+                      }
+                    }
+                  },
+                  {
+                    "best_access_path": {
+                      "table": "orders",
+                      "plan_details": {
+                        "record_count": 1
+                      },
+                      "considered_access_paths": [
+                        {
+                          "access_type": "scan",
+                          "rows": 14950,
+                          "rows_after_filter": 14950,
+                          "rows_out": 14950,
+                          "cost": 2.5844728,
+                          "index_only": false,
+                          "chosen": true
+                        }
+                      ],
+                      "chosen_access_method": {
+                        "type": "scan",
+                        "rows_read": 14950,
+                        "rows_out": 14950,
+                        "cost": 2.5844728,
+                        "uses_join_buffering": false
+                      }
+                    }
+                  },
+                  {
+                    "best_access_path": {
+                      "table": "lineitem",
+                      "plan_details": {
+                        "record_count": 1
+                      },
+                      "considered_access_paths": [
+                        {
+                          "access_type": "scan",
+                          "rows": 59138,
+                          "rows_after_filter": 59138,
+                          "rows_out": 59138,
+                          "cost": 10.1700672,
+                          "index_only": false,
+                          "chosen": true
+                        }
+                      ],
+                      "chosen_access_method": {
+                        "type": "scan",
+                        "rows_read": 59138,
+                        "rows_out": 59138,
+                        "cost": 10.1700672,
+                        "uses_join_buffering": false
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "plan_prefix": "",
+                "table": "nation",
+                "rows_for_plan": 25,
+                "cost_for_plan": 0.0149298,
+                "rest_of_plan": [
+                  {
+                    "plan_prefix": "nation",
+                    "get_costs_for_tables": [
+                      {
+                        "best_access_path": {
+                          "table": "supplier",
+                          "plan_details": {
+                            "record_count": 25
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "ref",
+                              "index": "SUPPLIER_FK1",
+                              "rows": 4,
+                              "cost": 0.0361557,
+                              "chosen": true
+                            },
+                            {
+                              "access_type": "ref",
+                              "index": "idx_S_NATIONKEY_S_SUPPKEY_S_NAME",
+                              "rows": 4,
+                              "cost": 0.0361557,
+                              "chosen": false,
+                              "cause": "cost"
+                            },
+                            {
+                              "type": "scan",
+                              "chosen": false,
+                              "cause": "cost"
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "ref",
+                            "index": "SUPPLIER_FK1",
+                            "rows_read": 4,
+                            "rows_out": 4,
+                            "cost": 0.0361557,
+                            "uses_join_buffering": false
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "part",
+                          "plan_details": {
+                            "record_count": 25
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 2080,
+                              "rows_after_filter": 2080,
+                              "rows_out": 2080,
+                              "cost": 5.19839925,
+                              "cost_without_join_buffer": 8.7636024,
+                              "index_only": false,
+                              "chosen": true
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "scan",
+                            "rows_read": 2080,
+                            "rows_out": 2080,
+                            "cost": 5.19839925,
+                            "uses_join_buffering": true
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "partsupp",
+                          "plan_details": {
+                            "record_count": 25
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 7950,
+                              "rows_after_filter": 7950,
+                              "rows_out": 7950,
+                              "cost": 19.84740475,
+                              "cost_without_join_buffer": 32.8120424,
+                              "index_only": false,
+                              "chosen": true
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "scan",
+                            "rows_read": 7950,
+                            "rows_out": 7950,
+                            "cost": 19.84740475,
+                            "uses_join_buffering": true
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "orders",
+                          "plan_details": {
+                            "record_count": 25
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 14950,
+                              "rows_after_filter": 14950,
+                              "rows_out": 14950,
+                              "cost": 37.29466195,
+                              "cost_without_join_buffer": 61.4464312,
+                              "index_only": false,
+                              "chosen": true
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "scan",
+                            "rows_read": 14950,
+                            "rows_out": 14950,
+                            "cost": 37.29466195,
+                            "uses_join_buffering": true
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "lineitem",
+                          "plan_details": {
+                            "record_count": 25
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 59138,
+                              "rows_after_filter": 59138,
+                              "rows_out": 59138,
+                              "cost": 147.4693266,
+                              "cost_without_join_buffer": 242.2782528,
+                              "index_only": false,
+                              "chosen": true
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "scan",
+                            "rows_read": 59138,
+                            "rows_out": 59138,
+                            "cost": 147.4693266,
+                            "uses_join_buffering": true
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "plan_prefix": "nation",
+                    "table": "supplier",
+                    "rows_for_plan": 100,
+                    "cost_for_plan": 0.0510855,
+                    "rest_of_plan": [
+                      {
+                        "plan_prefix": "nation,supplier",
+                        "get_costs_for_tables": [
+                          {
+                            "best_access_path": {
+                              "table": "part",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "scan_with_join_cache",
+                                  "rows": 2080,
+                                  "rows_after_filter": 2080,
+                                  "rows_out": 2080,
+                                  "cost": 32.3501882,
+                                  "cost_without_join_buffer": 35.0003424,
+                                  "index_only": false,
+                                  "chosen": true
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "scan",
+                                "rows_read": 2080,
+                                "rows_out": 2080,
+                                "cost": 32.3501882,
+                                "uses_join_buffering": true
+                              }
+                            }
+                          },
+                          {
+                            "best_access_path": {
+                              "table": "partsupp",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "ref",
+                                  "index": "PARTSUPP_UK1",
+                                  "chosen": false,
+                                  "cause": "no predicate for first keypart"
+                                },
+                                {
+                                  "access_type": "ref",
+                                  "index": "PARTSUPP_FK1",
+                                  "rows": 1,
+                                  "cost": 0.2663936,
+                                  "chosen": true
+                                },
+                                {
+                                  "type": "scan",
+                                  "chosen": false,
+                                  "cause": "cost"
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "ref",
+                                "index": "PARTSUPP_FK1",
+                                "rows_read": 1,
+                                "rows_out": 1,
+                                "cost": 0.2663936,
+                                "uses_join_buffering": false
+                              }
+                            }
+                          },
+                          {
+                            "best_access_path": {
+                              "table": "orders",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "scan_with_join_cache",
+                                  "rows": 14950,
+                                  "rows_after_filter": 14950,
+                                  "rows_out": 14950,
+                                  "cost": 232.4198994,
+                                  "cost_without_join_buffer": 245.3900512,
+                                  "index_only": false,
+                                  "chosen": true
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "scan",
+                                "rows_read": 14950,
+                                "rows_out": 14950,
+                                "cost": 232.4198994,
+                                "uses_join_buffering": true
+                              }
+                            }
+                          },
+                          {
+                            "best_access_path": {
+                              "table": "lineitem",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "ref",
+                                  "index": "LINEITEM_FK2",
+                                  "chosen": false,
+                                  "cause": "no predicate for first keypart"
+                                },
+                                {
+                                  "access_type": "scan_with_join_cache",
+                                  "rows": 59138,
+                                  "rows_after_filter": 59138,
+                                  "rows_out": 44353.5,
+                                  "cost": 919.3164554,
+                                  "cost_without_join_buffer": 967.6163328,
+                                  "index_only": false,
+                                  "chosen": true
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "scan",
+                                "rows_read": 59138,
+                                "rows_out": 44353.5,
+                                "cost": 919.3164554,
+                                "uses_join_buffering": true
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "plan_prefix": "nation,supplier",
+                        "table": "partsupp",
+                        "rows_for_plan": 100,
+                        "cost_for_plan": 0.3174791,
+                        "rest_of_plan": [
+                          {
+                            "plan_prefix": "nation,supplier,partsupp",
+                            "get_costs_for_tables": [
+                              {
+                                "best_access_path": {
+                                  "table": "part",
+                                  "plan_details": {
+                                    "record_count": 100
+                                  },
+                                  "considered_access_paths": [
+                                    {
+                                      "access_type": "eq_ref",
+                                      "index": "PRIMARY",
+                                      "rows": 1,
+                                      "cost": 0.1074664,
+                                      "chosen": true
+                                    },
+                                    {
+                                      "type": "scan",
+                                      "chosen": false,
+                                      "cause": "cost"
+                                    }
+                                  ],
+                                  "chosen_access_method": {
+                                    "type": "eq_ref",
+                                    "index": "PRIMARY",
+                                    "rows_read": 1,
+                                    "rows_out": 1,
+                                    "cost": 0.1074664,
+                                    "uses_join_buffering": false
+                                  }
+                                }
+                              },
+                              {
+                                "best_access_path": {
+                                  "table": "orders",
+                                  "plan_details": {
+                                    "record_count": 100
+                                  },
+                                  "considered_access_paths": [
+                                    {
+                                      "access_type": "scan_with_join_cache",
+                                      "rows": 14950,
+                                      "rows_after_filter": 14950,
+                                      "rows_out": 14950,
+                                      "cost": 323.4145694,
+                                      "cost_without_join_buffer": 245.3900512,
+                                      "index_only": false,
+                                      "chosen": true
+                                    }
+                                  ],
+                                  "chosen_access_method": {
+                                    "type": "scan",
+                                    "rows_read": 14950,
+                                    "rows_out": 14950,
+                                    "cost": 323.4145694,
+                                    "uses_join_buffering": true
+                                  }
+                                }
+                              },
+                              {
+                                "best_access_path": {
+                                  "table": "lineitem",
+                                  "plan_details": {
+                                    "record_count": 100
+                                  },
+                                  "considered_access_paths": [
+                                    {
+                                      "access_type": "ref",
+                                      "index": "LINEITEM_FK2",
+                                      "rows": 1,
+                                      "cost": 0.3114496,
+                                      "chosen": true
+                                    },
+                                    {
+                                      "type": "scan",
+                                      "chosen": false,
+                                      "cause": "cost"
+                                    }
+                                  ],
+                                  "chosen_access_method": {
+                                    "type": "ref",
+                                    "index": "LINEITEM_FK2",
+                                    "rows_read": 1,
+                                    "rows_out": 1,
+                                    "cost": 0.3114496,
+                                    "uses_join_buffering": false
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "plan_prefix": "nation,supplier,partsupp",
+                            "table": "part",
+                            "rows_for_plan": 100,
+                            "cost_for_plan": 0.4249455,
+                            "rest_of_plan": [
+                              {
+                                "plan_prefix": "nation,supplier,partsupp,part",
+                                "get_costs_for_tables": [
+                                  {
+                                    "best_access_path": {
+                                      "table": "orders",
+                                      "plan_details": {
+                                        "record_count": 100
+                                      },
+                                      "considered_access_paths": [
+                                        {
+                                          "access_type": "scan_with_join_cache",
+                                          "rows": 14950,
+                                          "rows_after_filter": 14950,
+                                          "rows_out": 14950,
+                                          "cost": 414.4092394,
+                                          "cost_without_join_buffer": 245.3900512,
+                                          "index_only": false,
+                                          "chosen": true
+                                        }
+                                      ],
+                                      "chosen_access_method": {
+                                        "type": "scan",
+                                        "rows_read": 14950,
+                                        "rows_out": 14950,
+                                        "cost": 414.4092394,
+                                        "uses_join_buffering": true
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "best_access_path": {
+                                      "table": "lineitem",
+                                      "plan_details": {
+                                        "record_count": 100
+                                      },
+                                      "considered_access_paths": [
+                                        {
+                                          "access_type": "ref",
+                                          "index": "LINEITEM_FK2",
+                                          "rows": 1,
+                                          "cost": 0.3114496,
+                                          "chosen": true
+                                        },
+                                        {
+                                          "type": "scan",
+                                          "chosen": false,
+                                          "cause": "cost"
+                                        }
+                                      ],
+                                      "chosen_access_method": {
+                                        "type": "ref",
+                                        "index": "LINEITEM_FK2",
+                                        "rows_read": 1,
+                                        "rows_out": 1,
+                                        "cost": 0.3114496,
+                                        "uses_join_buffering": false
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "plan_prefix": "nation,supplier,partsupp,part",
+                                "table": "lineitem",
+                                "rows_for_plan": 100,
+                                "cost_for_plan": 0.7363951,
+                                "rest_of_plan": [
+                                  {
+                                    "plan_prefix": "nation,supplier,partsupp,part,lineitem",
+                                    "get_costs_for_tables": [
+                                      {
+                                        "best_access_path": {
+                                          "table": "orders",
+                                          "plan_details": {
+                                            "record_count": 100
+                                          },
+                                          "considered_access_paths": [
+                                            {
+                                              "access_type": "eq_ref",
+                                              "index": "PRIMARY",
+                                              "rows": 1,
+                                              "cost": 0.171364,
+                                              "chosen": true
+                                            },
+                                            {
+                                              "type": "scan",
+                                              "chosen": false,
+                                              "cause": "cost"
+                                            }
+                                          ],
+                                          "chosen_access_method": {
+                                            "type": "eq_ref",
+                                            "index": "PRIMARY",
+                                            "rows_read": 1,
+                                            "rows_out": 1,
+                                            "cost": 0.171364,
+                                            "uses_join_buffering": false
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "plan_prefix": "nation,supplier,partsupp,part,lineitem",
+                                    "table": "orders",
+                                    "rows_for_plan": 100,
+                                    "cost_for_plan": 0.9077591
+                                  }
+                                ],
+                                "pruned_by_hanging_leaf": true
+                              }
+                            ],
+                            "pruned_by_hanging_leaf": true
+                          }
+                        ],
+                        "pruned_by_hanging_leaf": true
+                      }
+                    ]
+                  },
+                  {
+                    "plan_prefix": "nation",
+                    "table": "part",
+                    "rows_for_plan": 52000,
+                    "cost_for_plan": 5.21332905,
+                    "pruned_by_cost": true,
+                    "current_cost": 5.21332905,
+                    "best_cost": 0.9077591
+                  },
+                  {
+                    "plan_prefix": "nation",
+                    "table": "partsupp",
+                    "rows_for_plan": 198750,
+                    "cost_for_plan": 19.86233455,
+                    "pruned_by_cost": true,
+                    "current_cost": 19.86233455,
+                    "best_cost": 0.9077591
+                  },
+                  {
+                    "plan_prefix": "nation",
+                    "table": "orders",
+                    "rows_for_plan": 373750,
+                    "cost_for_plan": 37.30959175,
+                    "pruned_by_cost": true,
+                    "current_cost": 37.30959175,
+                    "best_cost": 0.9077591
+                  },
+                  {
+                    "plan_prefix": "nation",
+                    "table": "lineitem",
+                    "rows_for_plan": 1478450,
+                    "cost_for_plan": 147.4842564,
+                    "pruned_by_cost": true,
+                    "current_cost": 147.4842564,
+                    "best_cost": 0.9077591
+                  }
+                ]
+              },
+              {
+                "plan_prefix": "",
+                "table": "supplier",
+                "rows_for_plan": 100,
+                "cost_for_plan": 0.02131442,
+                "rest_of_plan": [
+                  {
+                    "plan_prefix": "supplier",
+                    "get_costs_for_tables": [
+                      {
+                        "best_access_path": {
+                          "table": "nation",
+                          "plan_details": {
+                            "record_count": 100
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "eq_ref",
+                              "index": "PRIMARY",
+                              "rows": 1,
+                              "cost": 0.0902632,
+                              "chosen": true
+                            },
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 25,
+                              "rows_after_filter": 25,
+                              "rows_out": 1,
+                              "cost": 0.2531814,
+                              "cost_without_join_buffer": 1.4118792,
+                              "index_only": false,
+                              "chosen": false
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "eq_ref",
+                            "index": "PRIMARY",
+                            "rows_read": 1,
+                            "rows_out": 1,
+                            "cost": 0.0902632,
+                            "uses_join_buffering": false
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "part",
+                          "plan_details": {
+                            "record_count": 100
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 2080,
+                              "rows_after_filter": 2080,
+                              "rows_out": 2080,
+                              "cost": 19.6900602,
+                              "cost_without_join_buffer": 35.0003424,
+                              "index_only": false,
+                              "chosen": true
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "scan",
+                            "rows_read": 2080,
+                            "rows_out": 2080,
+                            "cost": 19.6900602,
+                            "uses_join_buffering": true
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "partsupp",
+                          "plan_details": {
+                            "record_count": 100
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "ref",
+                              "index": "PARTSUPP_UK1",
+                              "chosen": false,
+                              "cause": "no predicate for first keypart"
+                            },
+                            {
+                              "access_type": "ref",
+                              "index": "PARTSUPP_FK1",
+                              "rows": 1,
+                              "cost": 0.2663936,
+                              "chosen": true
+                            },
+                            {
+                              "type": "scan",
+                              "chosen": false,
+                              "cause": "cost"
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "ref",
+                            "index": "PARTSUPP_FK1",
+                            "rows_read": 1,
+                            "rows_out": 1,
+                            "cost": 0.2663936,
+                            "uses_join_buffering": false
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "orders",
+                          "plan_details": {
+                            "record_count": 100
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 14950,
+                              "rows_after_filter": 14950,
+                              "rows_out": 14950,
+                              "cost": 141.4252294,
+                              "cost_without_join_buffer": 245.3900512,
+                              "index_only": false,
+                              "chosen": true
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "scan",
+                            "rows_read": 14950,
+                            "rows_out": 14950,
+                            "cost": 141.4252294,
+                            "uses_join_buffering": true
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "lineitem",
+                          "plan_details": {
+                            "record_count": 100
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "ref",
+                              "index": "LINEITEM_FK2",
+                              "chosen": false,
+                              "cause": "no predicate for first keypart"
+                            },
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 59138,
+                              "rows_after_filter": 59138,
+                              "rows_out": 44353.5,
+                              "cost": 559.3671046,
+                              "cost_without_join_buffer": 967.6163328,
+                              "index_only": false,
+                              "chosen": true
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "scan",
+                            "rows_read": 59138,
+                            "rows_out": 44353.5,
+                            "cost": 559.3671046,
+                            "uses_join_buffering": true
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "plan_prefix": "supplier",
+                    "table": "partsupp",
+                    "rows_for_plan": 100,
+                    "cost_for_plan": 0.28770802,
+                    "rest_of_plan": [
+                      {
+                        "plan_prefix": "supplier,partsupp",
+                        "get_costs_for_tables": [
+                          {
+                            "best_access_path": {
+                              "table": "part",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "eq_ref",
+                                  "index": "PRIMARY",
+                                  "rows": 1,
+                                  "cost": 0.1074664,
+                                  "chosen": true
+                                },
+                                {
+                                  "type": "scan",
+                                  "chosen": false,
+                                  "cause": "cost"
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "eq_ref",
+                                "index": "PRIMARY",
+                                "rows_read": 1,
+                                "rows_out": 1,
+                                "cost": 0.1074664,
+                                "uses_join_buffering": false
+                              }
+                            }
+                          },
+                          {
+                            "best_access_path": {
+                              "table": "nation",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "eq_ref",
+                                  "index": "PRIMARY",
+                                  "rows": 1,
+                                  "cost": 0.0902632,
+                                  "chosen": true
+                                },
+                                {
+                                  "access_type": "scan_with_join_cache",
+                                  "rows": 25,
+                                  "rows_after_filter": 25,
+                                  "rows_out": 1,
+                                  "cost": 0.4053464,
+                                  "cost_without_join_buffer": 1.4118792,
+                                  "index_only": false,
+                                  "chosen": false
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "eq_ref",
+                                "index": "PRIMARY",
+                                "rows_read": 1,
+                                "rows_out": 1,
+                                "cost": 0.0902632,
+                                "uses_join_buffering": false
+                              }
+                            }
+                          },
+                          {
+                            "best_access_path": {
+                              "table": "orders",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "scan_with_join_cache",
+                                  "rows": 14950,
+                                  "rows_after_filter": 14950,
+                                  "rows_out": 14950,
+                                  "cost": 232.4198994,
+                                  "cost_without_join_buffer": 245.3900512,
+                                  "index_only": false,
+                                  "chosen": true
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "scan",
+                                "rows_read": 14950,
+                                "rows_out": 14950,
+                                "cost": 232.4198994,
+                                "uses_join_buffering": true
+                              }
+                            }
+                          },
+                          {
+                            "best_access_path": {
+                              "table": "lineitem",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "ref",
+                                  "index": "LINEITEM_FK2",
+                                  "rows": 1,
+                                  "cost": 0.3114496,
+                                  "chosen": true
+                                },
+                                {
+                                  "type": "scan",
+                                  "chosen": false,
+                                  "cause": "cost"
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "ref",
+                                "index": "LINEITEM_FK2",
+                                "rows_read": 1,
+                                "rows_out": 1,
+                                "cost": 0.3114496,
+                                "uses_join_buffering": false
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "plan_prefix": "supplier,partsupp",
+                        "table": "part",
+                        "rows_for_plan": 100,
+                        "cost_for_plan": 0.39517442,
+                        "rest_of_plan": [
+                          {
+                            "plan_prefix": "supplier,partsupp,part",
+                            "get_costs_for_tables": [
+                              {
+                                "best_access_path": {
+                                  "table": "nation",
+                                  "plan_details": {
+                                    "record_count": 100
+                                  },
+                                  "considered_access_paths": [
+                                    {
+                                      "access_type": "eq_ref",
+                                      "index": "PRIMARY",
+                                      "rows": 1,
+                                      "cost": 0.0902632,
+                                      "chosen": true
+                                    },
+                                    {
+                                      "access_type": "scan_with_join_cache",
+                                      "rows": 25,
+                                      "rows_after_filter": 25,
+                                      "rows_out": 1,
+                                      "cost": 0.5575114,
+                                      "cost_without_join_buffer": 1.4118792,
+                                      "index_only": false,
+                                      "chosen": false
+                                    }
+                                  ],
+                                  "chosen_access_method": {
+                                    "type": "eq_ref",
+                                    "index": "PRIMARY",
+                                    "rows_read": 1,
+                                    "rows_out": 1,
+                                    "cost": 0.0902632,
+                                    "uses_join_buffering": false
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "plan_prefix": "supplier,partsupp,part",
+                            "table": "nation",
+                            "rows_for_plan": 100,
+                            "cost_for_plan": 0.48543762,
+                            "rest_of_plan": [
+                              {
+                                "plan_prefix": "supplier,partsupp,part,nation",
+                                "get_costs_for_tables": [
+                                  {
+                                    "best_access_path": {
+                                      "table": "orders",
+                                      "plan_details": {
+                                        "record_count": 100
+                                      },
+                                      "considered_access_paths": [
+                                        {
+                                          "access_type": "scan_with_join_cache",
+                                          "rows": 14950,
+                                          "rows_after_filter": 14950,
+                                          "rows_out": 14950,
+                                          "cost": 414.4092394,
+                                          "cost_without_join_buffer": 245.3900512,
+                                          "index_only": false,
+                                          "chosen": true
+                                        }
+                                      ],
+                                      "chosen_access_method": {
+                                        "type": "scan",
+                                        "rows_read": 14950,
+                                        "rows_out": 14950,
+                                        "cost": 414.4092394,
+                                        "uses_join_buffering": true
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "best_access_path": {
+                                      "table": "lineitem",
+                                      "plan_details": {
+                                        "record_count": 100
+                                      },
+                                      "considered_access_paths": [
+                                        {
+                                          "access_type": "ref",
+                                          "index": "LINEITEM_FK2",
+                                          "rows": 1,
+                                          "cost": 0.3114496,
+                                          "chosen": true
+                                        },
+                                        {
+                                          "type": "scan",
+                                          "chosen": false,
+                                          "cause": "cost"
+                                        }
+                                      ],
+                                      "chosen_access_method": {
+                                        "type": "ref",
+                                        "index": "LINEITEM_FK2",
+                                        "rows_read": 1,
+                                        "rows_out": 1,
+                                        "cost": 0.3114496,
+                                        "uses_join_buffering": false
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "plan_prefix": "supplier,partsupp,part,nation",
+                                "table": "lineitem",
+                                "rows_for_plan": 100,
+                                "cost_for_plan": 0.79688722,
+                                "rest_of_plan": [
+                                  {
+                                    "plan_prefix": "supplier,partsupp,part,nation,lineitem",
+                                    "get_costs_for_tables": [
+                                      {
+                                        "best_access_path": {
+                                          "table": "orders",
+                                          "plan_details": {
+                                            "record_count": 100
+                                          },
+                                          "considered_access_paths": [
+                                            {
+                                              "access_type": "eq_ref",
+                                              "index": "PRIMARY",
+                                              "rows": 1,
+                                              "cost": 0.171364,
+                                              "chosen": true
+                                            },
+                                            {
+                                              "type": "scan",
+                                              "chosen": false,
+                                              "cause": "cost"
+                                            }
+                                          ],
+                                          "chosen_access_method": {
+                                            "type": "eq_ref",
+                                            "index": "PRIMARY",
+                                            "rows_read": 1,
+                                            "rows_out": 1,
+                                            "cost": 0.171364,
+                                            "uses_join_buffering": false
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "plan_prefix": "supplier,partsupp,part,nation,lineitem",
+                                    "table": "orders",
+                                    "rows_for_plan": 100,
+                                    "cost_for_plan": 0.96825122,
+                                    "pruned_by_cost": true,
+                                    "current_cost": 0.96825122,
+                                    "best_cost": 0.9077591
+                                  }
+                                ]
+                              },
+                              {
+                                "plan_prefix": "supplier,partsupp,part,nation",
+                                "table": "orders",
+                                "rows_for_plan": 1495000,
+                                "cost_for_plan": 414.894677,
+                                "pruned_by_cost": true,
+                                "current_cost": 414.894677,
+                                "best_cost": 0.9077591
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "plan_prefix": "supplier,partsupp",
+                        "table": "lineitem",
+                        "rows_for_plan": 100,
+                        "cost_for_plan": 0.59915762,
+                        "pruned_by_heuristic": true
+                      },
+                      {
+                        "plan_prefix": "supplier,partsupp",
+                        "table": "orders",
+                        "rows_for_plan": 1495000,
+                        "cost_for_plan": 232.7076074,
+                        "pruned_by_cost": true,
+                        "current_cost": 232.7076074,
+                        "best_cost": 0.9077591
+                      }
+                    ]
+                  },
+                  {
+                    "plan_prefix": "supplier",
+                    "table": "nation",
+                    "rows_for_plan": 100,
+                    "cost_for_plan": 0.11157762,
+                    "rest_of_plan": [
+                      {
+                        "plan_prefix": "supplier,nation",
+                        "get_costs_for_tables": [
+                          {
+                            "best_access_path": {
+                              "table": "part",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "scan_with_join_cache",
+                                  "rows": 2080,
+                                  "rows_after_filter": 2080,
+                                  "rows_out": 2080,
+                                  "cost": 32.3501882,
+                                  "cost_without_join_buffer": 35.0003424,
+                                  "index_only": false,
+                                  "chosen": true
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "scan",
+                                "rows_read": 2080,
+                                "rows_out": 2080,
+                                "cost": 32.3501882,
+                                "uses_join_buffering": true
+                              }
+                            }
+                          },
+                          {
+                            "best_access_path": {
+                              "table": "partsupp",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "ref",
+                                  "index": "PARTSUPP_UK1",
+                                  "chosen": false,
+                                  "cause": "no predicate for first keypart"
+                                },
+                                {
+                                  "access_type": "ref",
+                                  "index": "PARTSUPP_FK1",
+                                  "rows": 1,
+                                  "cost": 0.2663936,
+                                  "chosen": true
+                                },
+                                {
+                                  "type": "scan",
+                                  "chosen": false,
+                                  "cause": "cost"
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "ref",
+                                "index": "PARTSUPP_FK1",
+                                "rows_read": 1,
+                                "rows_out": 1,
+                                "cost": 0.2663936,
+                                "uses_join_buffering": false
+                              }
+                            }
+                          },
+                          {
+                            "best_access_path": {
+                              "table": "orders",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "scan_with_join_cache",
+                                  "rows": 14950,
+                                  "rows_after_filter": 14950,
+                                  "rows_out": 14950,
+                                  "cost": 232.4198994,
+                                  "cost_without_join_buffer": 245.3900512,
+                                  "index_only": false,
+                                  "chosen": true
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "scan",
+                                "rows_read": 14950,
+                                "rows_out": 14950,
+                                "cost": 232.4198994,
+                                "uses_join_buffering": true
+                              }
+                            }
+                          },
+                          {
+                            "best_access_path": {
+                              "table": "lineitem",
+                              "plan_details": {
+                                "record_count": 100
+                              },
+                              "considered_access_paths": [
+                                {
+                                  "access_type": "ref",
+                                  "index": "LINEITEM_FK2",
+                                  "chosen": false,
+                                  "cause": "no predicate for first keypart"
+                                },
+                                {
+                                  "access_type": "scan_with_join_cache",
+                                  "rows": 59138,
+                                  "rows_after_filter": 59138,
+                                  "rows_out": 44353.5,
+                                  "cost": 919.3164554,
+                                  "cost_without_join_buffer": 967.6163328,
+                                  "index_only": false,
+                                  "chosen": true
+                                }
+                              ],
+                              "chosen_access_method": {
+                                "type": "scan",
+                                "rows_read": 59138,
+                                "rows_out": 44353.5,
+                                "cost": 919.3164554,
+                                "uses_join_buffering": true
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "plan_prefix": "supplier,nation",
+                        "table": "partsupp",
+                        "rows_for_plan": 100,
+                        "cost_for_plan": 0.37797122,
+                        "rest_of_plan": [
+                          {
+                            "plan_prefix": "supplier,nation,partsupp",
+                            "get_costs_for_tables": [
+                              {
+                                "best_access_path": {
+                                  "table": "part",
+                                  "plan_details": {
+                                    "record_count": 100
+                                  },
+                                  "considered_access_paths": [
+                                    {
+                                      "access_type": "eq_ref",
+                                      "index": "PRIMARY",
+                                      "rows": 1,
+                                      "cost": 0.1074664,
+                                      "chosen": true
+                                    },
+                                    {
+                                      "type": "scan",
+                                      "chosen": false,
+                                      "cause": "cost"
+                                    }
+                                  ],
+                                  "chosen_access_method": {
+                                    "type": "eq_ref",
+                                    "index": "PRIMARY",
+                                    "rows_read": 1,
+                                    "rows_out": 1,
+                                    "cost": 0.1074664,
+                                    "uses_join_buffering": false
+                                  }
+                                }
+                              },
+                              {
+                                "best_access_path": {
+                                  "table": "orders",
+                                  "plan_details": {
+                                    "record_count": 100
+                                  },
+                                  "considered_access_paths": [
+                                    {
+                                      "access_type": "scan_with_join_cache",
+                                      "rows": 14950,
+                                      "rows_after_filter": 14950,
+                                      "rows_out": 14950,
+                                      "cost": 323.4145694,
+                                      "cost_without_join_buffer": 245.3900512,
+                                      "index_only": false,
+                                      "chosen": true
+                                    }
+                                  ],
+                                  "chosen_access_method": {
+                                    "type": "scan",
+                                    "rows_read": 14950,
+                                    "rows_out": 14950,
+                                    "cost": 323.4145694,
+                                    "uses_join_buffering": true
+                                  }
+                                }
+                              },
+                              {
+                                "best_access_path": {
+                                  "table": "lineitem",
+                                  "plan_details": {
+                                    "record_count": 100
+                                  },
+                                  "considered_access_paths": [
+                                    {
+                                      "access_type": "ref",
+                                      "index": "LINEITEM_FK2",
+                                      "rows": 1,
+                                      "cost": 0.3114496,
+                                      "chosen": true
+                                    },
+                                    {
+                                      "type": "scan",
+                                      "chosen": false,
+                                      "cause": "cost"
+                                    }
+                                  ],
+                                  "chosen_access_method": {
+                                    "type": "ref",
+                                    "index": "LINEITEM_FK2",
+                                    "rows_read": 1,
+                                    "rows_out": 1,
+                                    "cost": 0.3114496,
+                                    "uses_join_buffering": false
+                                  }
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            "plan_prefix": "supplier,nation,partsupp",
+                            "table": "part",
+                            "rows_for_plan": 100,
+                            "cost_for_plan": 0.48543762,
+                            "rest_of_plan": [
+                              {
+                                "plan_prefix": "supplier,nation,partsupp,part",
+                                "get_costs_for_tables": [
+                                  {
+                                    "best_access_path": {
+                                      "table": "orders",
+                                      "plan_details": {
+                                        "record_count": 100
+                                      },
+                                      "considered_access_paths": [
+                                        {
+                                          "access_type": "scan_with_join_cache",
+                                          "rows": 14950,
+                                          "rows_after_filter": 14950,
+                                          "rows_out": 14950,
+                                          "cost": 414.4092394,
+                                          "cost_without_join_buffer": 245.3900512,
+                                          "index_only": false,
+                                          "chosen": true
+                                        }
+                                      ],
+                                      "chosen_access_method": {
+                                        "type": "scan",
+                                        "rows_read": 14950,
+                                        "rows_out": 14950,
+                                        "cost": 414.4092394,
+                                        "uses_join_buffering": true
+                                      }
+                                    }
+                                  },
+                                  {
+                                    "best_access_path": {
+                                      "table": "lineitem",
+                                      "plan_details": {
+                                        "record_count": 100
+                                      },
+                                      "considered_access_paths": [
+                                        {
+                                          "access_type": "ref",
+                                          "index": "LINEITEM_FK2",
+                                          "rows": 1,
+                                          "cost": 0.3114496,
+                                          "chosen": true
+                                        },
+                                        {
+                                          "type": "scan",
+                                          "chosen": false,
+                                          "cause": "cost"
+                                        }
+                                      ],
+                                      "chosen_access_method": {
+                                        "type": "ref",
+                                        "index": "LINEITEM_FK2",
+                                        "rows_read": 1,
+                                        "rows_out": 1,
+                                        "cost": 0.3114496,
+                                        "uses_join_buffering": false
+                                      }
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "plan_prefix": "supplier,nation,partsupp,part",
+                                "table": "lineitem",
+                                "rows_for_plan": 100,
+                                "cost_for_plan": 0.79688722,
+                                "rest_of_plan": [
+                                  {
+                                    "plan_prefix": "supplier,nation,partsupp,part,lineitem",
+                                    "get_costs_for_tables": [
+                                      {
+                                        "best_access_path": {
+                                          "table": "orders",
+                                          "plan_details": {
+                                            "record_count": 100
+                                          },
+                                          "considered_access_paths": [
+                                            {
+                                              "access_type": "eq_ref",
+                                              "index": "PRIMARY",
+                                              "rows": 1,
+                                              "cost": 0.171364,
+                                              "chosen": true
+                                            },
+                                            {
+                                              "type": "scan",
+                                              "chosen": false,
+                                              "cause": "cost"
+                                            }
+                                          ],
+                                          "chosen_access_method": {
+                                            "type": "eq_ref",
+                                            "index": "PRIMARY",
+                                            "rows_read": 1,
+                                            "rows_out": 1,
+                                            "cost": 0.171364,
+                                            "uses_join_buffering": false
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  {
+                                    "plan_prefix": "supplier,nation,partsupp,part,lineitem",
+                                    "table": "orders",
+                                    "rows_for_plan": 100,
+                                    "cost_for_plan": 0.96825122,
+                                    "pruned_by_cost": true,
+                                    "current_cost": 0.96825122,
+                                    "best_cost": 0.9077591
+                                  }
+                                ]
+                              },
+                              {
+                                "plan_prefix": "supplier,nation,partsupp,part",
+                                "table": "orders",
+                                "rows_for_plan": 1495000,
+                                "cost_for_plan": 414.894677,
+                                "pruned_by_cost": true,
+                                "current_cost": 414.894677,
+                                "best_cost": 0.9077591
+                              }
+                            ]
+                          },
+                          {
+                            "plan_prefix": "supplier,nation,partsupp",
+                            "table": "lineitem",
+                            "rows_for_plan": 100,
+                            "cost_for_plan": 0.68942082,
+                            "pruned_by_heuristic": true
+                          },
+                          {
+                            "plan_prefix": "supplier,nation,partsupp",
+                            "table": "orders",
+                            "rows_for_plan": 1495000,
+                            "cost_for_plan": 323.7925406,
+                            "pruned_by_cost": true,
+                            "current_cost": 323.7925406,
+                            "best_cost": 0.9077591
+                          }
+                        ]
+                      },
+                      {
+                        "plan_prefix": "supplier,nation",
+                        "table": "part",
+                        "rows_for_plan": 208000,
+                        "cost_for_plan": 32.46176582,
+                        "pruned_by_cost": true,
+                        "current_cost": 32.46176582,
+                        "best_cost": 0.9077591
+                      },
+                      {
+                        "plan_prefix": "supplier,nation",
+                        "table": "orders",
+                        "rows_for_plan": 1495000,
+                        "cost_for_plan": 232.531477,
+                        "pruned_by_cost": true,
+                        "current_cost": 232.531477,
+                        "best_cost": 0.9077591
+                      },
+                      {
+                        "plan_prefix": "supplier,nation",
+                        "table": "lineitem",
+                        "rows_for_plan": 4435350,
+                        "cost_for_plan": 919.428033,
+                        "pruned_by_cost": true,
+                        "current_cost": 919.428033,
+                        "best_cost": 0.9077591
+                      }
+                    ]
+                  },
+                  {
+                    "plan_prefix": "supplier",
+                    "table": "part",
+                    "rows_for_plan": 208000,
+                    "cost_for_plan": 19.71137462,
+                    "pruned_by_cost": true,
+                    "current_cost": 19.71137462,
+                    "best_cost": 0.9077591
+                  },
+                  {
+                    "plan_prefix": "supplier",
+                    "table": "orders",
+                    "rows_for_plan": 1495000,
+                    "cost_for_plan": 141.4465438,
+                    "pruned_by_cost": true,
+                    "current_cost": 141.4465438,
+                    "best_cost": 0.9077591
+                  },
+                  {
+                    "plan_prefix": "supplier",
+                    "table": "lineitem",
+                    "rows_for_plan": 4435350,
+                    "cost_for_plan": 559.388419,
+                    "pruned_by_cost": true,
+                    "current_cost": 559.388419,
+                    "best_cost": 0.9077591
+                  }
+                ]
+              },
+              {
+                "plan_prefix": "",
+                "table": "part",
+                "rows_for_plan": 2080,
+                "cost_for_plan": 0.3678456,
+                "rest_of_plan": [
+                  {
+                    "plan_prefix": "part",
+                    "get_costs_for_tables": [
+                      {
+                        "best_access_path": {
+                          "table": "supplier",
+                          "plan_details": {
+                            "record_count": 2080
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 100,
+                              "rows_after_filter": 100,
+                              "rows_out": 100,
+                              "cost": 19.48453892,
+                              "cost_without_join_buffer": 42.6308768,
+                              "index_only": true,
+                              "chosen": true
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "scan",
+                            "rows_read": 100,
+                            "rows_out": 100,
+                            "cost": 19.48453892,
+                            "uses_join_buffering": true
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "nation",
+                          "plan_details": {
+                            "record_count": 2080
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 25,
+                              "rows_after_filter": 25,
+                              "rows_out": 25,
+                              "cost": 4.98467368,
+                              "cost_without_join_buffer": 29.3508672,
+                              "index_only": false,
+                              "chosen": true
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "scan",
+                            "rows_read": 25,
+                            "rows_out": 25,
+                            "cost": 4.98467368,
+                            "uses_join_buffering": true
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "partsupp",
+                          "plan_details": {
+                            "record_count": 2080
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "ref",
+                              "index": "PARTSUPP_UK1",
+                              "rows": 1,
+                              "cost": 3.8719488,
+                              "chosen": true
+                            },
+                            {
+                              "access_type": "ref",
+                              "index": "PARTSUPP_FK2",
+                              "rows": 1,
+                              "cost": 3.8703104,
+                              "chosen": true
+                            },
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 7950,
+                              "rows_after_filter": 7950,
+                              "rows_out": 1,
+                              "cost": 1538.456846,
+                              "cost_without_join_buffer": 2723.430118,
+                              "index_only": false,
+                              "chosen": false
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "ref",
+                            "index": "PARTSUPP_FK2",
+                            "rows_read": 1,
+                            "rows_out": 1,
+                            "cost": 3.8703104,
+                            "uses_join_buffering": false
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "orders",
+                          "plan_details": {
+                            "record_count": 2080
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "scan_with_join_cache",
+                              "rows": 14950,
+                              "rows_after_filter": 14950,
+                              "rows_out": 14950,
+                              "cost": 2892.924792,
+                              "cost_without_join_buffer": 5101.501619,
+                              "index_only": false,
+                              "chosen": true
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "scan",
+                            "rows_read": 14950,
+                            "rows_out": 14950,
+                            "cost": 2892.924792,
+                            "uses_join_buffering": true
+                          }
+                        }
+                      },
+                      {
+                        "best_access_path": {
+                          "table": "lineitem",
+                          "plan_details": {
+                            "record_count": 2080
+                          },
+                          "considered_access_paths": [
+                            {
+                              "access_type": "ref",
+                              "index": "LINEITEM_FK2",
+                              "rows": 1,
+                              "cost": 4.3323392,
+                              "chosen": true
+                            },
+                            {
+                              "type": "scan",
+                              "chosen": false,
+                              "cause": "cost"
+                            }
+                          ],
+                          "chosen_access_method": {
+                            "type": "ref",
+                            "index": "LINEITEM_FK2",
+                            "rows_read": 1,
+                            "rows_out": 1,
+                            "cost": 4.3323392,
+                            "uses_join_buffering": false
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "plan_prefix": "part",
+                    "table": "lineitem",
+                    "rows_for_plan": 2080,
+                    "cost_for_plan": 4.7001848,
+                    "pruned_by_cost": true,
+                    "current_cost": 4.7001848,
+                    "best_cost": 0.9077591
+                  },
+                  {
+                    "plan_prefix": "part",
+                    "table": "partsupp",
+                    "rows_for_plan": 2080,
+                    "cost_for_plan": 4.238156,
+                    "pruned_by_cost": true,
+                    "current_cost": 4.238156,
+                    "best_cost": 0.9077591
+                  },
+                  {
+                    "plan_prefix": "part",
+                    "table": "nation",
+                    "rows_for_plan": 52000,
+                    "cost_for_plan": 5.35251928,
+                    "pruned_by_cost": true,
+                    "current_cost": 5.35251928,
+                    "best_cost": 0.9077591
+                  },
+                  {
+                    "plan_prefix": "part",
+                    "table": "supplier",
+                    "rows_for_plan": 208000,
+                    "cost_for_plan": 19.85238452,
+                    "pruned_by_cost": true,
+                    "current_cost": 19.85238452,
+                    "best_cost": 0.9077591
+                  },
+                  {
+                    "plan_prefix": "part",
+                    "table": "orders",
+                    "rows_for_plan": 31096000,
+                    "cost_for_plan": 2893.292637,
+                    "pruned_by_cost": true,
+                    "current_cost": 2893.292637,
+                    "best_cost": 0.9077591
+                  }
+                ]
+              },
+              {
+                "plan_prefix": "",
+                "table": "partsupp",
+                "rows_for_plan": 7950,
+                "cost_for_plan": 1.3887656,
+                "pruned_by_cost": true,
+                "current_cost": 1.3887656,
+                "best_cost": 0.9077591
+              },
+              {
+                "plan_prefix": "",
+                "table": "orders",
+                "rows_for_plan": 14950,
+                "cost_for_plan": 2.5844728,
+                "pruned_by_cost": true,
+                "current_cost": 2.5844728,
+                "best_cost": 0.9077591
+              },
+              {
+                "plan_prefix": "",
+                "table": "lineitem",
+                "rows_for_plan": 59138,
+                "cost_for_plan": 10.1700672,
+                "pruned_by_cost": true,
+                "current_cost": 10.1700672,
+                "best_cost": 0.9077591
+              }
+            ]
+          },
+          {
+            "best_join_order": [
+              "nation",
+              "supplier",
+              "partsupp",
+              "part",
+              "lineitem",
+              "orders"
+            ],
+            "rows": 100,
+            "cost": 0.9077591
+          },
+          {
+            "substitute_best_equal": {
+              "condition": "WHERE",
+              "resulting_condition": "partsupp.PS_SUPPKEY = supplier.S_SUPPKEY and lineitem.L_SUPPKEY = supplier.S_SUPPKEY and part.P_PARTKEY = partsupp.PS_PARTKEY and lineitem.L_PARTKEY = partsupp.PS_PARTKEY and orders.O_ORDERKEY = lineitem.L_ORDERKEY and supplier.S_NATIONKEY = nation.N_NATIONKEY and part.P_NAME like '%medium%'"
+            }
+          },
+          {
+            "attaching_conditions_to_tables": {
+              "attached_conditions_computation": [],
+              "attached_conditions_summary": [
+                {
+                  "table": "nation",
+                  "attached_condition": null
+                },
+                {
+                  "table": "supplier",
+                  "attached_condition": null
+                },
+                {
+                  "table": "partsupp",
+                  "attached_condition": null
+                },
+                {
+                  "table": "part",
+                  "attached_condition": "part.P_NAME like '%medium%'"
+                },
+                {
+                  "table": "lineitem",
+                  "attached_condition": null
+                },
+                {
+                  "table": "orders",
+                  "attached_condition": null
+                }
+              ]
+            }
+          },
+          {
+            "make_join_readinfo": []
+          },
+          {
+            "prepare_sum_aggregators": {
+              "function": "sum(lineitem.L_EXTENDEDPRICE * (1 - lineitem.L_DISCOUNT) - partsupp.PS_SUPPLYCOST * lineitem.L_QUANTITY)",
+              "aggregator_type": "simple"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "join_execution": {
+        "select_id": 1,
+        "steps": []
+      }
+    }
+  ]
+}

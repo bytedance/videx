@@ -1,0 +1,119 @@
+EXPLAIN
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 0.3174791,
+    "having_condition": "sum(partsupp.PS_SUPPLYCOST * partsupp.PS_AVAILQTY) > (subquery#2)",
+    "filesort": {
+      "sort_key": "sum(partsupp.PS_SUPPLYCOST * partsupp.PS_AVAILQTY) desc",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "nation",
+              "access_type": "ALL",
+              "possible_keys": ["PRIMARY"],
+              "loops": 1,
+              "rows": 25,
+              "cost": 0.0149298,
+              "filtered": 100,
+              "attached_condition": "nation.N_NAME = 'VIETNAM'"
+            }
+          },
+          {
+            "table": {
+              "table_name": "supplier",
+              "access_type": "ref",
+              "possible_keys": [
+                "PRIMARY",
+                "SUPPLIER_FK1",
+                "idx_S_NATIONKEY_S_SUPPKEY_S_NAME"
+              ],
+              "key": "SUPPLIER_FK1",
+              "key_length": "4",
+              "used_key_parts": ["S_NATIONKEY"],
+              "ref": ["videx_tpch_tiny.nation.N_NATIONKEY"],
+              "loops": 25,
+              "rows": 4,
+              "cost": 0.0361557,
+              "filtered": 100,
+              "using_index": true
+            }
+          },
+          {
+            "table": {
+              "table_name": "partsupp",
+              "access_type": "ref",
+              "possible_keys": ["PARTSUPP_FK1"],
+              "key": "PARTSUPP_FK1",
+              "key_length": "4",
+              "used_key_parts": ["PS_SUPPKEY"],
+              "ref": ["videx_tpch_tiny.supplier.S_SUPPKEY"],
+              "loops": 100,
+              "rows": 1,
+              "cost": 0.2663936,
+              "filtered": 100
+            }
+          }
+        ],
+        "subqueries": [
+          {
+            "query_block": {
+              "select_id": 2,
+              "cost": 0.3174791,
+              "nested_loop": [
+                {
+                  "table": {
+                    "table_name": "nation",
+                    "access_type": "ALL",
+                    "possible_keys": ["PRIMARY"],
+                    "loops": 1,
+                    "rows": 25,
+                    "cost": 0.0149298,
+                    "filtered": 100,
+                    "attached_condition": "nation.N_NAME = 'VIETNAM'"
+                  }
+                },
+                {
+                  "table": {
+                    "table_name": "supplier",
+                    "access_type": "ref",
+                    "possible_keys": [
+                      "PRIMARY",
+                      "SUPPLIER_FK1",
+                      "idx_S_NATIONKEY_S_SUPPKEY_S_NAME"
+                    ],
+                    "key": "SUPPLIER_FK1",
+                    "key_length": "4",
+                    "used_key_parts": ["S_NATIONKEY"],
+                    "ref": ["videx_tpch_tiny.nation.N_NATIONKEY"],
+                    "loops": 25,
+                    "rows": 4,
+                    "cost": 0.0361557,
+                    "filtered": 100,
+                    "using_index": true
+                  }
+                },
+                {
+                  "table": {
+                    "table_name": "partsupp",
+                    "access_type": "ref",
+                    "possible_keys": ["PARTSUPP_FK1"],
+                    "key": "PARTSUPP_FK1",
+                    "key_length": "4",
+                    "used_key_parts": ["PS_SUPPKEY"],
+                    "ref": ["videx_tpch_tiny.supplier.S_SUPPKEY"],
+                    "loops": 100,
+                    "rows": 1,
+                    "cost": 0.2663936,
+                    "filtered": 100
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}
