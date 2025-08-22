@@ -1,0 +1,54 @@
+EXPLAIN
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 1.292660209,
+    "filesort": {
+      "sort_key": "substr(customer.C_PHONE,1,2)",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "customer",
+              "access_type": "ALL",
+              "loops": 1,
+              "rows": 1545,
+              "cost": 0.278931,
+              "filtered": 100,
+              "attached_condition": "substr(customer.C_PHONE,1,2) in ('18','11','17','12','32','22','23') and customer.C_ACCTBAL > 4983.784107 and !<in_optimizer>(1,exists(subquery#3))"
+            }
+          }
+        ],
+        "subqueries": [
+          {
+            "subquery_cache": {
+              "state": "uninitialized",
+              "query_block": {
+                "select_id": 3,
+                "cost": 0.001792605,
+                "nested_loop": [
+                  {
+                    "table": {
+                      "table_name": "orders",
+                      "access_type": "ref",
+                      "possible_keys": ["ORDERS_FK1"],
+                      "key": "ORDERS_FK1",
+                      "key_length": "4",
+                      "used_key_parts": ["O_CUSTKEY"],
+                      "ref": ["tpch_tiny.customer.C_CUSTKEY"],
+                      "loops": 1,
+                      "rows": 1,
+                      "cost": 0.001792605,
+                      "filtered": 100,
+                      "using_index": true
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

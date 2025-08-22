@@ -1,0 +1,445 @@
+*************************** 1. row ***************************
+trace: {
+  "steps": [
+    {
+      "join_preparation": {
+        "select_id": 1,
+        "steps": [
+          {
+            "derived": {
+              "table": "c_orders",
+              "select_id": 2,
+              "algorithm": "materialized"
+            }
+          },
+          {
+            "join_preparation": {
+              "select_id": 2,
+              "steps": [
+                {
+                  "expanded_query": "/* select#2 */ select customer.C_CUSTKEY AS c_custkey,count(orders.O_ORDERKEY) AS c_count from (customer left join orders on(customer.C_CUSTKEY = orders.O_CUSTKEY and orders.O_COMMENT  not like '%unusual%packages%')) group by customer.C_CUSTKEY"
+                }
+              ]
+            }
+          },
+          {
+            "expanded_query": "/* select#1 */ select c_orders.c_count AS c_count,count(0) AS custdist from (/* select#2 */ select customer.C_CUSTKEY AS c_custkey,count(orders.O_ORDERKEY) AS c_count from (customer left join orders on(customer.C_CUSTKEY = orders.O_CUSTKEY and orders.O_COMMENT  not like '%unusual%packages%')) group by customer.C_CUSTKEY) c_orders group by c_orders.c_count order by count(0) desc,c_orders.c_count desc"
+          }
+        ]
+      }
+    },
+    {
+      "join_optimization": {
+        "select_id": 1,
+        "steps": [
+          {
+            "join_optimization": {
+              "select_id": 2,
+              "steps": [
+                {
+                  "build_equal_items": {
+                    "condition": "ON expr",
+                    "attached_to": "orders",
+                    "resulting_condition": "orders.O_COMMENT  not like '%unusual%packages%' and multiple equal(customer.C_CUSTKEY, orders.O_CUSTKEY)"
+                  }
+                },
+                {
+                  "table_dependencies": [
+                    {
+                      "table": "customer",
+                      "row_may_be_null": false,
+                      "map_bit": 0,
+                      "depends_on_map_bits": []
+                    },
+                    {
+                      "table": "orders",
+                      "row_may_be_null": true,
+                      "map_bit": 1,
+                      "depends_on_map_bits": ["0"]
+                    }
+                  ]
+                },
+                {
+                  "ref_optimizer_key_uses": [
+                    {
+                      "table": "orders",
+                      "index": "ORDERS_FK1",
+                      "field": "O_CUSTKEY",
+                      "equals": "customer.C_CUSTKEY",
+                      "null_rejecting": false
+                    }
+                  ]
+                },
+                {
+                  "eliminated_tables": []
+                },
+                {
+                  "rows_estimation": [
+                    {
+                      "table": "customer",
+                      "range_analysis": {
+                        "table_scan": {
+                          "rows": 1545,
+                          "cost": 0.278931
+                        },
+                        "potential_range_indexes": [
+                          {
+                            "index": "PRIMARY",
+                            "usable": true,
+                            "key_parts": ["C_CUSTKEY"]
+                          },
+                          {
+                            "index": "CUSTOMER_FK1",
+                            "usable": true,
+                            "key_parts": ["C_NATIONKEY", "C_CUSTKEY"]
+                          }
+                        ],
+                        "best_covering_index_scan": {
+                          "index": "CUSTOMER_FK1",
+                          "cost": 0.234129045,
+                          "chosen": true
+                        },
+                        "group_index_range": {
+                          "chosen": false,
+                          "cause": "not single_table"
+                        }
+                      }
+                    },
+                    {
+                      "table": "orders",
+                      "range_analysis": {
+                        "table_scan": {
+                          "rows": 14950,
+                          "cost": 2.5844728
+                        },
+                        "potential_range_indexes": [
+                          {
+                            "index": "PRIMARY",
+                            "usable": true,
+                            "key_parts": ["O_ORDERKEY"]
+                          },
+                          {
+                            "index": "ORDERS_FK1",
+                            "usable": true,
+                            "key_parts": ["O_CUSTKEY", "O_ORDERKEY"]
+                          }
+                        ],
+                        "setup_range_conditions": [],
+                        "group_index_range": {
+                          "chosen": false,
+                          "cause": "not single_table"
+                        }
+                      }
+                    },
+                    {
+                      "selectivity_for_indexes": [],
+                      "selectivity_for_columns": [],
+                      "cond_selectivity": 1
+                    }
+                  ]
+                },
+                {
+                  "considered_execution_plans": [
+                    {
+                      "plan_prefix": "",
+                      "get_costs_for_tables": [
+                        {
+                          "best_access_path": {
+                            "table": "customer",
+                            "plan_details": {
+                              "record_count": 1
+                            },
+                            "considered_access_paths": [
+                              {
+                                "access_type": "scan",
+                                "rows": 1545,
+                                "rows_after_filter": 1545,
+                                "rows_out": 1545,
+                                "cost": 0.234129045,
+                                "index_only": true,
+                                "chosen": true,
+                                "use_tmp_table": true
+                              }
+                            ],
+                            "chosen_access_method": {
+                              "type": "scan",
+                              "rows_read": 1545,
+                              "rows_out": 1545,
+                              "cost": 0.234129045,
+                              "uses_join_buffering": false
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "plan_prefix": "",
+                      "table": "customer",
+                      "rows_for_plan": 1545,
+                      "cost_for_plan": 0.234129045,
+                      "rest_of_plan": [
+                        {
+                          "plan_prefix": "customer",
+                          "get_costs_for_tables": [
+                            {
+                              "best_access_path": {
+                                "table": "orders",
+                                "plan_details": {
+                                  "record_count": 1545
+                                },
+                                "considered_access_paths": [
+                                  {
+                                    "access_type": "ref",
+                                    "index": "ORDERS_FK1",
+                                    "rows": 1,
+                                    "cost": 2.9522304,
+                                    "chosen": true
+                                  },
+                                  {
+                                    "access_type": "scan",
+                                    "rows": 14950,
+                                    "rows_after_filter": 14950,
+                                    "rows_out": 1,
+                                    "cost": 3789.370463,
+                                    "index_only": false,
+                                    "chosen": false
+                                  }
+                                ],
+                                "chosen_access_method": {
+                                  "type": "ref",
+                                  "index": "ORDERS_FK1",
+                                  "rows_read": 1,
+                                  "rows_out": 1,
+                                  "cost": 2.9522304,
+                                  "uses_join_buffering": false
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        {
+                          "plan_prefix": "customer",
+                          "table": "orders",
+                          "rows_for_plan": 1545,
+                          "cost_for_plan": 3.186359445,
+                          "cost_for_sorting": 1.013729209
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "materialized_output_cardinality": {
+                    "join_output_cardinality": 1545,
+                    "estimation": [
+                      {
+                        "table": "customer",
+                        "steps": [
+                          {
+                            "index_name": "PRIMARY",
+                            "cardinality": 1545
+                          }
+                        ],
+                        "cardinality": 1545
+                      }
+                    ],
+                    "post_group_cardinality": 1545
+                  }
+                },
+                {
+                  "check_split_materialized": {
+                    "split_candidates": ["customer.C_CUSTKEY"]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "table_dependencies": [
+              {
+                "table": "<derived2>",
+                "row_may_be_null": false,
+                "map_bit": 0,
+                "depends_on_map_bits": []
+              }
+            ]
+          },
+          {
+            "rows_estimation": [
+              {
+                "table": "<derived2>",
+                "table_scan": {
+                  "rows": 1545,
+                  "read_cost": 0.025991677,
+                  "read_and_compare_cost": 0.079037707
+                }
+              }
+            ]
+          },
+          {
+            "considered_execution_plans": [
+              {
+                "plan_prefix": "",
+                "get_costs_for_tables": [
+                  {
+                    "best_access_path": {
+                      "table": "<derived2>",
+                      "plan_details": {
+                        "record_count": 1
+                      },
+                      "considered_access_paths": [
+                        {
+                          "access_type": "scan",
+                          "rows": 1545,
+                          "rows_after_filter": 1545,
+                          "rows_out": 1545,
+                          "cost": 0.079037707,
+                          "index_only": false,
+                          "chosen": true,
+                          "use_tmp_table": true
+                        }
+                      ],
+                      "chosen_access_method": {
+                        "type": "scan",
+                        "rows_read": 1545,
+                        "rows_out": 1545,
+                        "cost": 0.079037707,
+                        "uses_join_buffering": false
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "plan_prefix": "",
+                "table": "<derived2>",
+                "rows_for_plan": 1545,
+                "cost_for_plan": 0.079037707,
+                "cost_for_sorting": 1.013729209
+              }
+            ]
+          },
+          {
+            "best_join_order": ["<derived2>"],
+            "rows": 1545,
+            "cost": 1.092766916
+          },
+          {
+            "best_join_order": ["customer", "orders"],
+            "rows": 1545,
+            "cost": 4.200088654
+          },
+          {
+            "substitute_best_equal": {
+              "condition": "WHERE",
+              "resulting_condition": "1"
+            }
+          },
+          {
+            "substitute_best_equal": {
+              "condition": "ON expr",
+              "attached_to": "orders",
+              "resulting_condition": "orders.O_CUSTKEY = customer.C_CUSTKEY and orders.O_COMMENT  not like '%unusual%packages%'"
+            }
+          },
+          {
+            "attaching_conditions_to_tables": {
+              "attached_conditions_computation": [
+                {
+                  "condition_on_constant_tables": "1",
+                  "computing_condition": []
+                }
+              ],
+              "attached_conditions_summary": [
+                {
+                  "table": "customer",
+                  "attached_condition": null
+                },
+                {
+                  "table": "orders",
+                  "attached_condition": "trigcond(orders.O_COMMENT  not like '%unusual%packages%')"
+                }
+              ]
+            }
+          },
+          {
+            "make_join_readinfo": []
+          },
+          {
+            "test_if_skip_sort_order": [
+              {
+                "reconsidering_access_paths_for_index_ordering": {
+                  "clause": "GROUP BY",
+                  "table": "customer",
+                  "rows_estimation": 1545,
+                  "filesort_cost": 0.151869312,
+                  "read_cost": 0.385998357,
+                  "filesort_type": "merge_sort with addon fields",
+                  "fanout": 1,
+                  "possible_keys": [
+                    {
+                      "index": "PRIMARY",
+                      "can_resolve_order": true,
+                      "direction": 1,
+                      "rows_to_examine": 1545,
+                      "range_scan": false,
+                      "scan_cost": 0.27279417,
+                      "chosen": true
+                    },
+                    {
+                      "index": "CUSTOMER_FK1",
+                      "can_resolve_order": false,
+                      "cause": "order can not be resolved by key"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "prepare_sum_aggregators": {
+              "function": "count(orders.O_ORDERKEY)",
+              "aggregator_type": "simple"
+            }
+          },
+          {
+            "attaching_conditions_to_tables": {
+              "attached_conditions_computation": [],
+              "attached_conditions_summary": [
+                {
+                  "table": "<derived2>",
+                  "attached_condition": null
+                }
+              ]
+            }
+          },
+          {
+            "make_join_readinfo": []
+          },
+          {
+            "test_if_skip_sort_order": []
+          },
+          {
+            "prepare_sum_aggregators": {
+              "function": "count(0)",
+              "aggregator_type": "simple"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "join_execution": {
+        "select_id": 1,
+        "steps": [
+          {
+            "join_execution": {
+              "select_id": 2,
+              "steps": []
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+EXPLAIN
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 4.7001848,
+    "nested_loop": [
+      {
+        "table": {
+          "table_name": "part",
+          "access_type": "ALL",
+          "possible_keys": ["PRIMARY"],
+          "loops": 1,
+          "rows": 2080,
+          "cost": 0.3678456,
+          "filtered": 100,
+          "attached_condition": "part.P_BRAND = 'Brand#24' and part.P_CONTAINER in ('SM CASE','SM BOX','SM PACK','SM PKG') and part.P_SIZE between 1 and 5 or part.P_BRAND = 'Brand#32' and part.P_CONTAINER in ('MED BAG','MED BOX','MED PKG','MED PACK') and part.P_SIZE between 1 and 10 or part.P_BRAND = 'Brand#12' and part.P_CONTAINER in ('LG CASE','LG BOX','LG PACK','LG PKG') and part.P_SIZE between 1 and 15"
+        }
+      },
+      {
+        "table": {
+          "table_name": "lineitem",
+          "access_type": "ref",
+          "possible_keys": ["LINEITEM_FK2"],
+          "key": "LINEITEM_FK2",
+          "key_length": "4",
+          "used_key_parts": ["L_PARTKEY"],
+          "ref": ["videx_tpch_tiny.part.P_PARTKEY"],
+          "loops": 2080,
+          "rows": 1,
+          "cost": 4.3323392,
+          "filtered": 100,
+          "index_condition": "part.P_BRAND = 'Brand#24' and part.P_CONTAINER in ('SM CASE','SM BOX','SM PACK','SM PKG') and part.P_SIZE between 1 and 5 or part.P_BRAND = 'Brand#32' and part.P_CONTAINER in ('MED BAG','MED BOX','MED PKG','MED PACK') and part.P_SIZE between 1 and 10 or part.P_BRAND = 'Brand#12' and part.P_CONTAINER in ('LG CASE','LG BOX','LG PACK','LG PKG') and part.P_SIZE between 1 and 15",
+          "attached_condition": "part.P_BRAND = 'Brand#24' and part.P_CONTAINER in ('SM CASE','SM BOX','SM PACK','SM PKG') and lineitem.L_QUANTITY >= 2 and lineitem.L_QUANTITY <= <cache>(2 + 10) and part.P_SIZE between 1 and 5 and lineitem.L_SHIPMODE in ('AIR','AIR REG') and lineitem.L_SHIPINSTRUCT = 'DELIVER IN PERSON' or part.P_BRAND = 'Brand#32' and part.P_CONTAINER in ('MED BAG','MED BOX','MED PKG','MED PACK') and lineitem.L_QUANTITY >= 19 and lineitem.L_QUANTITY <= <cache>(19 + 10) and part.P_SIZE between 1 and 10 and lineitem.L_SHIPMODE in ('AIR','AIR REG') and lineitem.L_SHIPINSTRUCT = 'DELIVER IN PERSON' or part.P_BRAND = 'Brand#12' and part.P_CONTAINER in ('LG CASE','LG BOX','LG PACK','LG PKG') and lineitem.L_QUANTITY >= 24 and lineitem.L_QUANTITY <= <cache>(24 + 10) and part.P_SIZE between 1 and 15 and lineitem.L_SHIPMODE in ('AIR','AIR REG') and lineitem.L_SHIPINSTRUCT = 'DELIVER IN PERSON'"
+        }
+      }
+    ]
+  }
+}
