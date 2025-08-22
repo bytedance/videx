@@ -17,14 +17,14 @@ else
     cp -r /root/videx_server/src/mysql/videx /root/mariadb_server/storage/videx
 fi
 
-if [ -f /root/mariadb_server/mysql_build_output/etc/my.cnf ]; then
-    echo "my.cnf already exists. Skipping copy."
+if [ -f /root/mariadb_server/mysql_build_output/etc/mariadb_my.cnf ]; then
+    echo "mariadb_my.cnf already exists. Skipping copy."
 else
-    if [ -f /root/videx_server/build/my.cnf ]; then
-        echo "Copying my.cnf to mariadb_server..."
-        cp /root/videx_server/build/my.cnf /root/mariadb_server/mysql_build_output/etc/my.cnf
+    if [ -f /root/videx_server/build/mariadb_my.cnf ]; then
+        echo "Copying mariadb_my.cnf to mariadb_server..."
+        cp /root/videx_server/build/mariadb_my.cnf /root/mariadb_server/mysql_build_output/etc/mariadb_my.cnf
     else
-        echo "Source my.cnf not found!"
+        echo "Source mariadb_my.cnf not found!"
         exit 1
     fi
 fi
