@@ -13,7 +13,7 @@ VIDEX supports the following installation methods:
 # Clone videx_server
 VIDEX_HOME=$(pwd)/videx_server
 MARIADB_HOME=$(pwd)/mariadb_server
-git clone -b adapt2mariadb-11.8 --single-branch https://github.com/bytedance/videx.git $VIDEX_HOME
+git clone -b adapt2mariadb-11.8 --single-branch https://github.com/YoungHypo/videx.git $VIDEX_HOME
 
 # Clone mariadb_server
 git clone -b videx-temp --single-branch https://github.com/YoungHypo/server.git $MARIADB_HOME
