@@ -1,0 +1,62 @@
+EXPLAIN
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 1.092766916,
+    "filesort": {
+      "sort_key": "count(0) desc, c_orders.c_count desc",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "<derived2>",
+              "access_type": "ALL",
+              "loops": 1,
+              "rows": 1545,
+              "cost": 0.079037707,
+              "filtered": 100,
+              "materialized": {
+                "query_block": {
+                  "select_id": 2,
+                  "cost": 4.200088654,
+                  "const_condition": "1",
+                  "nested_loop": [
+                    {
+                      "table": {
+                        "table_name": "customer",
+                        "access_type": "index",
+                        "key": "PRIMARY",
+                        "key_length": "4",
+                        "used_key_parts": ["C_CUSTKEY"],
+                        "loops": 1,
+                        "rows": 1545,
+                        "cost": 0.234129045,
+                        "filtered": 100
+                      }
+                    },
+                    {
+                      "table": {
+                        "table_name": "orders",
+                        "access_type": "ref",
+                        "possible_keys": ["ORDERS_FK1"],
+                        "key": "ORDERS_FK1",
+                        "key_length": "4",
+                        "used_key_parts": ["O_CUSTKEY"],
+                        "ref": ["videx_tpch_tiny.customer.C_CUSTKEY"],
+                        "loops": 1545,
+                        "rows": 1,
+                        "cost": 2.9522304,
+                        "filtered": 100,
+                        "attached_condition": "trigcond(orders.O_COMMENT  not like '%unusual%packages%')"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
