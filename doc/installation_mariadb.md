@@ -7,30 +7,46 @@ VIDEX supports the following installation methods:
 
 ## 1. Prepare Environment
 
+### 1.1 Download Code
+
+```bash
+# Clone videx_server
+VIDEX_HOME=$(pwd)/videx_server
+MARIADB_HOME=$(pwd)/mariadb_server
+git clone https://github.com/bytedance/videx.git $VIDEX_HOME
+
+# Clone mariadb_server
+git clone -b videx-temp --single-branch https://github.com/YoungHypo/server.git $MARIADB_HOME
+```
+
+### 1.2 Build Docker Image
 If you can configure the **Clang build environment** for MariaDB without Docker, you may skip to the next section.  
 Otherwise, please use Docker.
 
-
-### 1.1 Build Docker Image
-
 ```bash
+cd $VIDEX_HOME
 docker build -t mariadb11_build -f build/Dockerfile.mariadb .
 ```
 
-### 1.2 Start Docker Container
+### 1.3 Start Docker Container
 
 Run the following command to start the container:
 
 ```bash
 docker run -dit \
-  --name clion-videx-mariadb \
+  --name videx-mariadb \
   -p 2222:22 -p 13308:13308 -p 5001:5001 -p 1234:1234 \
-  -v ~/mariadb_server:/root/mariadb_server \
-  -v ~/videx_server:/root/videx_server \
-  mariadb11_build
+  -v $MARIADB_HOME:/root/mariadb_server \
+  -v $VIDEX_HOME:/root/videx_server \
+  mariadb11_build \
+  sleep infinity
 ```
 
 ### 1.3 Enter the Container
+
+```bash
+docker exec -it videx-mariadb /bin/bash
+```
 
 Once inside the container, execute the script:
 
@@ -66,8 +82,7 @@ Once inside the container, execute the script:
 ## 3. Build and Install
 
 ```bash
-/usr/bin/cmake --build mysql_build_output/build -j 10
-/usr/bin/cmake --build /root/mariadb_server/mysql_build_output/build --target install
+/usr/bin/cmake --build /root/mariadb_server/mysql_build_output/build -j 10
 ```
 
 ### 4. Initialize the Database
@@ -85,9 +100,9 @@ cd /root/mariadb_server/mysql_build_output/build
 ## 5. Start MariaDB Server
 
 ```bash
-./mysql_build_output/build/sql/mariadbd \
-  --defaults-file=/root/mariadb_server/mysql_build_output/etc/my.cnf \
-  --user=root
+cd /root/mariadb_server/mysql_build_output/build
+./sql/mariadbd \
+    --defaults-file=/root/mariadb_server/mysql_build_output/etc/my.cnf --user=root
 ```
 
 ## 6. Create New User
