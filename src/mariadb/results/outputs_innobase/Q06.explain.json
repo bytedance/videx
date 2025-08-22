@@ -1,0 +1,20 @@
+EXPLAIN
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 10.1700672,
+    "nested_loop": [
+      {
+        "table": {
+          "table_name": "lineitem",
+          "access_type": "ALL",
+          "loops": 1,
+          "rows": 59138,
+          "cost": 10.1700672,
+          "filtered": 100,
+          "attached_condition": "lineitem.L_SHIPDATE >= <cache>(str_to_date('1994-01-01','%Y-%m-%d')) and lineitem.L_SHIPDATE < <cache>(str_to_date('1994-01-01','%Y-%m-%d') + interval 1 year) and lineitem.L_DISCOUNT between <cache>(0.05 - 0.01) and <cache>(0.05 + 0.01) and lineitem.L_QUANTITY < 24"
+        }
+      }
+    ]
+  }
+}

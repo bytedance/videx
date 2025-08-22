@@ -1,0 +1,72 @@
+EXPLAIN
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 2.3990816,
+    "filesort": {
+      "sort_key": "count(distinct partsupp.PS_SUPPKEY) desc, part.P_BRAND, part.P_TYPE, part.P_SIZE",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "read_sorted_file": {
+              "filesort": {
+                "sort_key": "part.P_BRAND, part.P_TYPE, part.P_SIZE",
+                "table": {
+                  "table_name": "part",
+                  "access_type": "ALL",
+                  "possible_keys": ["PRIMARY"],
+                  "loops": 1,
+                  "rows": 2080,
+                  "cost": 0.3678456,
+                  "filtered": 100,
+                  "attached_condition": "part.P_BRAND <> 'Brand#53' and part.P_TYPE  not like 'PROMO BRUSHED%' and part.P_SIZE in (18,36,24,20,5,17,15,46)"
+                }
+              }
+            }
+          },
+          {
+            "table": {
+              "table_name": "partsupp",
+              "access_type": "ref",
+              "possible_keys": ["PARTSUPP_UK1", "PARTSUPP_FK2"],
+              "key": "PARTSUPP_UK1",
+              "key_length": "4",
+              "used_key_parts": ["PS_PARTKEY"],
+              "ref": ["videx_tpch_tiny.part.P_PARTKEY"],
+              "loops": 2080,
+              "rows": 1,
+              "cost": 2.031236,
+              "filtered": 100,
+              "attached_condition": "!<in_optimizer>(partsupp.PS_SUPPKEY,partsupp.PS_SUPPKEY in (subquery#2))",
+              "using_index": true
+            }
+          }
+        ],
+        "subqueries": [
+          {
+            "materialization": {
+              "query_block": {
+                "select_id": 2,
+                "cost": 0.00171364,
+                "nested_loop": [
+                  {
+                    "table": {
+                      "table_name": "supplier",
+                      "access_type": "ALL",
+                      "possible_keys": ["PRIMARY"],
+                      "loops": 1,
+                      "rows": 100,
+                      "cost": 0.0288644,
+                      "filtered": 100,
+                      "attached_condition": "supplier.S_COMMENT like '%Customer%Complaints%'"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
