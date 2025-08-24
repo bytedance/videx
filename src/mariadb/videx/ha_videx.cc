@@ -58,7 +58,7 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, std::string *ou
 	}
 
 	// Read the server address and change the host IP.
-	const char *host_ip = "host.docker.internal:5001";
+	const char *host_ip = "127.0.0.1:5001";
 	char value[1000];  // Buffer to hold the value of the user variable
 	
 	if (get_user_var_str("VIDEX_SERVER", value, sizeof(value), 0, &is_null) == 0)
@@ -190,14 +190,15 @@ videx_share::videx_share()
 
 static void videx_update_optimizer_costs(OPTIMIZER_COSTS *costs)
 {
-  /*
-    The following values were taken from storage/innodb/ha_innodb.cc in the function innobase_update_optimizer_costs(OPTIMIZER_COSTS *costs).
-  */
-  costs->row_next_find_cost= 0.00007013;
-  costs->row_lookup_cost=    0.00076597;
-  costs->key_next_find_cost= 0.00009900;
-  costs->key_lookup_cost=    0.00079112;
-  costs->row_copy_cost=      0.00006087;
+	/*
+	* The following values were taken from MariaDB Server 11.8 in the function innobase_update_optimizer_costs(OPTIMIZER_COSTS *costs).
+	* See more details in https://github.com/MariaDB/server/blob/11.8/storage/innobase/handler/ha_innodb.cc
+	*/
+	costs->row_next_find_cost= 0.00007013;
+	costs->row_lookup_cost=    0.00076597;
+	costs->key_next_find_cost= 0.00009900;
+	costs->key_lookup_cost=    0.00079112;
+	costs->row_copy_cost=      0.00006087;
 }
 
 static int videx_init(void *p)
@@ -331,11 +332,19 @@ uint ha_videx::max_supported_keys() const
 
 uint ha_videx::max_supported_key_length() const
 {
+	/*
+	 * This value was taken from MariaDB Server 11.8 in the function innobase_max_supported_key_length()
+	 * See more details in https://github.com/MariaDB/server/blob/11.8/storage/innobase/handler/ha_innodb.cc
+	*/
 	return(3500);
 }
 
 uint ha_videx::max_supported_key_part_length() const
 {
+	/*
+	 * This value was taken from MariaDB Server 11.8 in the function innobase_max_supported_key_part_length()
+	 * See more details in https://github.com/MariaDB/server/blob/11.8/storage/innobase/handler/ha_innodb.cc
+	*/
 	return(3072);
 }
 
@@ -384,6 +393,10 @@ int ha_videx::open(const char *name, int mode, uint test_if_locked)
 		ref_length = table->key_info[m_primary_key].key_length;
 	}
 
+	/*
+	 * This value was taken from MariaDB Server 11.8 in the function open(), where stats.block_size is set to srv_page_size.
+	 * See more details in https://github.com/MariaDB/server/blob/11.8/storage/innobase/handler/ha_innodb.cc
+	*/
 	stats.block_size = 16384;
 
 	info(HA_STATUS_NO_LOCK | HA_STATUS_VARIABLE | HA_STATUS_CONST
@@ -621,8 +634,16 @@ THR_LOCK_DATA **ha_videx::store_lock(THD *thd,
 }
 
 /**
-Estimates the number of index records in a range via VIDEX HTTP.
-@return estimated number of rows.
+* Estimates the number of index records in a specific range via VIDEX HTTP.
+* Working principle: VIDEX will forward requests via HTTP to the external VIDEX-Statistic-Server (launched in a RESTful manner).
+* If the request fails, a default value of 10 will be returned.
+* Reference link: For an implementation of VIDEX-Statistic-Server, see https://github.com/bytedance/videx.
+* We plan to introduce it into the official MariaDB repository in a subsequent PR.
+* @param keynr: The index number of the key
+* @param min_key: The minimum key value of the range
+* @param max_key: The maximum key value of the range
+* @param pages: Page range information (present as a parameter but not used in the function)
+* @return estimated number of rows.
 */
 
 ha_rows ha_videx::records_in_range(uint keynr,
@@ -652,13 +673,7 @@ ha_rows ha_videx::records_in_range(uint keynr,
 	DBUG_RETURN(n_rows);
 }
 
-ha_rows ha_videx::estimate_rows_upper_bound()
-{
-	DBUG_ENTER("ha_videx::estimate_rows_upper_bound");
-	DBUG_RETURN(10);
-}
-
-/** 
+/**
 Create a new table to an VIDEX database. Not required for VIDEX. */
 
 int ha_videx::create(const char *name, TABLE *table_arg,
@@ -739,10 +754,12 @@ int ha_videx::multi_range_read_explain_info(uint mrr_mode,
 	return(m_ds_mrr.dsmrr_explain_info(mrr_mode, str, size));
 }
 
-/** Attempt to push down an index condition.
-@param[in] keyno MySQL key number
-@param[in] idx_cond Index condition to be checked
-@return Part of idx_cond which the handler will not evaluate */
+/**
+* Attempt to push down an index condition.
+* @param keyno MySQL key number
+* @param idx_cond Index condition to be checked
+* @return Part of idx_cond which the handler will not evaluate
+*/
 
 class Item* ha_videx::idx_cond_push(
 	uint		keyno,
@@ -759,10 +776,24 @@ class Item* ha_videx::idx_cond_push(
 }
 
 /**
-Returns table statistics using the VIDEX server (HTTP).
-Populates `stats` and related fields.
-@return 0 on success or HA_ERR_*.
-*/
+ * A very important function. When a query arrives, MariaDB calls this function to initialize the information of a table.
+ * In a session, this function is only called once by the MariaDB query optimizer.
+ * VIDEX requests the `videx_stats_server` to return various statistics of a single table, including:
+ *  stat_n_rows: The number of rows in the table.
+ *  stat_clustered_index_size: The size of the clustered index.
+ *  stat_sum_of_other_index_sizes: The sum of sizes of other indexes.
+ *  data_file_length: The size of the data file.
+ *  index_file_length: The length of the index file.
+ *  data_free_length: The length of free space in the data file.
+ *
+ *  [Very Important]
+ *  rec_per_key of several columns: require NDV algorithm
+ *
+ * Returns statistics information of the table to the MariaDB interpreter, in various fields of the handle object.
+ * @param[in]      flag            what information is requested
+ * @param[in]      is_analyze      True if called from "::analyze()".
+ * @return HA_ERR_* error code or 0
+ */
 
 int ha_videx::info_low(uint flag, bool is_analyze)
 {
@@ -799,6 +830,7 @@ int ha_videx::info_low(uint flag, bool is_analyze)
   	}
 	else {
 		// validate the returned json
+		// stat_n_rows, stat_clustered_index_size, stat_sum_of_other_index_sizes, data_file_length, index_file_length, data_free_length
 		if (!(
 			videx_contains_key(res_json, "stat_n_rows") &&
 			videx_contains_key(res_json, "stat_clustered_index_size") &&
@@ -856,6 +888,7 @@ int ha_videx::info_low(uint flag, bool is_analyze)
 					continue;
 				}
 
+				// The #@# separator combines the index name and field name, making it easier to extract the corresponding statistical values from the JSON response.
 				std::string concat_key = "rec_per_key #@# " + std::string(key->name.str) + " #@# " + std::string(key->key_part[j].field->field_name.str);
 				ulong rec_per_key_int = 0;
 			  	if (videx_contains_key(res_json, concat_key.c_str())){
@@ -878,76 +911,7 @@ int ha_videx::info_low(uint flag, bool is_analyze)
 struct st_mysql_storage_engine videx_storage_engine=
 { MYSQL_HANDLERTON_INTERFACE_VERSION };
 
-static ulong srv_enum_var= 0;
-static ulong srv_ulong_var= 0;
-static double srv_double_var= 0;
-
-const char *enum_var_names[]=
-{
-	"e1", "e2", NullS
-};
-
-TYPELIB enum_var_typelib= CREATE_TYPELIB_FOR(enum_var_names);
-
-static MYSQL_SYSVAR_ENUM(
-	enum_var,                       // name
-	srv_enum_var,                   // varname
-	PLUGIN_VAR_RQCMDARG,            // opt
-	"Sample ENUM system variable",  // comment
-	NULL,                           // check
-	NULL,                           // update
-	0,                              // def
-	&enum_var_typelib);             // typelib
-
-static MYSQL_THDVAR_INT(int_var, PLUGIN_VAR_RQCMDARG, "-1..1",
-	NULL, NULL, 0, -1, 1, 0);
-
-static MYSQL_SYSVAR_ULONG(
-	ulong_var,
-	srv_ulong_var,
-	PLUGIN_VAR_RQCMDARG,
-	"0..1000",
-	NULL,
-	NULL,
-	8,
-	0,
-	1000,
-	0);
-
-static MYSQL_SYSVAR_DOUBLE(
-	double_var,
-	srv_double_var,
-	PLUGIN_VAR_RQCMDARG,
-	"0.500000..1000.500000",
-	NULL,
-	NULL,
-	8.5,
-	0.5,
-	1000.5,
-	0);                             // reserved always 0
-
-static MYSQL_THDVAR_DOUBLE(
-	double_thdvar,
-	PLUGIN_VAR_RQCMDARG,
-	"0.500000..1000.500000",
-	NULL,
-	NULL,
-	8.5,
-	0.5,
-	1000.5,
-	0);
-
-static MYSQL_THDVAR_INT(
-	deprecated_var, PLUGIN_VAR_RQCMDARG | PLUGIN_VAR_DEPRECATED, "-1..1",
-	NULL, NULL, 0, -1, 1, 0);
-
 static struct st_mysql_sys_var* videx_system_variables[]= {
-	MYSQL_SYSVAR(enum_var), // enum variable 
-	MYSQL_SYSVAR(ulong_var), // ulong variable
-	MYSQL_SYSVAR(int_var), // int variable
-	MYSQL_SYSVAR(double_var), // double variable
-	MYSQL_SYSVAR(double_thdvar), // double variable for thread
-	MYSQL_SYSVAR(deprecated_var), // deprecated variable
 	NULL
 };
 
@@ -956,11 +920,6 @@ static int show_func_videx(MYSQL_THD thd, struct st_mysql_show_var *var,
 {
 	var->type= SHOW_CHAR;
 	var->value= buf; // it's of SHOW_VAR_FUNC_BUFF_SIZE bytes
-	my_snprintf(buf, SHOW_VAR_FUNC_BUFF_SIZE,
-				"enum_var is %lu, ulong_var is %lu, int_var is %d, "
-				"double_var is %f, %.6sB", // %sB is a MariaDB extension
-				srv_enum_var, srv_ulong_var, THDVAR(thd, int_var),
-				srv_double_var, "really");
 	return 0;
 }
 

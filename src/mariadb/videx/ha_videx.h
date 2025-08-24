@@ -135,8 +135,6 @@ public:
 		const key_range*        max_key,
 		page_range*             pages) override;
 
-	ha_rows estimate_rows_upper_bound() override;
-
 	int create(
 		const char*		name,
 		TABLE*			form,
