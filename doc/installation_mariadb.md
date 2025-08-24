@@ -51,7 +51,7 @@ docker exec -it videx-mariadb /bin/bash
 Once inside the container, execute the script:
 
 ```bash
-./root/videx_server/build/build_mariadb.sh
+/root/videx_server/build/build_mariadb.sh
 ```
 
 ## 2. CMake Build
