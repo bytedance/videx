@@ -172,6 +172,7 @@ class VidexModelInnoDB(VidexModelBase):
             "data_file_length": self.table_stats.data_file_length,
             "index_file_length": self.table_stats.index_file_length,
             "data_free_length": self.table_stats.data_free_length,
+            "innodb_buffer_pool_size": self.table_stats.innodb_buffer_pool_size,
 
         }
         for i, key_json in enumerate(req_json_item['data']):
