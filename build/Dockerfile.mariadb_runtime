@@ -1,0 +1,32 @@
+FROM mariadb_videx_build:latest AS builder
+
+COPY mariadb_server/ /root/mariadb_server
+COPY videx_server/ /root/videx_server
+
+RUN mkdir -p /root/mariadb_server/mysql_build_output/build
+RUN mkdir -p /root/mariadb_server/mysql_build_output/data
+RUN mkdir -p /root/mariadb_server/mysql_build_output/etc
+RUN mkdir -p /root/mariadb_server/mysql_build_output/tmp
+RUN mkdir -p /root/mariadb_server/mysql_build_output/ccache
+
+ENV CCACHE_DIR=/root/mariadb_server/mysql_build_output/ccache
+
+COPY videx_server/build/mariadb_my.cnf /root/mariadb_server/mysql_build_output/etc/mariadb_my.cnf
+
+WORKDIR /root/videx_server/build
+RUN chmod +x *.sh && ./init_mariadb.sh
+
+FROM mariadb_videx_build:latest
+
+COPY --from=builder /root/mariadb_server/mysql_build_output /root/mariadb_server/mysql_build_output
+COPY --from=builder /root/videx_server /root/videx_server
+
+WORKDIR /root/videx_server
+RUN python3.9 -m pip install -e . --use-pep517
+
+WORKDIR /root/videx_server/build
+RUN chmod +x *.sh
+
+EXPOSE 13308 5001
+
+CMD ["./start_mariadb.sh"]
