@@ -191,10 +191,11 @@ if __name__ == "__main__":
         elif db_type == "pg":
             files = fetch_all_meta_with_one_file_for_pg(meta_path=meta_path, 
                                                         env=target_env, target_db=target_db, all_table_names=all_table_names)
-            stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
+            stats_file_dict, statistic_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
             meta_request = construct_videx_task_meta_from_local_files_for_pg(task_id=args.task_id,
                                                                              videx_db=videx_db,
                                                                              stats_file=stats_file_dict,
+                                                                             statistic_file=statistic_file_dict,
                                                                              raise_error=True
                                                                              )
 

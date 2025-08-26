@@ -315,7 +315,7 @@ class OpenPGUtils(AbstractMySQLUtils):
     def get_user(self):
         return self.user
     
-    def pg_dump(self, db_name, schema_name, table_name):
+    def pg_dump(self, db_name, schema_name, table_name) -> str:
         env = os.environ.copy()
         env["PGPASSWORD"] = self.password
 
@@ -333,9 +333,10 @@ class OpenPGUtils(AbstractMySQLUtils):
             "-h", self.host,
         ]
         try:
-            result = subprocess.run(cmd, env=env, stderr=subprocess.PIPE, text=True)
-            sql_text = result.stdout
-            print(sql_text)
+            result = subprocess.run(cmd, env=env, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, text=True)
+            sql_text = result.stdout  
+            print(f'sql_text: {sql_text}')
             return sql_text
         except subprocess.CalledProcessError as e:
                 logging.error(f"pg_dump error:, {e.stderr}")

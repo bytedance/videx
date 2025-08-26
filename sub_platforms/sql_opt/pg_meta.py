@@ -3,9 +3,10 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Union
 
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
-from sub_platforms.sql_opt.meta import IndexBasicInfo,IndexType
+from sub_platforms.sql_opt.meta import IndexType
+from sub_platforms.sql_opt.meta_base import BaseTableId,BaseColumn,BaseIndexColumn,BaseIndex,BaseTable
 
-class PGTableId(BaseModel, PydanticDataClassJsonMixin):
+class PGTableId(BaseTableId):
     table_catalog: str       #db name               
     table_schema: str        #schema name       
     table_name: str          #table name   
@@ -30,8 +31,7 @@ class PGTableId(BaseModel, PydanticDataClassJsonMixin):
         else:
             return False
         
-
-class PGColumn(BaseModel):
+class PGColumn(BaseColumn):
     table_catalog: str       #db name               
     table_schema: str        #schema name       
     table_name: str          #table name   
@@ -90,7 +90,7 @@ class PGColumn(BaseModel):
             self.column_name == other.column_name
         )
     
-class PGIndexColumn(BaseModel, PydanticDataClassJsonMixin):
+class PGIndexColumn(BaseIndexColumn):
     name: Optional[str] = None  # 可能是表达式，所以可以为空
     #cardinality: Optional[int] = None
     #sub_part: Optional[int] = 0
@@ -148,7 +148,7 @@ class PGIndexColumn(BaseModel, PydanticDataClassJsonMixin):
             and self.name == other.name and self.expression == other.expression \
             and self.collation == other.collation    
 
-class PGIndex(IndexBasicInfo, BaseModel, PydanticDataClassJsonMixin):
+class PGIndex(BaseIndex):
     type: Optional[IndexType] = Field(default=None)
     name: Optional[str] = Field(default=None)
     is_unique: Optional[bool] = Field(default=None)
@@ -163,7 +163,7 @@ class PGIndex(IndexBasicInfo, BaseModel, PydanticDataClassJsonMixin):
     def table(self):
         return self.table_name
     
-class PGTable(BaseModel, PydanticDataClassJsonMixin):
+class PGTable(BaseTable):
     dbname: str
     table_schema: str
     table_name: str
@@ -171,7 +171,7 @@ class PGTable(BaseModel, PydanticDataClassJsonMixin):
     relpages: Optional[int] = None
     reltuples: Optional[int] = None
     relallvisible: Optional[int] = None
-    ddl: Optional[str] = None
+    ddl: str
     columns: Optional[List[PGColumn]] = Field(default_factory=list)
     indexes: Optional[List[PGIndex]] = Field(default_factory=list)
     def model_post_init(self,__context: Any) -> None:
@@ -183,6 +183,34 @@ class PGTable(BaseModel, PydanticDataClassJsonMixin):
 
     def support_optimize(self):
         return NotImplementedError("This method is not implemented in this context.")
+
+class PGStatisticSlot(BaseModel,PydanticDataClassJsonMixin):
+    kind: int
+    op: Optional[int] = None
+    coll: Optional[int] = None
+    numbers: Optional[List[float]] = None
+    values: Optional[List[Any]] = None
+
+class PGStatistic(BaseModel,PydanticDataClassJsonMixin):
+    dbname: str
+    table_schema: str
+    table_name: str
+    col_name: str
+    stainherit: bool
+
+    stanullfrac: float
+    stawidth: int
+    stadistinct: float
+    slots: List[PGStatisticSlot]
+
+    @property
+    def table_id(self) -> PGTableId:
+        return PGTableId(table_catalog=self.dbname, table_schema=self.table_schema, table_name=self.table_name)
+
+class PGStatisticExt(BaseModel,PydanticDataClassJsonMixin):
+    dbname: str
+    table_schema: str
+    table_name: str
 
 class PGOpTypeName(Enum):
     pass

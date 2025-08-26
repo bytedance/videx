@@ -31,6 +31,8 @@ from sub_platforms.sql_opt.videx.videx_histogram import HistogramStats, generate
 from sub_platforms.sql_opt.videx.videx_mysql_utils import _parse_col_names
 from sub_platforms.sql_opt.videx.videx_utils import load_json_from_file, dump_json_to_file, GT_Table_Return, \
     target_env_available_for_videx
+from sub_platforms.sql_opt.column_statastics.statistics_info_base import BaseTableStatisticsInfo
+from sub_platforms.sql_opt.meta_base import BaseTable
 
 # VIDEX Statistic attribute keys
 EXTRA_INFO_KEY_pct_cached = 'pct_cached'
@@ -62,8 +64,8 @@ INVALID_VALUE = -1234
 
 class VidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
     task_id: Optional[str]
-    meta_dict: Dict[str, Dict[str, Table]]
-    stats_dict: Dict[str, Dict[str, TableStatisticsInfo]]
+    meta_dict: Dict[str, Dict[str, BaseTable]]
+    stats_dict: Dict[str, Dict[str, BaseTableStatisticsInfo]]
     db_config: VariablesAboutIndex
     # use_gt: Optional[bool] = field(default=True)
     # gt_rec_in_ranges: Optional[List[Any]] = field(default_factory=list)

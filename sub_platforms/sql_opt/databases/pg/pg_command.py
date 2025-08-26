@@ -55,6 +55,7 @@ class PGCommand:
                 is_nullable = row[6],
                 data_type = row[7]
             )
+            columns.append(column)
         return columns
     
     def get_table_indexes(self, db_name, table_name,schema_name = 'public') -> List[PGIndex]:
@@ -129,8 +130,8 @@ class PGCommand:
     
     def get_table_meta(self, db_name, schema_table_name):
         from sub_platforms.sql_opt.videx.videx_utils import pg_deserialize_schema_table
-        dump_text = self.pg_util.pg_dump(db_name,schema_name,table_name)
         schema_name,table_name = pg_deserialize_schema_table(schema_table_name)
+        dump_text = self.pg_util.pg_dump(db_name,schema_name,table_name)
         sql = f"""
             SELECT relpages,reltuples, relallvisible
             FROM pg_class c
@@ -145,8 +146,8 @@ class PGCommand:
             relpages = df['relpages'].values[0],
             reltuples = df['reltuples'].values[0],
             relallvisible = df['relallvisible'].values[0],
-            columns = self.get_table_columns(db_name, table_name),
-            indexes = self.get_table_indexes(db_name, table_name),
+            columns = self.get_table_columns(db_name, table_name,schema_name),
+            indexes = self.get_table_indexes(db_name, table_name,schema_name),
             ddl = dump_text
         )
         mapping_index_columns(table)

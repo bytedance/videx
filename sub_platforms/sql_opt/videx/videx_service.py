@@ -624,13 +624,13 @@ def create_videx_env_multi_db_for_pg(videx_env: Env,
         videx_default_db = videx_env.default_db
         try:
             videx_env.set_default_db(target_db)
-            print(f"taget_dadata: {target_db}, table_size: {len(table_dict)}")
+            print(f"taget_database: {target_db}, table_size: {len(table_dict)}")
             for table in table_dict.values():
                 dump_text = table.ddl
                 pattern = r'(CREATE TABLE\s+[\w\.]+\s*\(\s*.*?\s*\))\s*;'
                 replacement = rf'\1 USING {new_engine};'
                 videx_dump_text = re.sub(pattern, replacement, dump_text, flags=re.DOTALL)
-                videx_env.query_for_dataframe(videx_dump_text)
+                videx_env.execute(videx_dump_text)
         finally:
             videx_env.set_default_db(videx_default_db)
 

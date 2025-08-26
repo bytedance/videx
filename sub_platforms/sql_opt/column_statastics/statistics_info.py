@@ -6,9 +6,8 @@ from typing import Dict, List, Any, Optional
 from pydantic import BaseModel, Field, PrivateAttr, PlainSerializer, BeforeValidator
 from typing_extensions import Annotated
 
-from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 from sub_platforms.sql_opt.videx.videx_histogram import HistogramStats
-
+from sub_platforms.sql_opt.column_statastics.statistics_info_base import BaseTableStatisticsInfo
 
 def large_number_decoder(y):
     if isinstance(y, list):
@@ -21,7 +20,7 @@ def large_number_decoder(y):
         return res
 
 
-class TableStatisticsInfo(BaseModel, PydanticDataClassJsonMixin):
+class TableStatisticsInfo(BaseTableStatisticsInfo):
     db_name: str
     table_name: str
     # {col_name: col ndv}

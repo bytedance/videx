@@ -14,48 +14,12 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 from sub_platforms.sql_opt.column_statastics.statistics_info_pg import PGTableStatisticsInfo
-from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 from sub_platforms.sql_opt.env.rds_env import Env
-from sub_platforms.sql_opt.pg_meta import PGTable,PGColumn, PGIndex
+from sub_platforms.sql_opt.pg_meta import PGTable,PGColumn, PGIndex ,PGStatistic, PGStatisticExt,PGStatisticSlot
 from sub_platforms.sql_opt.videx.videx_utils import load_json_from_file, dump_json_to_file, GT_Table_Return, \
-    target_env_available_for_videx,pg_serialize_schema_table
-
-class PGVidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
-    task_id: Optional[str]
-    meta_dict: Dict[str,Dict[str,PGTable]]
-    stats_dict: Dict[str,Dict[str,PGTableStatisticsInfo]]
-
-    def model_post_init(self, __context: Any) -> None:
-        pass
-
-    def get_table_stats_info(self, db_name: str, table_name: str,schema_name: str = 'public') -> Optional[PGTableStatisticsInfo]:
-        pass
-
-    def get_table_meta(self, db_name: str, table_name: str, schema_name: str = 'public') -> Optional[PGTable]:
-        pass
-
-    def get_stats_info_keys(self) -> Dict[str, List[str]]:
-        pass
-
-    def get_meta_info_keys(self) -> Dict[str, List[str]]:
-        pass
-
-    def get_expect_response(self, req_json, result2str: bool = True):
-        pass
-    
-    @property
-    def key(self):
-        return self.to_key(self.task_id)
-    
-    def key_is_none(self):
-        return not self.task_id or self.task_id == 'None'
-    
-    @staticmethod
-    def to_key(task_id: str) -> str:
-        return f"{task_id}"
-    
-    def merge_with(self, other: 'PGVidexDBTaskStats', inplace: bool = False) -> Optional['PGVidexDBTaskStats']:
-        return NotImplementedError("merge_with not implemented yet.")
+    target_env_available_for_videx,pg_serialize_schema_table,pg_deserialize_schema_table
+from sub_platforms.sql_opt.videx.videx_metadata import VidexDBTaskStats
+from sub_platforms.sql_opt.videx.videx_utils import pg_deserialize_schema_table
 
 def fetch_all_meta_with_one_file_for_pg(meta_path: Union[str, dict],
                                  env: Env, target_db: str, all_table_names: List[str] = None
@@ -65,16 +29,17 @@ def fetch_all_meta_with_one_file_for_pg(meta_path: Union[str, dict],
     os.makedirs(temp_dir, exist_ok=True)
 
     try:
-        stats_dict, _, _, _ = fetch_all_meta_for_videx(
+        stats_dict, statistic_dict, _, _ = fetch_all_meta_for_videx(
             env, target_db, all_table_names,
             result_dir=temp_dir
         )
         if isinstance(meta_path, str):
             metadata = {
                 'stats_dict': stats_dict,
+                'statistic_dict': statistic_dict
             }
             dump_json_to_file(meta_path, metadata)
-        return stats_dict, {}, {}, {}
+        return stats_dict, statistic_dict, {}, {}
     finally:
         shutil.rmtree(temp_dir)
 
@@ -95,19 +60,18 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
     else:
         stats_dict = {k: v for k, v in stats_dict.items() if k.lower() in set(t.lower() for t in all_table_names)}
     
-    #TODO: pg_statistic & pg_statistic_ext
+    #TODO: pg_statistic_ext
     if result_dir is not None and os.path.exists(os.path.join(result_dir, statistic_file)): 
-        return NotImplementedError("Fetching from existing file is not supported in this context.")
+       return NotImplementedError("Fetching from existing file is not supported in this context.")
     else:
-       statistic_dict = {}
-
-
+       statistic_dict = fetch_pg_statistics(env,target_db,all_table_names,True)
 
     if result_dir is not None:
        os.makedirs(result_dir, exist_ok=True)
        dump_json_to_file(os.path.join(result_dir, stats_file), stats_dict)
+       dump_json_to_file(os.path.join(result_dir, statistic_file), statistic_dict)
 
-    return stats_dict, {}, {}, {}
+    return stats_dict, statistic_dict, {}, {}
 
 def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
     """
@@ -142,17 +106,84 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
         res_dict[schema_table_name]['relallvisible'] = table_obj.relallvisible
         res_dict[schema_table_name]['columns'] = [json.loads(c.to_json()) for c in table_obj.columns]
         res_dict[schema_table_name]['indexes'] = [json.loads(i.to_json()) for i in table_obj.indexes]
-
+        res_dict[schema_table_name]['ddl'] = table_obj.ddl
     res_dict = {k.lower(): v for k, v in res_dict.items()}
     return res_dict
 
-def fetch_pg_statistics(env: Env, target_dbname: str) -> Dict[str, dict]:
-    pass
+def fetch_pg_statistics(env: Env, target_dbname: str,all_table_names: List[str],ret_json: bool = False,
+                        ) -> Dict[str, Dict[str, Union[PGStatistic, dict]]]:
+    res_tables = defaultdict(dict)
+    for table_name in all_table_names:
+        table_meta: PGTable = env.get_table_meta(target_dbname, table_name)
+        for c_id, col in enumerate(table_meta.columns):
+            col: PGColumn
+            hist = fetch_col_statistic(env, target_dbname, table_meta.table_schema,table_meta.table_name, col.column_name)
+            if hist is not None and ret_json:
+                hist = hist.to_dict()
+            res_tables[str(table_name).lower()][col.column_name] = hist
+    return res_tables
+
+def fetch_col_statistic(env, dbname: str, schema: str, table_name: str, col_name: str) -> Optional[PGStatistic]:
+
+    sql = f"""
+        SELECT s.*, a.attname
+        FROM pg_statistic s
+        JOIN pg_class c ON s.starelid = c.oid
+        JOIN pg_namespace n ON c.relnamespace = n.oid
+        JOIN pg_attribute a ON c.oid = a.attrelid AND s.staattnum = a.attnum
+        WHERE n.nspname = '{schema}'
+          AND c.relname = '{table_name}'
+          AND a.attname = '{col_name}';
+    """
+
+    res: pd.DataFrame = env.query_for_dataframe(sql)
+    print(f'schema: {schema},relname: {table_name},col_name: {col_name}, col statistic: {res}\n')
+    if len(res) == 0:
+        return None
+
+    row = res.iloc[0].to_dict()
+
+    slots: List[PGStatisticSlot] = []
+    for i in range(1, 6):
+        kind = row.get(f"stakind{i}")
+        op = row.get(f"staop{i}")
+        coll = row.get(f"stacoll{i}")
+        numbers = row.get(f"stanumbers{i}")
+        values = row.get(f"stavalues{i}")
+
+        # stanumbers/stavalues 可能是 None 或 PostgreSQL array，需要转 python list
+        if isinstance(numbers, str):
+            # PG array 格式转 list
+            numbers = json.loads(numbers.replace("{", "[").replace("}", "]"))
+        if isinstance(values, str):
+            values = json.loads(values.replace("{", "[").replace("}", "]"))
+
+        if kind != 0:  # 0 表示未使用的 slot
+            slots.append(PGStatisticSlot(
+                kind=kind,
+                op=op,
+                coll=coll,
+                numbers=numbers,
+                values=values
+            ))
+
+    return PGStatistic(
+        dbname=dbname,
+        table_schema=schema,
+        table_name=table_name,
+        col_name=col_name,
+        stainherit=row["stainherit"],
+        stanullfrac=row["stanullfrac"],
+        stawidth=row["stawidth"],
+        stadistinct=row["stadistinct"],
+        slots=slots
+    )
 
 def construct_videx_task_meta_from_local_files_for_pg(task_id, videx_db,
                                                stats_file: Union[str, dict],
+                                               statistic_file: Union[str, dict],
                                                raise_error: bool = False
-                                              ) -> PGVidexDBTaskStats:
+                                              ) -> VidexDBTaskStats:
     if isinstance(stats_file, dict):
         stats_dict = stats_file
     else:
@@ -163,6 +194,22 @@ def construct_videx_task_meta_from_local_files_for_pg(task_id, videx_db,
             logging.error(err_msg)
             return False
         stats_dict = load_json_from_file(stats_file)
+
+    if isinstance(statistic_file, dict):
+        statistic_dict = statistic_file
+    else:
+        if not os.path.exists(statistic_file):
+            err_msg = f"statistic_file not valid: {statistic_file}, return"
+            if raise_error:
+                raise Exception(err_msg)
+            logging.error(err_msg)
+            return False
+        statistic_dict = load_json_from_file(statistic_file)
+    
+    db_stat_dict, _ = meta_dict_to_sample_file(
+        stats_dict={videx_db: stats_dict},
+        statistic_dict={videx_db: statistic_dict}
+    )
 
     meta_dict = {videx_db:{}}
     for table_name,table_dict in stats_dict.items():
@@ -176,21 +223,20 @@ def construct_videx_task_meta_from_local_files_for_pg(task_id, videx_db,
             relallvisible = table_dict['relallvisible'],
             columns=[PGColumn.from_dict(col_meta_dict) for col_meta_dict in table_dict.get('columns', [])],
             indexes=[PGIndex.from_dict(index_meta_dict) for index_meta_dict in table_dict.get('indexes', [])],
+            ddl = table_dict['ddl']
         )
-    req_obj = PGVidexDBTaskStats(
+    req_obj = VidexDBTaskStats(
         task_id=task_id,
         meta_dict=meta_dict,
-        stats_dict={}
+        stats_dict= db_stat_dict,
+        db_config = {}
     )
     return req_obj
 
 def meta_dict_to_sample_file(
         stats_dict,
-        hist_dict,
-        ndv_single_dict,
-        multi_ndv_dict,
-        gt_rec_in_ranges,
-        gt_req_resp) -> Tuple[Dict[str, Dict[str, PGTableStatisticsInfo]], None]:
+        statistic_dict,
+    ) -> Tuple[Dict[str, Dict[str, PGTableStatisticsInfo]], None]:
     
     """
     TODO: constuct PGTableStatisticsInfo form a list of metadata
@@ -198,5 +244,19 @@ def meta_dict_to_sample_file(
     def to_lower_db_tb(d):
         return {k.lower(): {k2.lower(): v2 for k2, v2 in v.items()} for k, v in d.items()}
     stats_dict = to_lower_db_tb(stats_dict)
+    statistic_dict = to_lower_db_tb(statistic_dict)
     numerical_info: Dict[str, Dict[str, PGTableStatisticsInfo]] = defaultdict(dict)
+    for db_name, db_stats_dict in stats_dict.items():
+        for table_name, table_raw_stat_dict in db_stats_dict.items():
+            s_name,t_name = pg_deserialize_schema_table(table_name)
+            table_stat_info = PGTableStatisticsInfo(db_name=db_name, schema_name=s_name,table_name=t_name)
+            statistic_data = statistic_dict[db_name][table_name]
+            if statistic_data and isinstance(list(statistic_data.values())[0], dict):
+                # if histogram_dict is a dict, convert it to HistogramStats object
+                statistic_data = {
+                    col: PGStatistic.from_dict(hist_data) if hist_data else None
+                    for col, hist_data in statistic_data.items()
+                }
+            table_stat_info.statistic_dict = statistic_data
+            numerical_info[db_name.lower()][table_name.lower()] = table_stat_info    
     return numerical_info, None

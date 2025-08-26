@@ -5,11 +5,11 @@ SPDX-License-Identifier: MIT
 from enum import Enum
 from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Union
-
+from sub_platforms.sql_opt.meta_base import BaseTableId,BaseColumn,BaseIndexColumn,BaseIndex,BaseTable
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 
 
-class TableId(BaseModel, PydanticDataClassJsonMixin):
+class TableId(BaseTableId):
     db_name: Optional[str]
     table_name: Optional[str]
 
@@ -30,7 +30,7 @@ class TableId(BaseModel, PydanticDataClassJsonMixin):
             return False
 
 
-class Column(BaseModel, PydanticDataClassJsonMixin):
+class Column(BaseColumn):
     name: Optional[str] = None  # it may be None when column is an expression
     table: str = None
     db: Optional[str] = None
@@ -94,7 +94,7 @@ class IndexType(Enum):
     FOREIGN_KEY = 'FOREIGN_KEY'
 
 
-class IndexColumn(BaseModel, PydanticDataClassJsonMixin):
+class IndexColumn(BaseIndexColumn):
     """
         It's the column class in index. We distinct it from Column class because:
         1. The information obtained from Index Column is limited, we will complement more information later.
@@ -157,17 +157,7 @@ class IndexColumn(BaseModel, PydanticDataClassJsonMixin):
             and self.name == other.name and self.expression == other.expression \
             and self.sub_part == other.sub_part and self.collation == other.collation
 
-
-class IndexBasicInfo(BaseModel, PydanticDataClassJsonMixin):
-    db_name: Optional[str] = Field(default=None)
-    table_name: Optional[str] = Field(default=None)
-    columns: Optional[List[IndexColumn]] = Field(default_factory=list)
-
-    def get_column_names(self):
-        return [column.name for column in self.columns]
-
-
-class Index(IndexBasicInfo, BaseModel, PydanticDataClassJsonMixin):
+class Index(BaseIndex):
     type: Optional[IndexType] = Field(default=None)
     name: Optional[str] = Field(default=None)
     is_unique: Optional[bool] = Field(default=False)
@@ -183,7 +173,7 @@ class Index(IndexBasicInfo, BaseModel, PydanticDataClassJsonMixin):
         return self.table_name
 
 
-class Table(BaseModel, PydanticDataClassJsonMixin):
+class Table(BaseTable):
     name: str = None
     db: str = None
     engine: Optional[str] = None
