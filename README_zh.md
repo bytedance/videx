@@ -18,6 +18,7 @@
     <img src="https://img.shields.io/badge/VLDB Demo-2025-Teal?style=for-the-badge&logo=acm" alt="VLDB-Demo 2025"/>
   </a>
   <img src="https://img.shields.io/badge/MySQL|Percona-8.0|5.7-FF9800?style=for-the-badge&logo=mysql" alt="MySQL Support"/>
+  <img src="https://img.shields.io/badge/MySQL|Percona|MariaDB-8.0|5.7|11.8-FF9800?style=for-the-badge&logo=mysql" alt="Database Support"/>
 </p>
 
 **VIDEX** 为 MySQL 提供了一个解耦的、可扩展的开源虚拟索引引擎 (**\[VI\]**rtual in**\[DEX\]**)。
@@ -116,9 +117,15 @@ python -m pip install -e . --use-pep517
 ```
 ### 2.2 启动 VIDEX (Docker方式)
 
-为简化部署，我们提供了预编译的 Docker 镜像，包含:
-- VIDEX-Optimizer: 基于 [Percona-MySQL 8.0.34-26](https://github.com/percona/percona-server/tree/release-8.0.34-26)，并集成了 VIDEX 插件
-- VIDEX-Server: ndv 和 cardinality 算法服务
+为简化部署，我们分别提供了MySQL和MariaDB预编译的 Docker 镜像，包含:
+
+**MySQL 版本：**
+- VIDEX-Optimizer: 基于 [Percona-MySQL 8.0.34-26](https://github.com/percona/percona-server/tree/release-8.0.34-26)，并集成 VIDEX 插件
+- VIDEX-Server: 提供 ndv 和 cardinality 算法服务
+
+**MariaDB 版本：**
+- VIDEX-Optimizer: 基于 [MariaDB 11.8.2](https://github.com/MariaDB/server/tree/11.8)，并集成 VIDEX 插件  
+- VIDEX-Server: 提供 ndv 和 cardinality 算法服务
 
 #### 2.2.1 安装 Docker
 如果您尚未安装 Docker:
@@ -126,9 +133,22 @@ python -m pip install -e . --use-pep517
 - Linux: 参考[官方安装指南](https://docs.docker.com/engine/install/)
 
 #### 2.2.2 启动 VIDEX 容器
-```cmd
+
+##### MySQL 版本
+
+```bash
 docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:latest
 ```
+
+##### MariaDB 版本
+
+```bash
+docker run -d -p 13308:13308 -p 5001:5001 --name mariadb_videx kangrongme/mariadb_videx:0.0.1
+```
+
+> **端口说明**
+> - `13308`: MySQL/MariaDB 服务端口
+> - `5001`: VIDEX-Server 服务端口
 
 > **其他部署方式**
 >
@@ -343,7 +363,48 @@ mysql -h ${HOST_MYSQL57} -P13308 -uvidex -ppassword < src/sub_platforms/sql_opt/
 mysql -h ${HOST_MYSQL57} -P13308 -uvidex -ppassword < src/sub_platforms/sql_opt/videx/scripts/clear_mysql57_env.sql
 ```
 
-### 3.3 TPCH sf1 (1g) 示例 (MySQL 8.0)
+### 3.3 TPCH-Tiny 示例 (MariaDB 11.8)
+
+VIDEX 支持高精度模拟 MariaDB 11.8。
+
+#### 环境说明
+环境配置与 [3.1 MySQL 8.0 示例](#31-tpch-tiny-示例-mysql-80) 相同。
+
+#### Step 1: 导入测试数据
+参考 [3.1 MySQL 8.0 示例](#31-tpch-tiny-示例-mysql-80) 的 Step 1。
+
+#### Step 2: VIDEX 采集并导入 VIDEX 元数据
+参考 [3.1 MySQL 8.0 示例](#31-tpch-tiny-示例-mysql-80) 的 Step 2。
+
+#### Step 3: EXPLAIN SQL
+
+在 MariaDB 环境下进行 InnoDB 比较时，建议执行如下命令。
+
+```sql
+SET SESSION use_stat_tables=NEVER;
+```
+生成直方图会修改 `mysql.column_stats` 等系统表，从而影响优化器的行为。该命令可确保优化过程仅依赖 `mysql.innodb_table_stats` 与 `mysql.innodb_index_stats` 中的 InnoDB 持久化统计信息
+
+同样以 TPC-H Q21 为例，EXPLAIN 结果如下图所示。VIDEX 保持了高精度模拟，行数差异主要源于直方图采样数据的影响。
+
+![explainQ21_mariadb.png](doc/explainQ21_mariadb.png)
+
+同样执行相同的索引创建操作
+```sql
+ALTER TABLE tpch_tiny.orders ADD INDEX idx_o_orderstatus (o_orderstatus);
+ALTER TABLE videx_tpch_tiny.orders ADD INDEX idx_o_orderstatus (o_orderstatus);
+```
+再次执行 EXPLAIN，MariaDB-InnoDB 和 VIDEX 的查询计划均发生了相同的变化，都采纳了新索引。
+
+![explainQ21_maridb_with_index.png](doc/explainQ21_maridb_with_index.png)
+
+最后，我们移除索引：
+```sql
+ALTER TABLE tpch_tiny.orders DROP INDEX idx_o_orderstatus;
+ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
+```
+
+### 3.4 TPCH sf1 (1g) 示例 (MySQL 8.0)
 
 我们额外为 TPC-H sf1 准备了元数据文件：`data/videx_metadata_tpch_sf1.json`，无需采集，直接导入即可体验 VIDEX。
 
