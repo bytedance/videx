@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# Unset proxy environment variables to avoid interference
+unset http_proxy HTTP_PROXY
+unset https_proxy HTTPS_PROXY
+unset no_proxy NO_PROXY
+unset all_proxy ALL_PROXY
+unset ftp_proxy FTP_PROXY
+
 echo "MARIADB-START..." >> /var/log/mariadb.log
 cd /root/mariadb_server/mysql_build_output/build
 ./sql/mariadbd \
