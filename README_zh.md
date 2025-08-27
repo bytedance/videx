@@ -552,7 +552,7 @@ VIDEX-Optimizer 将基于用户指定的地址，通过 `HTTP` 请求索引元�
 | Percona | 8.0.34-26+ | ✅ 支持     | 在 全部 `TPC-H`、`JOB` 下完成测试   |  
 | MySQL   | 8.0.x      | ✅ 支持     | 在 部分 `TPC-H` 下完成测试         |  
 | MySQL   | 5.7.x      | ✅ 支持     | 在 部分 `TPC-H` 下完成测试         |  
-| MariaDB | —          | ⏳ 正在规划  | 与 MariaDB 社区持续讨论中          |  
+| MariaDB | 11.8.2          | ✅ 支持  | 在 部分 `TPC-H` 下完成测试           |  
 | PG      | -          | 🔮 未来工作  | 期待与贡献者进行讨论                 |
 
 

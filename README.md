@@ -554,7 +554,7 @@ If you find this code useful, we would appreciate citations to our paper:
 | Percona         | 8.0.34-26+    | ✅ Supported | Tested in all `TPC-H` and `JOB` scenarios      |
 | MySQL           | 8.0.x         | ✅ Supported      | Tested in some `TPC-H` scenarios               |
 | MySQL           | 5.7.x         | ✅ Supported      | Tested in some `TPC-H` scenarios               |
-| MariaDB         | 11.8.x        | ✅ Supported       | Tested in TPC-H scenarios                       |
+| MariaDB         | 11.8.2        | ✅ Supported       | Tested in some `TPC-H` scenarios                       |
 | PG              | -             | 🔮 Future Work   | Anticipating discussions with contributors     |
 
 ## Authors
