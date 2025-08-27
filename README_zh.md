@@ -18,7 +18,7 @@
     <img src="https://img.shields.io/badge/VLDB Demo-2025-Teal?style=for-the-badge&logo=acm" alt="VLDB-Demo 2025"/>
   </a>
   <img src="https://img.shields.io/badge/MySQL|Percona-8.0|5.7-FF9800?style=for-the-badge&logo=mysql" alt="MySQL Support"/>
-  <img src="https://img.shields.io/badge/MySQL|Percona|MariaDB-8.0|5.7|11.8-FF9800?style=for-the-badge&logo=mysql" alt="Database Support"/>
+  <img src="https://img.shields.io/badge/MariaDB-11.8-FF9800?style=for-the-badge&logo=mariadb" alt="MariaDB Support"/>
 </p>
 
 **VIDEX** 为 MySQL 提供了一个解耦的、可扩展的开源虚拟索引引擎 (**\[VI\]**rtual in**\[DEX\]**)。
