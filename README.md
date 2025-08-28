@@ -18,6 +18,7 @@
     <img src="https://img.shields.io/badge/VLDB Demo-2025-Teal?style=for-the-badge&logo=acm" alt="VLDB-Demo 2025"/>
   </a>
   <img src="https://img.shields.io/badge/MySQL|Percona-8.0|5.7-FF9800?style=for-the-badge&logo=mysql" alt="MySQL Support"/>
+  <img src="https://img.shields.io/badge/MariaDB-11.8-FF9800?style=for-the-badge&logo=mariadb" alt="MariaDB Support"/>
 </p>
 
 **VIDEX**: The Disaggregated, Extensible **\[VI\]**rtual in**\[DEX\]** Engine for What-If Analysis in MySQL.
@@ -117,8 +118,14 @@ python -m pip install -e . --use-pep517
 
 ### 2.2 Launch VIDEX (Docker Mode)
 
-For simplified deployment, we provide pre-built Docker images containing:
+For simplified deployment, we provide pre-built Docker images for both MySQL and MariaDB, containing:
+
+**MySQL Version:**
 - VIDEX-Optimizer: Based on [Percona-MySQL 8.0.34-26](https://github.com/percona/percona-server/tree/release-8.0.34-26) with integrated VIDEX plugin
+- VIDEX-Server: NDV and cardinality algorithm service
+
+**MariaDB Version:**
+- VIDEX-Optimizer: Based on [MariaDB 11.8.2](https://github.com/MariaDB/server/tree/11.8) with integrated VIDEX plugin
 - VIDEX-Server: NDV and cardinality algorithm service
 
 #### Install Docker
@@ -127,9 +134,22 @@ If you haven't installed Docker yet:
 - Linux: Follow the [official installation guide](https://docs.docker.com/engine/install/)
 
 #### Launch VIDEX Container
+
+##### MySQL Version
+
 ```bash
 docker run -d -p 13308:13308 -p 5001:5001 --name videx kangrongme/videx:latest
 ```
+
+##### MariaDB Version
+
+```bash
+docker run -d -p 13308:13308 -p 5001:5001 --name mariadb_videx kangrongme/mariadb_videx:0.0.1
+```
+
+> **Port Information**
+> - `13308`: MySQL/MariaDB service port
+> - `5001`: VIDEX-Server service port
 
 > **Alternative Deployment Options**
 >
@@ -346,6 +366,49 @@ If you wish to revert the MySQL-optimizer to MySQL 8.0, please run the following
 mysql -h ${HOST_MYSQL57} -P13308 -uvidex -ppassword < src/sub_platforms/sql_opt/videx/scripts/clear_mysql57_env.sql
 ```
 
+### 3.3 TPCH-Tiny Example (MariaDB 11.8)
+
+VIDEX supports high-precision simulation of MariaDB 11.8.
+
+#### Environment Setup
+Environment configuration is the same as [3.1 MySQL 8.0 Example](#31-tpch-tiny-example-mysql-80).
+
+#### Step 1: Import Test Data
+Refer to [3.1 MySQL 8.0 Example](#31-tpch-tiny-example-mysql-80) Step 1.
+
+#### Step 2: VIDEX Collection and Import of VIDEX Metadata
+Refer to [3.1 MySQL 8.0 Example](#31-tpch-tiny-example-mysql-80) Step 2.
+
+#### Step 3: EXPLAIN SQL
+
+When performing InnoDB comparison in MariaDB environment, it's recommended to execute the following command:
+
+```sql
+SET SESSION use_stat_tables=NEVER;
+```
+
+Generating histograms will modify system tables such as `mysql.column_stats`, which can affect optimizer behavior. This command ensures the optimization process only relies on InnoDB persistent statistics stored in `mysql.innodb_table_stats` and `mysql.innodb_index_stats`.
+
+Using TPC-H Q21 as an example, the EXPLAIN results are shown in the figure below. VIDEX maintains high-precision simulation, with row count differences mainly stemming from histogram sampling data.
+
+![explainQ21_mariadb.png](doc/explainQ21_mariadb.png)
+
+Execute the same index creation operation:
+```sql
+ALTER TABLE tpch_tiny.orders ADD INDEX idx_o_orderstatus (o_orderstatus);
+ALTER TABLE videx_tpch_tiny.orders ADD INDEX idx_o_orderstatus (o_orderstatus);
+```
+
+Re-running EXPLAIN shows that both MariaDB-InnoDB and VIDEX query plans changed identically, both adopting the new index.
+
+![explainQ21_maridb_with_index.png](doc/explainQ21_maridb_with_index.png)
+
+Finally, we remove the index:
+```sql
+ALTER TABLE tpch_tiny.orders DROP INDEX idx_o_orderstatus;
+ALTER TABLE videx_tpch_tiny.orders DROP INDEX idx_o_orderstatus;
+```
+
 ### 3.3 TPCH sf1 (1g) Example (MySQL 8.0)
 
 We provide metadata file for TPC-H sf1: `data/videx_metadata_tpch_sf1.json`, allowing direct import without collection.
@@ -491,7 +554,7 @@ If you find this code useful, we would appreciate citations to our paper:
 | Percona         | 8.0.34-26+    | ✅ Supported | Tested in all `TPC-H` and `JOB` scenarios      |
 | MySQL           | 8.0.x         | ✅ Supported      | Tested in some `TPC-H` scenarios               |
 | MySQL           | 5.7.x         | ✅ Supported      | Tested in some `TPC-H` scenarios               |
-| MariaDB         | —             | ⏳ Planning       | Ongoing discussions with the MariaDB community |
+| MariaDB         | 11.8.2        | ✅ Supported       | Tested in some `TPC-H` scenarios                       |
 | PG              | -             | 🔮 Future Work   | Anticipating discussions with contributors     |
 
 ## Authors

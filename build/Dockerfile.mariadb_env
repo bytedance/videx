@@ -1,0 +1,102 @@
+# MariaDB Build Environment
+FROM debian:bullseye AS builder
+
+# Metadata
+LABEL maintainer="Haibo Yang <haibo942us@gmail.com>"
+
+# Arguments
+ARG MARIADB_BRANCH=11.8
+
+# Install base tools
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    build-essential \
+    devscripts \
+    equivs \
+    ccache \
+    eatmydata \
+    ninja-build \
+    clang \
+    entr \
+    moreutils \
+    cmake \
+    wget \
+    ca-certificates \
+    curl \
+    gnupg \
+    procps \
+    psmisc \
+    # MariaDB build dependencies (from official debian/control)
+    bison \
+    flex \
+    debhelper \
+    dh-exec \
+    libaio-dev \
+    libboost-dev \
+    libboost-atomic-dev \
+    libboost-chrono-dev \
+    libboost-date-time-dev \
+    libboost-filesystem-dev \
+    libboost-regex-dev \
+    libboost-system-dev \
+    libboost-thread-dev \
+    libbz2-dev \
+    libcrack2-dev \
+    libcurl4-openssl-dev \
+    libedit-dev \
+    libfmt-dev \
+    libjemalloc-dev \
+    libjudy-dev \
+    libkrb5-dev \
+    liblz4-dev \
+    liblzma-dev \
+    liblzo2-dev \
+    libncurses-dev \
+    libpam0g-dev \
+    libpcre2-dev \
+    libreadline-dev \
+    libsnappy-dev \
+    libssl-dev \
+    libsystemd-dev \
+    liburing-dev \
+    libxml2-dev \
+    libzstd-dev \
+    lsb-release \
+    perl \
+    po-debconf \
+    psmisc \
+    unixodbc-dev \
+    uuid-dev \
+    zlib1g-dev \
+    pkg-config \
+    libnuma-dev \
+    libpmem-dev \
+    python3.9 \
+    python3.9-dev \
+    python3.9-venv \
+    && apt-get clean && rm -rf /var/lib/apt/lists/* \
+    && ldconfig
+
+# Verify key build tools are installed
+RUN bison --version && \
+    cmake --version && \
+    clang --version && \
+    ninja --version && \
+    pkg-config --version && \
+    perl --version && \
+    debhelper --help > /dev/null 2>&1 || echo "debhelper available" && \
+    echo "All build tools verified successfully!"
+
+# Set clang environment
+ENV CXX=clang++ \
+    CC=clang \
+    CXX_FOR_BUILD=clang++ \
+    CC_FOR_BUILD=clang \
+    CFLAGS="-Wno-unused-command-line-argument" \
+    CXXFLAGS="-Wno-unused-command-line-argument"
+
+RUN ln -sf /usr/bin/python3.9 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.9 /usr/bin/python \
+    && curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+    && python3.9 get-pip.py \
+    && rm get-pip.py
