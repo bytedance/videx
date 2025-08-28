@@ -23,36 +23,55 @@ from sub_platforms.sql_opt.videx.videx_pg_metadata import fetch_all_meta_with_on
 
 
 
-def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port):
+def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port,db_type):
     base_msg = f"Build env finished. Your VIDEX server is {videx_server_ip_port}."
 
     mysql57_msg = ("-- Note, if your MySQL version is 5.x, please setup/clear the environment "
                    "before and after your connecting as follows:\n"
                    f"mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} < setup_mysql57_env.sql\n"
                    f"mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} < clear_mysql57_env.sql\n")
-
-    if args.task_id:
-        videx_options = json.dumps({"task_id": args.task_id})
-        return (f"{base_msg}\n"
-                f"To use VIDEX, please set the following variable before explaining your SQL:\n" + "-" * 20 +
-                "\n"
-                f"-- Connect VIDEX-MySQL: mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} -D{videx_db}\n"
-                f"USE {videx_db};\n"
-                f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
-                f"SET @VIDEX_OPTIONS='{videx_options}';\n"
-                f"-- EXPLAIN YOUR_SQL;\n"
-                f"{mysql57_msg}")
-    else:
-        return (f"{base_msg}\n"
-                f"You are running in non-task mode.\n"
-                f"To use VIDEX, please set the following variable before explaining your SQL:\n" + "-" * 20 +
-                "\n"
-                f"-- Connect VIDEX-MySQL: mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} -D{videx_db}\n"
-                f"USE {videx_db};\n"
-                f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
-                f"-- EXPLAIN YOUR_SQL;\n"
-                f"{mysql57_msg}")
-
+    if db_type == 'mysql':
+        if args.task_id:
+            videx_options = json.dumps({"task_id": args.task_id})
+            return (f"{base_msg}\n"
+                    f"To use VIDEX, please set the following variable before explaining your SQL:\n" + "-" * 20 +
+                    "\n"
+                    f"-- Connect VIDEX-MySQL: mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} -D{videx_db}\n"
+                    f"USE {videx_db};\n"
+                    f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
+                    f"SET @VIDEX_OPTIONS='{videx_options}';\n"
+                    f"-- EXPLAIN YOUR_SQL;\n"
+                    f"{mysql57_msg}")
+        else:
+            return (f"{base_msg}\n"
+                    f"You are running in non-task mode.\n"
+                    f"To use VIDEX, please set the following variable before explaining your SQL:\n" + "-" * 20 +
+                    "\n"
+                    f"-- Connect VIDEX-MySQL: mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} -D{videx_db}\n"
+                    f"USE {videx_db};\n"
+                    f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
+                    f"-- EXPLAIN YOUR_SQL;\n"
+                    f"{mysql57_msg}")
+    elif db_type == 'pg':
+        if args.task_id:
+            videx_options = json.dumps({"task_id": args.task_id})
+            return (f"{base_msg}\n"
+                    f"To use VIDEX, please set the following variable before explaining your SQL:\n" + "-" * 20 +
+                    "\n"
+                    f"-- Connect VIDEX-PG: psql -h{videx_ip} -p{videx_port} -U{videx_user} -d{videx_db}\n"
+                    f"\c {videx_db};\n"
+                    f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
+                    f"SET @VIDEX_OPTIONS='{videx_options}';\n"
+                    f"-- EXPLAIN YOUR_SQL;\n")
+        else:
+            return (f"{base_msg}\n"
+                    f"You are running in non-task mode.\n"
+                    f"To use VIDEX, please set the following variable before explaining your SQL:\n" + "-" * 20 +
+                    "\n"
+                    f"-- Connect VIDEX-PG: psql -h{videx_ip} -p{videx_port} -U{videx_user} -d{videx_db}\n"
+                    f"\c {videx_db};\n"
+                    f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
+                    f"-- EXPLAIN YOUR_SQL;\n")
 
 def parse_connection_info(info):
     target_ip, target_port, target_db, target_user, target_pwd = info.split(':')
@@ -220,4 +239,4 @@ if __name__ == "__main__":
     #assert response.status_code == 200
 
     logging.info(f"metadata file is {meta_path}")
-    logging.info(get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port))
+    logging.info(get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port,db_type))

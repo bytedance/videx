@@ -336,7 +336,6 @@ class OpenPGUtils(AbstractMySQLUtils):
             result = subprocess.run(cmd, env=env, stdout=subprocess.PIPE,
                                     stderr=subprocess.PIPE, text=True)
             sql_text = result.stdout  
-            print(f'sql_text: {sql_text}')
             return sql_text
         except subprocess.CalledProcessError as e:
                 logging.error(f"pg_dump error:, {e.stderr}")

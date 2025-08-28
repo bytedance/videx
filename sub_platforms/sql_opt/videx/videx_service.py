@@ -619,8 +619,11 @@ def create_videx_env_multi_db_for_pg(videx_env: Env,
                               ):
     for target_db, table_dict in meta_dict.items():
         #TODO: In Postgresql, you cannot drop a database if you are connected to it.
-        #videx_env.execute(f"DROP DATABASE IF EXISTS {target_db}")
-        #videx_env.execute(f"CREATE DATABASE {target_db}")
+        videx_env._switch_db("postgres")
+        videx_env.execute(f"DROP DATABASE IF EXISTS {target_db}")
+        videx_env.execute(f"CREATE DATABASE {target_db}")
+        videx_env._switch_db(target_db)
+        videx_env.execute(f"CREATE EXTENSION VIDEX")
         videx_default_db = videx_env.default_db
         try:
             videx_env.set_default_db(target_db)
