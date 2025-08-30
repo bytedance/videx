@@ -22,8 +22,13 @@ extern "C" {
     #include "catalog/pg_index.h"
     #include "catalog/pg_statistic_ext.h"
     #include "utils/selfuncs.h"
+    #include "commands/dbcommands.h"
+    #include "miscadmin.h"
+    #include "utils/guc.h"
+    #include "optimizer/pathnode.h"
 }
 #include "videx_json_item.h"
+#include <curl/curl.h>
 
 PG_MODULE_MAGIC;
 PG_FUNCTION_INFO_V1(videx_analyze);
@@ -31,7 +36,6 @@ PG_FUNCTION_INFO_V1(videx_tableam_handler);
 
 static const TableAmRoutine videxam_methods = {
         .type = T_TableAmRoutine,
-
         .slot_callbacks = videx_slot_callbacks,
         .scan_begin = videx_scan_begin,
         .scan_end = videx_scan_end,
@@ -301,17 +305,97 @@ static bool videx_get_index_stats(PlannerInfo *root,
                                            Oid indexOid,
                                            AttrNumber indexattnum,
                                            VariableStatData *vardata);
+
 /*
  * Module load callback
  */
 void
 _PG_init(void)
 {
+	DefineCustomStringVariable("VIDEX_SERVER",
+								"set the ip::port for videx statistic server",
+								"set the ip::port for videx statistic server",
+								&videx_server,
+								"127.0.0.1:5001",
+								PGC_SUSET,
+								0,
+								NULL,
+								NULL,
+								NULL);
     /*Install hooks*/
     prev_get_relation_stats_hook = get_relation_stats_hook;
     get_relation_stats_hook = videx_get_relation_stats;
     prev_get_index_stats_hook = get_index_stats_hook;
     get_index_stats_hook = videx_get_index_stats;
+}
+
+HeapTuple
+BuildPGStatisticTuple(VidexStringMap &res_json, Oid relid, int attnum)
+{
+    Datum values[Natts_pg_statistic];
+    bool nulls[Natts_pg_statistic];
+    MemSet(nulls, 0, sizeof(nulls));
+
+    values[Anum_pg_statistic_starelid - 1] =
+        ObjectIdGetDatum(relid);
+    values[Anum_pg_statistic_staattnum - 1] =
+        Int16GetDatum(attnum);
+    values[Anum_pg_statistic_stainherit - 1] =
+        BoolGetDatum(res_json["stainherit"] == "true");
+    values[Anum_pg_statistic_stanullfrac - 1] =
+        Float4GetDatum(std::stof(res_json["stanullfrac"]));
+    values[Anum_pg_statistic_stawidth - 1] =
+        Int32GetDatum(std::stoi(res_json["stawidth"]));
+    values[Anum_pg_statistic_stadistinct - 1] =
+        Float4GetDatum(std::stof(res_json["stadistinct"]));
+
+    /* ---- slot 信息 ---- */
+    //auto slots = res_json["slots"];
+    // if (!slots.empty())
+    // {
+    //     auto slot = slots[0];
+
+    //     values[Anum_pg_statistic_stakind1 - 1] = Int16GetDatum(slot.kind);
+    //     values[Anum_pg_statistic_staop1 - 1] = ObjectIdGetDatum(slot.op ? slot.op : InvalidOid);
+    //     values[Anum_pg_statistic_stacoll1 - 1] = ObjectIdGetDatum(slot.coll ? slot.coll : InvalidOid);
+
+    //     /* numbers[] 转成 PG 数组 */
+    //     if (!slot.numbers.empty())
+    //     {
+    //         Datum *elems = (Datum *) palloc(slot.numbers.size() * sizeof(Datum));
+    //         for (size_t i = 0; i < slot.numbers.size(); i++)
+    //             elems[i] = Float4GetDatum(slot.numbers[i]);
+
+    //         ArrayType *arr = construct_array(elems,
+    //                                          slot.numbers.size(),
+    //                                          FLOAT4OID,
+    //                                          sizeof(float4),
+    //                                          true, 'i');
+    //         values[Anum_pg_statistic_stanumbers1 - 1] = PointerGetDatum(arr);
+    //     }
+    //     else
+    //         nulls[Anum_pg_statistic_stanumbers1 - 1] = true;
+
+    //     /* values[] 转成 TEXT[] */
+    //     if (!slot.values.empty())
+    //     {
+    //         Datum *elems = (Datum *) palloc(slot.values.size() * sizeof(Datum));
+    //         for (size_t i = 0; i < slot.values.size(); i++)
+    //             elems[i] = CStringGetTextDatum(slot.values[i].c_str());
+
+    //         ArrayType *arr = construct_array(elems,
+    //                                          slot.values.size(),
+    //                                          TEXTOID,
+    //                                          -1,
+    //                                          false, 'i');
+    //         values[Anum_pg_statistic_stavalues1 - 1] = PointerGetDatum(arr);
+    //     }
+    //     else
+    //         nulls[Anum_pg_statistic_stavalues1 - 1] = true;
+    // }
+    TupleDesc tupDesc = lookup_rowtype_tupdesc(relid, -1);
+    HeapTuple tuple = heap_form_tuple(tupDesc, values, nulls);
+    return tuple;
 }
 
 static bool videx_get_relation_stats(PlannerInfo *root,
@@ -320,7 +404,28 @@ static bool videx_get_relation_stats(PlannerInfo *root,
                                               VariableStatData *vardata){
     if (rte->rtekind == RTE_RELATION){
         /*fetch HeapTuple of pg_statistic from videx_statistic_server*/
+        char *dbname = get_database_name(MyDatabaseId);
+        char *relname   = get_rel_name(rte->relid); 
+        Oid   nspoid    = get_rel_namespace(rte->relid);
+        char *nspname   = get_namespace_name(nspoid);  
+        char *colname = get_attname(rte->relid, attnum, false);
+
         VidexStringMap res_json;
+        VidexJsonItem request_item = construct_request(dbname,nspname,relname,__PRETTY_FUNCTION__);
+        VidexJsonItem * keyItem = request_item.create("colname");
+        keyItem->add_property("name", colname);
+
+        int error = ask_from_videx_http(request_item, res_json);
+        if (error) {
+            std::cout << "ask_from_videx_http error. videx_get_realtion_stats" << std::endl;
+            return 0;
+        }
+        vardata->statsTuple = BuildPGStatisticTuple(res_json,rte->relid,attnum);
+        vardata->freefunc = ReleaseSysCache;
+        if (HeapTupleIsValid(vardata->statsTuple))
+			vardata->acl_ok = true;
+        
+
     }else if ((rte->rtekind == RTE_SUBQUERY && !rte->inh) ||
 			 (rte->rtekind == RTE_CTE && !rte->self_reference)){
         
@@ -334,3 +439,4 @@ static bool videx_get_index_stats(PlannerInfo *root,
                                            VariableStatData *vardata){
     return true;
 }
+

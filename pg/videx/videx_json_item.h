@@ -17,6 +17,7 @@
 #include <initializer_list>
 #include <memory>
 #include <fstream>
+#include <curl/curl.h>
 
 typedef std::map<std::string, std::string> VidexStringMap;
 
@@ -139,15 +140,22 @@ public:
  * construct a basic request, and other parameters can be conveniently added externally.
 */
 inline VidexJsonItem construct_request(const std::string &db_name,
+                                       const std::string &schema_name,
                                        const std::string &table_name,
                                        const std::string &function,
-                                       const std::string &target_storage_engine = "INNODB") {
+                                       const std::string &target_storage_engine = "PG") {
     VidexJsonItem req("videx_request", 0);
     req.add_property("dbname", db_name);
+    req.add_property("schema_name",schema_name);
     req.add_property("table_name", table_name);
     req.add_property("function", function);
     req.add_property("target_storage_engine", target_storage_engine);
     return req;
 }
+
+
+extern char* videx_server;
+size_t write_callback(void *contents, size_t size, size_t nmemb, std::string *outString);
+int ask_from_videx_http(VidexJsonItem &request, VidexStringMap &res_json);
 
 #endif  // VIDEX_JSON_ITEM_H

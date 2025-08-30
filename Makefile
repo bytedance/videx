@@ -10,7 +10,7 @@ OBJS = \
 CURRENT_DIR := $(shell pwd)
 $(info CURRENT_DIR = $(CURRENT_DIR))
 
-SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -L/usr/local/lib -luv -lstdc++ -L/usr/lib/x86_64-linux-gnu
+SHLIB_LINK_INTERNAL = $(libpq) -lstdc++ -lcurl -L/usr/local/lib -luv -lstdc++ -L/usr/lib/x86_64-linux-gnu
 CFLAGS += -std=c11  -I/usr/local/include 
 PG_CPPFLAGS =  -fPIC -I$(libpq_srcdir) -I$(CURRENT_DIR)/pg/videx 
 

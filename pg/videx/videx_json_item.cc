@@ -116,3 +116,74 @@ std::string videx_escape_double_quotes(const std::string &input, size_t len) {
     }
     return output;
 }
+
+char* videx_server = nullptr;
+
+size_t write_callback(void *contents, size_t size, size_t nmemb, std::string *outString) {
+    size_t totalSize = size * nmemb;
+    outString->append((char *) contents, totalSize);
+    return totalSize;
+}
+
+int ask_from_videx_http(VidexJsonItem &request, VidexStringMap &res_json){
+    const char *host_ip = "127.0.0.1:5001";
+    char value[1000];
+    
+    //VIDEX_SERVER
+    if(videx_server)
+        host_ip = value;
+    std::string url = std::string("http://") + host_ip + "/ask_videx";
+    CURL *curl;
+    CURLcode res_code;
+    std::string readBuffer;
+    curl = curl_easy_init(); // 初始化一个CURL easy handle。
+    if(curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_POST, 1);
+
+
+        std::string request_str = request.to_json();
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, request_str.c_str());
+
+        // Set the headers
+        struct curl_slist *headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_callback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+
+        // Set the connection timeout to 10 seconds.
+        curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 10L);
+        // Set the overall request timeout to 30 seconds.
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 30L);
+
+        // Disallow connection reuse, so libcurl will close the connection immediately after completing a request.
+        curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
+
+        res_code = curl_easy_perform(curl);
+        if (res_code != CURLE_OK) {
+            std::cout << "access videx_server failed res_code != curle_ok: " << host_ip << std::endl;
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res_code));
+            return 1;
+        } else {
+            int code;
+            std::string message;
+            int error = videx_parse_simple_json(readBuffer.c_str(), code, message, res_json);
+            if (error) {
+                std::cout << "!__!__!__!__!__! JSON parse error: " << message << '\n';
+                return 1;
+            } else {
+                if (message == "OK") {
+                    std::cout << "access videx_server success: " << host_ip << std::endl;
+                    return 0;
+                } else {
+                    std::cout << "access videx_server success but msg != OK: " << readBuffer.c_str() << std::endl;
+                    return 1;
+                }
+            }
+        }
+    }
+    std::cout << "access videx_server failed curl = false: " << host_ip << std::endl;
+    return 1;
+}
