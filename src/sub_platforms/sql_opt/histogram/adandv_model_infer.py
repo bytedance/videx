@@ -8,7 +8,7 @@ class AdaNDVConfig:
     def __init__(self,
                  model_path: str,
                  model_input_len: int = 100,
-                 estimator_num: int = 14,
+                 estimator_num: int = 9, 
                  k: int = 2,
                  sample_rate: float = 0.01):
         self.model_path = model_path

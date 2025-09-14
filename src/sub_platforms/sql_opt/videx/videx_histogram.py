@@ -18,6 +18,15 @@ from sub_platforms.sql_opt.meta import Table, Column
 from sub_platforms.sql_opt.videx import videx_logging
 from sub_platforms.sql_opt.videx.videx_utils import BTreeKeySide, target_env_available_for_videx, parse_datetime, \
     data_type_is_int, reformat_datetime_str
+from sub_platforms.sql_opt.histogram.histogram_utils import (
+    block_level_sample,
+    sort_and_validate,
+    fit_c_from_cv_curve,
+    compute_required_rblk,
+    build_histogram_from_samples,
+    merge_sorted_samples,
+    estimate_null_ratio,
+)
 
 MEANINGLESS_INT = -1357
 
@@ -727,8 +736,103 @@ def force_generate_histogram_by_sdc_for_col(env: Env, db_name: str, table_name: 
     return HistogramStats.init_from_mysql_json(res_dict)
 
 
+def force_generate_histogram_by_2phase_for_col(env: Env, db_name: str, table_name: str, col_name: str,
+                                               n_buckets: int, delta_req: float = 0.05,
+                                               r1_hint: Optional[int] = None,
+                                               lmax: int = 4,
+                                               histogram_builder: str = "equi-depth",
+                                               ndv: Optional[int] = None) -> HistogramStats:
+    """
+    2PHASE (block-level sampling) histogram construction entrypoint.
+
+    Phase I: draw initial block-level samples (~2*r1), collect CV errors via sort-and-validate,
+             fit c in y=c/x, and estimate required sample size rblk for target error delta_req.
+    Phase II: collect remaining samples up to rblk, then build final histogram from samples.
+
+    Implementation details:
+    - Uses page-level approximate sampling via primary key range scanning
+    - Recursive sortAndValidate with cross-validation error computation
+    - Conservative r1 heuristic: max(2000, beta*k/delta_req^2) where beta=4
+    - Falls back to brute-force method if sampling fails
+    """
+    # Phase I: initial block-level sample and CV-based estimation
+    # Conservative heuristic for r1 if not provided: r1 ≈ max(2000, beta * k / delta_req^2)
+    # where beta is an empirical constant (default 4).
+    if r1_hint is None:
+        beta = 4.0
+        r1 = int(max(2000, beta * max(1, n_buckets) / max(1e-6, float(delta_req) ** 2)))
+    else:
+        r1 = int(r1_hint)
+    initial_size = max(2 * r1, 1)
+    samples_phase1 = block_level_sample(env, db_name, table_name, col_name, rows_target=initial_size)
+    if not samples_phase1:
+        # Fallback to brute-force path if sampling yielded nothing
+        return force_generate_histogram_by_sdc_for_col(env, db_name, table_name, col_name, n_buckets)
+
+    # Collect CV errors via simplified sort-and-validate
+    sample_sizes, sq_err_levels = sort_and_validate(samples_phase1, k=n_buckets, lmax=lmax,
+                                                    histogram_builder=histogram_builder)
+    # If we cannot fit, fallback to using phase1 only
+    c = fit_c_from_cv_curve(sample_sizes, sq_err_levels) if sample_sizes and sq_err_levels else 0.0
+    rblk = compute_required_rblk(c, delta_req) if c > 0.0 else len(samples_phase1)
+    rblk = max(len(samples_phase1), rblk)
+
+    # Phase II: collect remaining samples and build final histogram
+    if rblk > len(samples_phase1):
+        extra_needed = rblk - len(samples_phase1)
+        extra_samples = block_level_sample(env, db_name, table_name, col_name, rows_target=extra_needed)
+        merged = merge_sorted_samples(sorted(samples_phase1), sorted(extra_samples))
+        final_samples = merged[: rblk]
+    else:
+        final_samples = sorted(samples_phase1)[: rblk]
+
+    buckets = build_histogram_from_samples(final_samples, k=n_buckets, histogram_builder=histogram_builder)
+    if not buckets:
+        return force_generate_histogram_by_sdc_for_col(env, db_name, table_name, col_name, n_buckets)
+
+    # Assemble HistogramStats JSON-like dict
+    total = sum(cnt for _, _, cnt in buckets) or 1
+    cum = 0.0
+    
+    # Get table metadata to avoid full table scan for sampling rate
+    try:
+        table_meta = env.get_table_meta(db_name, table_name)
+        total_rows = getattr(table_meta, 'rows', None) if table_meta else None
+    except Exception:
+        total_rows = None
+    
+    # Calculate sampling rate using metadata or fallback
+    if total_rows and total_rows > 0:
+        sampling_rate = min(1.0, float(rblk) / float(total_rows))
+    else:
+        # Fallback: use sample count as approximation
+        sampling_rate = min(1.0, float(rblk) / float(len(final_samples) * 10))  # Rough estimate
+    
+    res_dict = {
+        "buckets": [],
+        "data-type": env.get_column_meta(db_name, table_name, col_name).data_type,
+        "histogram-type": "block_2phase",
+        "null-values": estimate_null_ratio(env, db_name, table_name, col_name),
+        "collation-id": MEANINGLESS_INT,
+        "sampling-rate": sampling_rate,
+        "number-of-buckets-specified": n_buckets
+    }
+    
+    # Fill bucket information: [min_value, max_value, cumulative_frequency, row_count]
+    for mn, mx, cnt in buckets:
+        cum += cnt / total
+        res_dict["buckets"].append([str(mn), str(mx), float(cum), max(1, int(cnt))])
+    
+    return HistogramStats.init_from_mysql_json(res_dict)
+
+
 def fetch_col_histogram(env: Env, dbname: str, table_name: str, col_name: str, n_buckets: int = 32,
-                        force: bool = False, hist_mem_size: int = None, ndv: int = None) -> HistogramStats:
+                        force: bool = False, hist_mem_size: int = None, ndv: int = None,
+                        algo: Optional[str] = None,
+                        delta_req: float = 0.05,
+                        lmax: int = 4,
+                        r1_hint: Optional[int] = None,
+                        histogram_builder: str = "equi-depth") -> HistogramStats:
     """
     fetch or generate histogram for a column
     Args:
@@ -742,6 +846,13 @@ def fetch_col_histogram(env: Env, dbname: str, table_name: str, col_name: str, n
     Returns:
 
     """
+    # Optional algorithm switch. Default (None) preserves existing behavior.
+    if algo == 'block_2phase':
+        return force_generate_histogram_by_2phase_for_col(env, dbname, table_name, col_name,
+                                                          n_buckets=n_buckets, delta_req=delta_req,
+                                                          lmax=lmax, r1_hint=r1_hint,
+                                                          histogram_builder=histogram_builder, ndv=ndv)
+
     if not force:
         hist: HistogramStats = query_histogram(env, dbname, table_name, col_name)
         if hist is not None:
@@ -776,6 +887,11 @@ def generate_fetch_histogram(env: Env, target_db: str, all_table_names: List[str
                              hist_mem_size: int,
                              ret_json: bool = False,
                              ndv_single_dict: dict = None,
+                             algo: Optional[str] = None,
+                             delta_req: float = 0.05,
+                             lmax: int = 4,
+                             r1_hint: Optional[int] = None,
+                             histogram_builder: str = "equi-depth",
                              ) -> Dict[str, Dict[str, Union[HistogramStats, dict]]]:
     """
     generate histogram for all specifed tables
@@ -818,7 +934,11 @@ def generate_fetch_histogram(env: Env, target_db: str, all_table_names: List[str
                     hist = fetch_col_histogram(env, target_db, table_name, col.name, n_buckets, force=force,
                                                hist_mem_size=hist_mem_size,
                                                ndv=ndv,
-                                               )
+                                               algo=algo,
+                                               delta_req=delta_req,
+                                               lmax=lmax,
+                                               r1_hint=r1_hint,
+                                               histogram_builder=histogram_builder)
             finally:
                 if not only_sfw_fetch and drop_hist_after_fetch:
                     try:
