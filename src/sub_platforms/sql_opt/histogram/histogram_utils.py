@@ -4,26 +4,87 @@ Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
 # from sub_platforms.sql_opt.videx.videx_metadata import VidexTableStats
+from sub_platforms.sql_opt.common.sample_info import SampleColumnInfo
 from typing import List, Optional, Tuple, Any
 import math
-
-# not implemented yet
-# def load_sample_file(table_stats: VidexTableStats):
-#     raise NotImplementedError("Will integrated in next stage")
-
-
-# ############################################################################
-# 2PHASE (block-level sampling) utility function shells
-# These are interfaces/placeholders to be used by videx_histogram.
-# Implementations can be added later without changing current behavior.
-
-
+import pandas as pd
+import logging
 try:
     # Optional import for type hints; avoid hard dependency at runtime
     from sub_platforms.sql_opt.env.rds_env import Env  # type: ignore
 except Exception:  # pragma: no cover
     Env = Any  # fallback typing if import is unavailable during static analysis
 
+
+
+def load_sample_file(table_stats):
+    """
+    从 table_stats.sample_file_info 加载采样数据
+    """
+    if hasattr(table_stats, 'sample_data') and table_stats.sample_data is not None:
+        logging.info(f"Using in-memory sample data for {table_stats.table_name}")
+        return table_stats.sample_data
+
+    # return None
+    info = getattr(table_stats, 'sample_file_info', None)
+    if not info:
+        logging.info(f"No sample data available for {table_stats.table_name}")
+        return None
+
+    # 兼容 dict 和对象
+    if isinstance(info, dict):
+        path = info.get('path') or info.get('local_path')
+        fmt = (info.get('format') or 'parquet').lower()
+    else:
+        # 如果是对象，按你现有字段名兜底
+        if getattr(info, 'local_path_prefix', None) == 'RowFetchNone':
+            logging.info(f"No sample data available for {table_stats.table_name}")
+            return None
+        path = getattr(info, 'path', None) or getattr(info, 'local_path', None)
+        fmt = (getattr(info, 'format', None) or 'parquet').lower()
+
+    if not path:
+        logging.warning(f"sample_file_info exists but no path for {table_stats.table_name}")
+        return None
+
+    try:
+        if fmt == 'parquet':
+            df = pd.read_parquet(path)
+        elif fmt == 'csv':
+            df = pd.read_csv(path)
+        else:
+            logging.warning(f"Unsupported sample format '{fmt}' for {table_stats.table_name}")
+            return None
+        logging.info(f"Loaded sample for {table_stats.table_name} from {path} shape={df.shape}")
+        return df
+    except Exception as e:
+        logging.error(f"Failed to load sample for {table_stats.table_name} from {path}: {e}")
+        return None
+
+
+def calculate_optimal_buckets(samples: List[Any], data_type: str, ndv: int = None) -> int:
+    """根据数据特征计算最优桶数"""
+    if not samples:
+        return 1
+    
+    n = len(samples)
+    unique_count = len(set(samples))
+    
+    # 基础桶数
+    base_buckets = min(32, max(4, int(math.sqrt(n))))
+    
+    # 根据唯一值数量调整
+    if ndv:
+        base_buckets = min(base_buckets, ndv)
+    
+    # 根据数据类型调整
+    if data_type in ['int', 'bigint']:
+        base_buckets = min(base_buckets * 2, 64)
+    elif data_type in ['varchar', 'char', 'text']:
+        base_buckets = min(base_buckets, 32)
+    
+    print(f"Optimal buckets: n={n}, unique={unique_count}, ndv={ndv}, result={base_buckets}")
+    return max(1, base_buckets)
 
 def block_level_sample(env: "Env", db: str, table: str, col: str,
                        rows_target: int, seed: int = 0) -> List[Any]:
@@ -35,9 +96,15 @@ def block_level_sample(env: "Env", db: str, table: str, col: str,
     - For non-numeric PK: use keyset pagination with limited OFFSET queries
     - Fallback: progressive sampling on target column
     """
+    print(f"Block sampling {rows_target} rows from {db}.{table}.{col}")
     rows_target = max(1, int(rows_target))
     samples: List[Any] = []
     col_q = f"`{col}`"
+
+    # 添加采样质量检查
+    max_attempts = 50
+    attempt_count = 0
+    consecutive_empty = 0
     
     # Heuristics for number of blocks and rows per block
     approx_block_rows = 128
@@ -103,7 +170,9 @@ def block_level_sample(env: "Env", db: str, table: str, col: str,
                 # Use the found starting point for progressive sampling
                 current_anchor = start_anchor
                 
-                while len(samples) < rows_target and len(samples) < rows_target * 2:  # Safety limit
+                while len(samples) < rows_target and attempt_count < max_attempts:  # Safety limit
+                    
+                    attempt_count += 1
                     sql = f"SELECT {col_q} FROM `{db}`.`{table}` WHERE {col_q} IS NOT NULL AND {pk_q} >= {current_anchor} ORDER BY {pk_q} LIMIT {rows_per_block}"
                     df = env.query_for_dataframe(sql)
                     
@@ -112,6 +181,15 @@ def block_level_sample(env: "Env", db: str, table: str, col: str,
                         
                     new_samples = df[col].tolist()
                     samples.extend(new_samples)
+
+                    # 添加调试信息
+                    print(f"Attempt {attempt_count}: got {len(new_samples)} samples, total: {len(samples)}")
+
+                    # 如果已经达到目标，停止采样
+                    if len(samples) >= rows_target:
+                        break
+
+                    
                     
                     # If we got fewer rows than expected, we're near the end
                     if len(new_samples) < rows_per_block:
@@ -125,45 +203,92 @@ def block_level_sample(env: "Env", db: str, table: str, col: str,
                         step = min(step * 2, 10000)  # Increase step if we're getting full blocks
                     else:
                         step = max(step // 2, 100)   # Decrease step if we're getting partial blocks
-                        
+                     
+                    if len(new_samples) == 0:
+                        consecutive_empty += 1
+                        if consecutive_empty > 5:
+                            print(f"Stopping sampling after {consecutive_empty} consecutive empty results")
+                            break
+                    else:
+                        consecutive_empty = 0
+
+
+                print(f"Sampling completed: {len(samples)} rows after {attempt_count} attempts")
                 return samples[:rows_target]
         else:
-            # Non-numeric PK: use keyset pagination with limited OFFSET
+            # Non-numeric or composite PK: use tuple keyset pagination (avoid ORDER BY target column + OFFSET)
+            # NOTE: Keep original OFFSET-based anchor logic commented below for reference.
             # Use estimated rows or a reasonable default
             if estimated_rows and estimated_rows > 0:
                 stride = max(1, estimated_rows // (num_blocks + 1))
             else:
                 stride = 1000  # Default stride
-                
+
+            # Build composite PK tuple columns and ORDER BY clause
+            pk_q_list = [f"`{c}`" for c in pk_cols]
+            order_by = ", ".join(pk_q_list)
+
             for i in range(1, num_blocks + 1):
                 if len(samples) >= rows_target:
                     break
-                    
+
                 offset = (i - 1) * stride
-                # Limit OFFSET to avoid very large values
-                offset = min(offset, 100000)  # Cap at 100k offset
-                
+                offset = min(offset, 100000)  # Cap offset for anchor probing only
+
                 try:
+                    # Get anchor composite PK tuple
+                    anchor_cols = ", ".join(pk_q_list)
                     anchor_df = env.query_for_dataframe(
-                        f"SELECT {pk_q} AS pk FROM `{db}`.`{table}` ORDER BY {pk_q} LIMIT 1 OFFSET {offset}"
+                        f"SELECT {anchor_cols} FROM `{db}`.`{table}` ORDER BY {order_by} LIMIT 1 OFFSET {offset}"
                     )
                     if anchor_df.empty:
                         continue
-                    anchor = anchor_df['pk'].iloc[0]
-                    
-                    # Fetch block after anchor
-                    if isinstance(anchor, str):
-                        anchor_val = "'" + anchor.replace("'", "''") + "'"
-                    else:
-                        anchor_val = str(anchor)
-                    sql = f"SELECT {col_q} FROM `{db}`.`{table}` WHERE {col_q} IS NOT NULL AND {pk_q} >= {anchor_val} ORDER BY {pk_q} LIMIT {rows_per_block}"
+
+                    # Build tuple literal (v1, v2, ...)
+                    anchor_vals = []
+                    for c in pk_cols:
+                        v = anchor_df[c].iloc[0]
+                        if isinstance(v, str):
+                            anchor_vals.append("'" + v.replace("'", "''") + "'")
+                        else:
+                            anchor_vals.append(str(v))
+                    tuple_lit = "(" + ",".join(anchor_vals) + ")"
+                    tuple_cols = "(" + ",".join(pk_q_list) + ")"
+
+                    # Fetch block using tuple keyset pagination
+                    sql = (
+                        f"SELECT {col_q} FROM `{db}`.`{table}` "
+                        f"WHERE {col_q} IS NOT NULL AND {tuple_cols} >= {tuple_lit} "
+                        f"ORDER BY {order_by} LIMIT {rows_per_block}"
+                    )
                     df = env.query_for_dataframe(sql)
                     if not df.empty and col in df.columns:
                         samples.extend(df[col].tolist())
                 except Exception:
-                    # If OFFSET fails, try next block
+                    # If anchor probing fails, try next block
                     continue
-                    
+
+            # Original OFFSET-based single-column PK pagination (kept for reference):
+            # for i in range(1, num_blocks + 1):
+            #     if len(samples) >= rows_target:
+            #         break
+            #     offset = (i - 1) * stride
+            #     offset = min(offset, 100000)
+            #     try:
+            #         anchor_df = env.query_for_dataframe(
+            #             f"SELECT {pk_q} AS pk FROM `{db}`.`{table}` ORDER BY {pk_q} LIMIT 1 OFFSET {offset}"
+            #         )
+            #         if anchor_df.empty:
+            #             continue
+            #         anchor = anchor_df['pk'].iloc[0]
+            #         anchor_val = ("'" + anchor.replace("'", "''") + "'") if isinstance(anchor, str) else str(anchor)
+            #         sql = f"SELECT {col_q} FROM `{db}`.`{table}` WHERE {col_q} IS NOT NULL AND {pk_q} >= {anchor_val} ORDER BY {pk_q} LIMIT {rows_per_block}"
+            #         df = env.query_for_dataframe(sql)
+            #         if not df.empty and col in df.columns:
+            #             samples.extend(df[col].tolist())
+            #     except Exception:
+            #         continue
+
             return samples[:rows_target]
 
     # Fallback: progressive sampling on target column (no full table scan)
@@ -171,7 +296,14 @@ def block_level_sample(env: "Env", db: str, table: str, col: str,
     step = 1000
     
     while len(samples) < rows_target and start_offset < 100000:  # Safety limit
-        sql = f"SELECT {col_q} FROM `{db}`.`{table}` WHERE {col_q} IS NOT NULL ORDER BY {col_q} LIMIT {rows_per_block} OFFSET {start_offset}"
+        # Avoid ORDER BY target column here to prevent full-table sort in fallback
+        # Original (commented):
+        # sql = f"SELECT {col_q} FROM `{db}`.`{table}` WHERE {col_q} IS NOT NULL ORDER BY {col_q} LIMIT {rows_per_block} OFFSET {start_offset}"
+        sql = (
+            f"SELECT {col_q} FROM `{db}`.`{table}` "
+            f"WHERE {col_q} IS NOT NULL "
+            f"LIMIT {rows_per_block} OFFSET {start_offset}"
+        )
         try:
             df = env.query_for_dataframe(sql)
             if df.empty or col not in df.columns:
@@ -320,7 +452,9 @@ def compute_required_rblk(c: float, delta_req: float) -> int:
 
 
 def build_histogram_from_samples(samples: List[Any], k: int,
-                                 histogram_builder: str = "equi-depth") -> List[Tuple[Any, Any, int]]:
+                                 histogram_builder: str = "equi-depth",
+                                 data_type: str = None,
+                                 ndv: int = None) -> List[Tuple[Any, Any, int]]:
     """Build k-bucket histogram from samples. Returns list of (min_value, max_value, count).
     
     Ensures bucket continuity to match VIDEX's histogram format:
@@ -328,13 +462,22 @@ def build_histogram_from_samples(samples: List[Any], k: int,
     - No gaps between bucket boundaries
     - Compatible with MySQL histogram standards
     """
+
+    """
+    构建等深直方图
+    """
     if not samples:
         return []
     vals = sorted(samples)
     n = len(vals)
     if k <= 0:
-        k = 1
+        #k = 1
+        k = calculate_optimal_buckets(samples, data_type, ndv)
     
+    if n < k:
+        k = max(1, n)
+        print(f"Adjusted buckets from {k} to {max(1, n)} due to small sample size")
+
     # For equi-depth histogram, each bucket should have roughly n/k elements
     step = max(1, n // k)
     buckets: List[Tuple[Any, Any, int]] = []

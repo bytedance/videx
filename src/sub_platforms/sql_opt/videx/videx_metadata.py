@@ -170,6 +170,9 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
     """
     Represents the statistics of a HA table.
     """
+
+    model_config = {"arbitrary_types_allowed": True}
+
     dbname: str
     table_name: str
 
@@ -243,6 +246,8 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
     # records metadata about table schema
     table_meta: Optional[Table] = None
 
+    sample_data: Optional[pd.DataFrame] = Field(default=None)
+
     def get_col_hist(self, col: str) -> Optional[HistogramStats]:
         return self.hist_columns.get(col)
 
@@ -273,7 +278,8 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
                   db_config: VariablesAboutIndex,
                   ideal_ndvs: dict, single_ndvs: dict,
                   pct_cached: dict,
-                  gt_rec_in_ranges: GT_Table_Return):
+                  gt_rec_in_ranges: GT_Table_Return,
+                  sample_data: Optional[pd.DataFrame] = None):
         """
         Args:
             dbname:
@@ -285,6 +291,11 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
         Returns:
 
         """
+
+        if sample_data is None and sample_file_info and sample_file_info.sample_file_dict:
+            sample_data = sample_file_info.get_dataframe(table_name)
+    
+
         # index lowercase
         hist_columns = {col: None if not hist else HistogramStats.from_dict(hist) for col, hist in
                         hist_columns.items()}
@@ -344,6 +355,7 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
             ndvs_multi_col_gt=ideal_ndvs,
             gt_return=gt_rec_in_ranges,
             table_meta=raw_meta_dict,
+            sample_data=sample_data,
         )
         # for k, v in res.hist_columns.items():
         #     if v is not None:
@@ -567,6 +579,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
                              drop_hist_after_fetch: bool = True,
                              hist_mem_size: int = None,
                              histogram_data: dict = None,
+                             hist_algo: Optional[str] = None,
                              ) -> Tuple[dict, dict, dict, dict]:
     """
 
@@ -591,7 +604,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
         raise Exception(f"given env ({env.instance=}) is not in BLACKLIST, cannot fetch raw metadata directly")
     # 如果非空，则将数据写入到指定目录的文件中
     logging.info(
-        f"fetch_all_meta_for_videx. {target_db=} {result_dir=} {n_buckets=} {hist_force=} {hist_mem_size=} {all_table_names=}")
+        f"fetch_all_meta_for_videx. {target_db=} {result_dir=} {n_buckets=} {hist_force=} {hist_mem_size=} {all_table_names=} {hist_algo=}")
     stats_file = f'videx_{target_db}_info_stats.json'
     hist_file = f'videx_{target_db}_histogram.json'
     ndv_single_file = f'videx_{target_db}_ndv_single.json'
@@ -646,6 +659,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
                                                  ret_json=True,
                                                  hist_mem_size=hist_mem_size,
                                                  ndv_single_dict=ndv_single_dict,
+                                                 algo=hist_algo,
                                                  )
         hist_dict.update(tmp_hist_dict)
 
@@ -687,6 +701,7 @@ def fetch_all_meta_with_one_file(meta_path: Union[str, dict],
                                  drop_hist_after_fetch: bool = True,
                                  hist_mem_size: int = None,
                                  histogram_data: dict = None,
+                                 hist_algo: Optional[str] = None, 
                                  ) -> Tuple[dict, dict, dict, dict]:
     """Fetch all metadata and store/load it in a single file.
 
@@ -733,7 +748,7 @@ def fetch_all_meta_with_one_file(meta_path: Union[str, dict],
         # Recursively process the loaded dictionary
         return fetch_all_meta_with_one_file(metadata, env, target_db, all_table_names,
                                             n_buckets, hist_force, drop_hist_after_fetch,
-                                            hist_mem_size, histogram_data)
+                                            hist_mem_size, histogram_data, hist_algo)
 
     # Generate new metadata if file is None, or file doesn't exist
     # Create temporary directory with timestamp
@@ -749,7 +764,8 @@ def fetch_all_meta_with_one_file(meta_path: Union[str, dict],
             hist_force=hist_force,
             drop_hist_after_fetch=drop_hist_after_fetch,
             hist_mem_size=hist_mem_size,
-            histogram_data=histogram_data
+            histogram_data=histogram_data,
+            hist_algo=hist_algo
         )
 
         if isinstance(meta_path, str):
@@ -937,9 +953,19 @@ def meta_dict_to_sample_file(
             # table_raw_stat_dict: Dict[str, Any] = self.stats_dict.get(db_name, {}).get(table_name, {})
             table_stat_info = TableStatisticsInfo(db_name=db_name, table_name=table_name)
 
-            table_stat_info.ndv_dict = ndv_single_dict[db_name][table_name]
+            # 安全地获取 NDV 数据，如果不存在则使用空字典
+            if db_name in ndv_single_dict and table_name in ndv_single_dict[db_name]:
+                table_stat_info.ndv_dict = ndv_single_dict[db_name][table_name]
+            else:
+                table_stat_info.ndv_dict = {}
 
-            histogram_data = hist_dict[db_name][table_name]
+
+            # 安全地获取 NDV 数据，如果不存在则使用空字典
+            if db_name in hist_dict and table_name in hist_dict[db_name]:
+                histogram_data = hist_dict[db_name][table_name]
+            else:
+                histogram_data = {} 
+
             if histogram_data and isinstance(list(histogram_data.values())[0], dict):
                 # if histogram_dict is a dict, convert it to HistogramStats object
                 histogram_data = {
@@ -981,6 +1007,7 @@ def construct_videx_task_meta_from_local_files(task_id, videx_db,
                                                gt_rec_in_ranges_file: Union[str, dict] = None,
                                                gt_req_resp_file: Union[str, dict] = None,
                                                raise_error: bool = False,
+                                               sample_file_dict: dict = None,
                                                ) -> VidexDBTaskStats:
     """
     Add task metadata from a local file.
@@ -1104,11 +1131,20 @@ def construct_videx_task_meta_from_local_files(task_id, videx_db,
             cluster_index_size=table_dict['CLUSTERED_INDEX_SIZE'],
             other_index_sizes=table_dict['SUM_OF_OTHER_INDEX_SIZES'],
         )
+    
+    sample_file_info = None
+    if sample_file_dict:
+        sample_file_info = SampleFileInfo(
+            local_path_prefix='RowFetchNone',
+            tos_path_prefix='RowFetchNone',
+            sample_file_dict=sample_file_dict,
+        )
 
     req_obj = VidexDBTaskStats(task_id=task_id,
                                meta_dict=meta_dict,
                                stats_dict=db_stat_dict,
                                db_config=db_config,
+                               sample_file_info=sample_file_info,
                                )
     return req_obj
 

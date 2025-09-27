@@ -33,3 +33,5 @@ stats_estimators.py
 test_plm4ndv_inference.py
 test_2phase_comparison.py
 src/sub_platforms/sql_opt/videx/*.md
+resources/
+build/

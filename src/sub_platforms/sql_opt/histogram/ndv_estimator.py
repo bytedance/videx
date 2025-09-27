@@ -11,9 +11,10 @@ from typing import List, Any, Dict
 import numpy as np
 # from estndv import ndvEstimator
 from pandas import DataFrame
+from scipy.optimize import broyden1, broyden2
 
-from adandv_model_infer import AdaNDVPredictor, AdaNDVConfig
-from plm4ndv_model_infer import PLM4NDVPredictor
+from .adandv_model_infer import AdaNDVPredictor, AdaNDVConfig
+from .plm4ndv_model_infer import PLM4NDVPredictor
 
 # from sub_platforms.sql_opt.videx.videx_utils import safe_tolist  # 暂时注释掉，路径问题
 
@@ -129,15 +130,18 @@ class NEVUtils:
 
 class NDVEstimator:
     def __init__(self, original_num) -> None:
+        # 在你的 ndv_estimator 或 histogram 算法中添加：
+        print("----This is new NDV Estimator from 5002 port----", flush=True)
         self.original_num = original_num # 原表行数
         self.tools = NEVUtils()
         self.ada_model = None
         self.plm4ndv_model = None
 
-    def estimator(self, r: int, profile: List[int], method: str = 'GEE', column_name: str = "unknown", all_columns: List[str] = None):
+    def estimator(self, r: int, profile: List[int], method: str = 'GEE', column_name: str = "unknown", all_columns: List[str] = None, table_stats=None):
         """
         [error_bound, GEE, Chao, scale, shlosser, ChaoLee, LS]
         """
+        print(f"----This is new NDV Estimator from 5002 port - method: {method}----", flush=True)
         if method == 'error_bound':
             ndv = self.error_bound_estimate(r, profile)
         elif method == 'GEE':
@@ -185,9 +189,9 @@ class NDVEstimator:
         elif method == 'PLM4NDV':
             if self.plm4ndv_model is None:
                 # model_path = "src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth"
-                model_path = "resources/plm4ndv.pth"
+                model_path = "src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth"
                 self.plm4ndv_model = PLM4NDVPredictor(model_path=model_path)
-            ndv = self.plm4ndv_estimate(r, profile, column_name=column_name, all_columns=all_columns)
+            ndv = self.plm4ndv_estimate(r, profile, column_name=column_name, all_columns=all_columns, table_stats=table_stats)
         else:
             raise ValueError(f"Unsupported NDV estimation method: {method}")
         return ndv
@@ -212,11 +216,12 @@ class NDVEstimator:
         ndv = self.ada_model.predict(profile, estimate_list)
         return ndv
     
-    def plm4ndv_estimate(self, r: int, profile: List[int], column_name: str = "unknown", all_columns: List[str] = None):
+    def plm4ndv_estimate(self, r: int, profile: List[int], column_name: str = "unknown", all_columns: List[str] = None, table_stats=None):
         """
         PLM4NDV估计方法
         这个方法需要额外的列信息，这里提供一个基础实现,实际使用时需要传入完整的列信息
         """
+        self._ensure_plm4ndv_loaded()
         # 这里需要实际的列信息，暂时返回一个fallback值
         d = self.tools.profile_to_ndv(profile)
         if r == 0 or d == 0:
@@ -228,52 +233,33 @@ class NDVEstimator:
         
         # 使用PLM4NDV模型进行预测
         try:
-            # PLM4NDV 总是需要多列输入来做 attention，即使只预测一列
+            # 多列：构造覆盖当前列的真实 profile，其余列占位
             if all_columns and len(all_columns) > 1:
-                # 构造所有列的信息（这里简化处理，实际使用时需要传入完整的列信息）
-                columns_info = []
-                for col in all_columns:
-                    if col == column_name:
-                        # 当前列使用真实的profile
-                        columns_info.append({
-                            'profile': profile,
-                            'N': self.original_num,
-                            'D': d,
-                            'column_name': col,
-                            'column_type': 'unknown'
-                        })
-                    else:
-                        # 其他列使用占位信息（实际使用时应该传入真实信息）
-                        # 注意：这里应该传入其他列的真实信息，而不是占位符
-                        columns_info.append({
-                            'profile': [0] * 101,  # 占位profile，实际应该传入真实profile
-                            'N': self.original_num,
-                            'D': 1,
-                            'column_name': col,
-                            'column_type': 'unknown'
-                        })
-                
-                # 使用多列预测，让模型通过 attention 学习列间关系
-                predicted_ndvs = self.plm4ndv_model.predict_table(columns_info)
-                # 找到当前列的预测结果
-                current_col_idx = all_columns.index(column_name)
+                columns_info = self._build_columns_info(
+                    all_sampled_data=None,
+                    target_columns=list(all_columns) if hasattr(all_columns, 'tolist') else all_columns,
+                    table_stats=table_stats,
+                    override_profile=profile,
+                    override_d=d,
+                    target_column=column_name,
+                    use_placeholders_for_others=True,
+                )
+                predicted_ndvs = self._predict_ndv_list(columns_info)
+                all_columns_list = list(all_columns) if hasattr(all_columns, 'tolist') else all_columns
+                current_col_idx = all_columns_list.index(column_name)
                 return predicted_ndvs[current_col_idx]
-            else:
-                # 如果只有一列，直接使用单列预测（不使用attention）
-                # 这种情况下，模型可能无法充分利用attention机制，但避免了虚假数据
-                columns_info = [
-                    {
-                        'profile': profile,
-                        'N': self.original_num,
-                        'D': d,
-                        'column_name': column_name,
-                        'column_type': 'unknown'
-                    }
-                ]
-                
-                # 使用单列预测
-                predicted_ndvs = self.plm4ndv_model.predict_table(columns_info)
-                return predicted_ndvs[0]
+            # 单列
+            columns_info = self._build_columns_info(
+                all_sampled_data=None,
+                target_columns=[column_name],
+                table_stats=table_stats,
+                override_profile=profile,
+                override_d=d,
+                target_column=column_name,
+                use_placeholders_for_others=False,
+            )
+            predicted_ndvs = self._predict_ndv_list(columns_info)
+            return predicted_ndvs[0]
             
         except Exception as e:
             print(f"PLM4NDV prediction failed: {e}, falling back to scale estimate")
@@ -283,6 +269,7 @@ class NDVEstimator:
     def estimate(self, all_sampled_data: DataFrame) -> Dict[str, float]:
         """input all data and estimate NDV
         """
+        print("----This is NDVEstimator.estimate() called from 5002 port----", flush=True)
         columns = all_sampled_data.columns
         ndv_dict = {}
         data_len = len(all_sampled_data)
@@ -292,7 +279,7 @@ class NDVEstimator:
             if len(profile) <= 1:
                 ndv_dict[column] = 0.01 # 没采到数据，直接返回0.01，不让ndv为0，影响后续计算
                 continue
-            ndv = self.estimator(data_len, profile, column_name=column, all_columns=columns)
+            ndv = self.estimator(data_len, profile, column_name=column, all_columns=columns, table_stats=None)
             ndv_dict[column] = ndv
         return ndv_dict
 
@@ -649,7 +636,14 @@ class NDVEstimator:
         # return estimated
         return 1
 
-    def estimate_multi_columns(self, all_sampled_data: DataFrame, target_columns: List[str], method='error_bound') -> float:
+    def _ensure_plm4ndv_loaded(self):
+        if self.plm4ndv_model is None:
+            model_path = "src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth"
+            self.plm4ndv_model = PLM4NDVPredictor(model_path=model_path)
+
+
+
+    def estimate_multi_columns(self, all_sampled_data: DataFrame, target_columns: List[str], method='error_bound', table_stats=None) -> float:
         """输入全部的采样数据和目标列（可以为多列），估计其NDV"""
         if target_columns[0] not in all_sampled_data.columns:
             target_columns = [target_column.upper() for target_column in target_columns]
@@ -660,10 +654,107 @@ class NDVEstimator:
             target_columns = [col for col in target_columns if col in all_sampled_data.columns]
             if len(target_columns) == 0:
                 return 1
-        tuple_list = list(zip(*[all_sampled_data[col] for col in target_columns]))
-        profile = self.build_column_profile(tuple_list)
+        
+        # 特殊处理真正支持多列的方法
         if method == 'block_split':
-            ndv = self.block_split_estimate(tuple_list)
+            tuple_list = list(zip(*[all_sampled_data[col] for col in target_columns]))
+            return self.block_split_estimate(tuple_list)
         else:
-            ndv = self.estimator(len(all_sampled_data), profile, method)
-        return ndv
+            # 对于所有单列方法（包括PLM4NDV），使用独立假设合成多列NDV
+            return self._estimate_multi_columns_independent(all_sampled_data, target_columns, method)
+    
+    def _get_column_type(self, column_name: str, table_stats=None) -> str:
+        """从表元数据中获取列类型"""
+        if table_stats and hasattr(table_stats, 'table_meta') and table_stats.table_meta:
+            for col in table_stats.table_meta.columns:
+                if col.name and col.name.lower() == column_name.lower():
+                    return col.data_type or 'unknown'
+        return 'unknown'
+    
+
+    def _build_columns_info(self, all_sampled_data: DataFrame, target_columns: List[str], table_stats=None,
+                             override_profile: List[int] = None, override_d: float = None,
+                             target_column: str = None, use_placeholders_for_others: bool = False) -> List[dict]:
+        """
+        统一构造 columns_info：
+        - 当 all_sampled_data 可用时，按列构建真实 profile/D/type
+        - 可通过 override_profile/override_d 指定某一目标列的覆盖值
+        - 其余列在 use_placeholders_for_others=True 时使用占位
+        """
+        columns_info: List[dict] = []
+        for col in target_columns:
+            if override_profile is not None and target_column is not None and col == target_column:
+                prof = override_profile
+                d_val = override_d if override_d is not None else self.tools.profile_to_ndv(prof)
+                columns_info.append({
+                    'profile': prof,
+                    'N': self.original_num,
+                    'D': d_val,
+                    'column_name': col,
+                    'column_type': self._get_column_type(col, table_stats)
+                })
+                continue
+
+            if all_sampled_data is not None and col in all_sampled_data.columns:
+                col_data = safe_tolist(all_sampled_data[col].dropna())
+                if len(col_data) > 0:
+                    prof = self.build_column_profile(col_data)
+                    d_val = self.tools.profile_to_ndv(prof)
+                    columns_info.append({
+                        'profile': prof,
+                        'N': self.original_num,
+                        'D': d_val,
+                        'column_name': col,
+                        'column_type': self._get_column_type(col, table_stats)
+                    })
+                    continue
+
+            if use_placeholders_for_others:
+                columns_info.append({
+                    'profile': [0] * 101,
+                    'N': self.original_num,
+                    'D': 1,
+                    'column_name': col,
+                    'column_type': self._get_column_type(col, table_stats)
+                })
+        return columns_info
+
+    def _predict_ndv_list(self, columns_info: List[dict]) -> List[float]:
+        predicted_ndvs = self.plm4ndv_model.predict_table(columns_info)
+        return [max(1.0, min(float(x), self.original_num)) for x in predicted_ndvs]
+
+    def _estimate_multi_columns_independent(self, all_sampled_data: DataFrame, target_columns: List[str], method: str) -> float:
+        """
+        使用独立假设合成多列NDV：对每列分别估计NDV，然后合成
+        适用于传统单列估计方法（Ada、GEE、Chao、scale等）
+        """
+        if len(target_columns) == 1:
+            # 单列直接估计
+            col_data = safe_tolist(all_sampled_data[target_columns[0]].dropna())
+            profile = self.build_column_profile(col_data)
+            return float(self.estimator(len(all_sampled_data), profile, method))
+        
+        # 多列：分别估计每列NDV，再用独立假设合成
+        individual_ndvs = []
+        for col in target_columns:
+            col_data = safe_tolist(all_sampled_data[col].dropna())
+            if len(col_data) == 0:
+                individual_ndvs.append(1.0)
+                continue
+            profile = self.build_column_profile(col_data)
+            try:
+                ndv = self.estimator(len(all_sampled_data), profile, method)
+                individual_ndvs.append(max(1.0, float(ndv)))
+            except Exception as e:
+                print(f"NDV estimation failed for column {col} with method {method}: {e}", flush=True)
+                individual_ndvs.append(1.0)
+        
+        # 独立假设合成：rows / product(rows / ndv_i)
+        rows = float(self.original_num)
+        from math import prod
+        rec_per_keys = [max(1.0, rows / x) for x in individual_ndvs]
+        combined_rpk = min(rows, prod(rec_per_keys))
+        ndv_multi = max(1.0, min(rows, rows / combined_rpk))
+        
+        print(f"Independent assumption: {target_columns} -> {individual_ndvs} -> {ndv_multi}", flush=True)
+        return ndv_multi

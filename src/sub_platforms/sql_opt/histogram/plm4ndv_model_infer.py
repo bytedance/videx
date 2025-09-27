@@ -60,7 +60,6 @@ class MultiHeadSelfAttention(nn.Module):
         
         return output, attn_weights
 
-
 class PLM4NDVModel(nn.Module):
     def __init__(self, input_len=768, profile_len=100, num_layers=1, use_sample=True):
         super(PLM4NDVModel, self).__init__()
@@ -109,7 +108,6 @@ class PLM4NDVModel(nn.Module):
         ans = self.run(emb, N, profile, mask)
         return ans
 
-
 class PLM4NDVPredictor:
     def __init__(self, model_path: str = None, device: str = "cpu", use_sample: bool = True):
         """
@@ -120,7 +118,8 @@ class PLM4NDVPredictor:
             device: 计算设备
             use_sample: 是否使用sample数据（对应原始代码中的args.sample）
         """
-        self.device = torch.device(device)
+        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.device = torch.device("cpu")
         self.embedding_model = None
         self.plm_model = None
         self.use_sample = use_sample
@@ -138,7 +137,7 @@ class PLM4NDVPredictor:
         """初始化embedding模型和PLM4NDV模型"""
         try:
             # 初始化sentence transformer模型 - 优先使用plm4ndv项目中的本地模型
-            local_model_dir = "../../../../../../plm4ndv/plm4ndv/models/sentence-transformers/sentence-t5-large"
+            local_model_dir = "src/sub_platforms/sql_opt/histogram/resources/sentence-transformers/sentence-t5-large"
             if os.path.exists(local_model_dir):
                 print(f"使用plm4ndv项目中的本地模型: {local_model_dir}")
                 self.embedding_model = SentenceTransformer(local_model_dir)
@@ -170,28 +169,30 @@ class PLM4NDVPredictor:
             print(f"Error initializing models: {e}")
             raise
     
-    def generate_column_embedding(self, column_name: str, column_type: str) -> np.ndarray:
+    def generate_column_embedding(self, column_name: str, column_type: str, N: int, D: int) -> np.ndarray:
         """
         生成列的embedding，参考semantic_embedding.py的实现
         
         Args:
             column_name: 列名
             column_type: 列类型
+            N: 表行数
+            D: 该列的NDV
             
         Returns:
             embedding: 768维向量
         """
-        # 构建列描述，参考semantic_embedding.py中的格式
-        # col_description = ','.join(content_splited[:-2])  # 去掉最后两个字段：N, D
-        col_description = f"{column_name}, {column_type}"
+        # 构建列描述，与plm4ndv训练时完全一致
+        # 格式: "列名, 类型, N, D" -> 去掉N,D -> "列名, 类型"
+        col_description = f"{column_name}, {column_type}, {N}, {D}"
+        # 去掉最后两个字段（N, D），与semantic_embedding.py第62行一致
+        col_description = ','.join(col_description.split(',')[:-2])
         
         # 生成embedding
         with torch.no_grad():
             embedding = self.embedding_model.encode([col_description], device=self.device)
         
         return embedding[0]  # 返回第一个（也是唯一的）embedding
-    
-
     
     def predict_table(self, columns_info: List[Dict[str, Any]], max_column_num: int = None) -> List[float]:
         """
@@ -226,7 +227,9 @@ class PLM4NDVPredictor:
             for col_info in columns_info:
                 embedding = self.generate_column_embedding(
                     col_info['column_name'], 
-                    col_info['column_type']
+                    col_info['column_type'],
+                    col_info['N'],
+                    col_info['D']
                 )
                 embeddings.append(embedding)
                 N_list.append(col_info['N'])

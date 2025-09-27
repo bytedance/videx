@@ -10,6 +10,9 @@ from collections import defaultdict
 from typing import List, Optional, Union, Dict, Any, Tuple
 from pydantic import BaseModel, PlainSerializer, BeforeValidator
 from typing_extensions import Annotated
+import time
+import math
+import numpy as np
 
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 from sub_platforms.sql_opt.databases.mysql.mysql_command import MySQLVersion
@@ -26,6 +29,7 @@ from sub_platforms.sql_opt.histogram.histogram_utils import (
     build_histogram_from_samples,
     merge_sorted_samples,
     estimate_null_ratio,
+    calculate_optimal_buckets,
 )
 
 MEANINGLESS_INT = -1357
@@ -763,6 +767,22 @@ def force_generate_histogram_by_2phase_for_col(env: Env, db_name: str, table_nam
         r1 = int(max(2000, beta * max(1, n_buckets) / max(1e-6, float(delta_req) ** 2)))
     else:
         r1 = int(r1_hint)
+    
+    # 获取表大小信息，用于动态调整采样量
+    table_rows = None
+    try:
+        table_meta = env.get_table_meta(db_name, table_name)
+        table_rows = getattr(table_meta, 'rows', None) if table_meta else None
+    except Exception:
+        pass
+
+    # 动态调整初始采样量，避免采样过多
+    if table_rows and table_rows > 0:
+        max_initial_sample = max(1000, int(table_rows * 0.1))  # 最多采样表大小的10%
+        r1 = min(r1, max_initial_sample)
+        print(f"Table has {table_rows} rows, limiting r1 to {r1}")
+    
+    
     initial_size = max(2 * r1, 1)
     samples_phase1 = block_level_sample(env, db_name, table_name, col_name, rows_target=initial_size)
     if not samples_phase1:
@@ -774,7 +794,31 @@ def force_generate_histogram_by_2phase_for_col(env: Env, db_name: str, table_nam
                                                     histogram_builder=histogram_builder)
     # If we cannot fit, fallback to using phase1 only
     c = fit_c_from_cv_curve(sample_sizes, sq_err_levels) if sample_sizes and sq_err_levels else 0.0
+    
+    # 检查c值的合理性
+    if c > 1e6:
+        print(f"Warning: c value very large ({c}), this may indicate:")
+        print(f"  - Complex data distribution")
+        print(f"  - Poor sampling quality")
+        print(f"  - CV curve fitting issues")
+    if c <= 0 or c > 1e6:
+        print(f"c={c} out of sane range, fallback to conservative rblk")
+        if table_rows and table_rows > 0:
+            rblk = max(len(samples_phase1), max(int(2 * r1), int(table_rows * 0.10)))
+        else:
+            rblk = max(len(samples_phase1), int(2 * r1))
+    
+    
     rblk = compute_required_rblk(c, delta_req) if c > 0.0 else len(samples_phase1)
+    
+    
+    if table_rows and table_rows > 0:
+        hard_cap = max(int(2 * r1), int(table_rows * 0.10))
+        if rblk > hard_cap:
+            print(f"Limiting rblk from {rblk} to hard cap {hard_cap} (<=10% or 2*r1)")
+            rblk = hard_cap
+    
+    
     rblk = max(len(samples_phase1), rblk)
 
     # Phase II: collect remaining samples and build final histogram
@@ -786,7 +830,23 @@ def force_generate_histogram_by_2phase_for_col(env: Env, db_name: str, table_nam
     else:
         final_samples = sorted(samples_phase1)[: rblk]
 
-    buckets = build_histogram_from_samples(final_samples, k=n_buckets, histogram_builder=histogram_builder)
+    #buckets = build_histogram_from_samples(final_samples, k=n_buckets, histogram_builder=histogram_builder)
+    
+    column_meta = env.get_column_meta(db_name, table_name, col_name)
+    data_type = column_meta.data_type if column_meta else 'unknown'
+    
+    # 智能调整桶数
+    optimal_buckets = calculate_optimal_buckets(final_samples, data_type, ndv)
+    actual_buckets = min(n_buckets, optimal_buckets)
+    
+    print(f"Original buckets: {n_buckets}, Optimal buckets: {optimal_buckets}, Using: {actual_buckets}")
+    
+    # 使用调整后的桶数构建直方图
+    buckets = build_histogram_from_samples(final_samples, k=actual_buckets, 
+                                         histogram_builder=histogram_builder,
+                                         data_type=data_type, ndv=ndv)
+    
+    
     if not buckets:
         return force_generate_histogram_by_sdc_for_col(env, db_name, table_name, col_name, n_buckets)
 
@@ -803,11 +863,15 @@ def force_generate_histogram_by_2phase_for_col(env: Env, db_name: str, table_nam
     
     # Calculate sampling rate using metadata or fallback
     if total_rows and total_rows > 0:
-        sampling_rate = min(1.0, float(rblk) / float(total_rows))
+        # sampling_rate = min(1.0, float(rblk) / float(total_rows))
+        sampling_rate = min(1.0, float(len(final_samples)) / float(total_rows))
     else:
         # Fallback: use sample count as approximation
-        sampling_rate = min(1.0, float(rblk) / float(len(final_samples) * 10))  # Rough estimate
+        # sampling_rate = min(1.0, float(rblk) / float(len(final_samples) * 10))  # Rough estimate
+        sampling_rate = min(1.0, float(len(final_samples)) / float(len(samples_phase1) * 10))
     
+    print(f"Sampling rate: {sampling_rate:.4f} ({len(final_samples)}/{total_rows})")
+
     res_dict = {
         "buckets": [],
         "data-type": env.get_column_meta(db_name, table_name, col_name).data_type,
@@ -815,7 +879,7 @@ def force_generate_histogram_by_2phase_for_col(env: Env, db_name: str, table_nam
         "null-values": estimate_null_ratio(env, db_name, table_name, col_name),
         "collation-id": MEANINGLESS_INT,
         "sampling-rate": sampling_rate,
-        "number-of-buckets-specified": n_buckets
+        "number-of-buckets-specified": actual_buckets
     }
     
     # Fill bucket information: [min_value, max_value, cumulative_frequency, row_count]
@@ -829,7 +893,7 @@ def force_generate_histogram_by_2phase_for_col(env: Env, db_name: str, table_nam
 def fetch_col_histogram(env: Env, dbname: str, table_name: str, col_name: str, n_buckets: int = 32,
                         force: bool = False, hist_mem_size: int = None, ndv: int = None,
                         algo: Optional[str] = None,
-                        delta_req: float = 0.05,
+                        delta_req: float = 0.2,
                         lmax: int = 4,
                         r1_hint: Optional[int] = None,
                         histogram_builder: str = "equi-depth") -> HistogramStats:
@@ -846,8 +910,39 @@ def fetch_col_histogram(env: Env, dbname: str, table_name: str, col_name: str, n
     Returns:
 
     """
+    if algo == 'compare':
+        print(f"=== Comparing histogram algorithms for {dbname}.{table_name}.{col_name} ===")
+        
+        # 运行原有算法（作为基准）
+        start_time = time.time()
+        hist_original = fetch_col_histogram(env, dbname, table_name, col_name, n_buckets, 
+                                          force, hist_mem_size, ndv, None, delta_req, lmax, r1_hint, histogram_builder)
+        time_original = time.time() - start_time
+        
+        # 运行2phase算法
+        start_time = time.time()
+        hist_2phase = force_generate_histogram_by_2phase_for_col(env, dbname, table_name, col_name,
+                                                                n_buckets=n_buckets, delta_req=delta_req,
+                                                                lmax=lmax, r1_hint=r1_hint,
+                                                                histogram_builder=histogram_builder, ndv=ndv)
+        time_2phase = time.time() - start_time
+        
+        # 计算准确性指标
+        accuracy_metrics = compare_histogram_accuracy(hist_original, hist_2phase, env, dbname, table_name, col_name)
+        
+        # 输出对比结果
+        print(f"=== Results for {dbname}.{table_name}.{col_name} ===")
+        print(f"Original algorithm: {len(hist_original.buckets)} buckets, {time_original:.2f}s")
+        print(f"2Phase algorithm: {len(hist_2phase.buckets)} buckets, {time_2phase:.2f}s")
+        print(f"Speedup: {time_original/time_2phase:.2f}x")
+        print(f"Accuracy metrics: {accuracy_metrics}")
+        
+        return hist_2phase  # 返回2phase结果
+  
+    
     # Optional algorithm switch. Default (None) preserves existing behavior.
     if algo == 'block_2phase':
+        print("----This is new Histogram Construction Block_2phase----")
         return force_generate_histogram_by_2phase_for_col(env, dbname, table_name, col_name,
                                                           n_buckets=n_buckets, delta_req=delta_req,
                                                           lmax=lmax, r1_hint=r1_hint,
@@ -950,6 +1045,162 @@ def generate_fetch_histogram(env: Env, target_db: str, all_table_names: List[str
                 hist = hist.to_dict()
             res_tables[str(table_name).lower()][col.name] = hist
     return res_tables
+
+
+def compare_histogram_accuracy(hist_original: HistogramStats, hist_2phase: HistogramStats, 
+                              env: Env, dbname: str, table_name: str, col_name: str) -> dict:
+    """
+    比较两种直方图算法的准确性（不包含实际查询测试）
+    """
+    metrics = {}
+    
+    # 1. 桶数量比较
+    metrics['bucket_count_diff'] = abs(len(hist_2phase.buckets) - len(hist_original.buckets))
+    metrics['bucket_count_ratio'] = len(hist_2phase.buckets) / max(len(hist_original.buckets), 1)
+    
+    # 2. 采样率比较
+    metrics['sampling_rate_original'] = getattr(hist_original, 'sampling_rate', 1.0)
+    metrics['sampling_rate_2phase'] = getattr(hist_2phase, 'sampling_rate', 1.0)
+    
+    # 3. 累积频率分布比较
+    if hist_original.buckets and hist_2phase.buckets:
+        # 计算KL散度
+        kl_divergence = calculate_kl_divergence(hist_original, hist_2phase)
+        metrics['kl_divergence'] = kl_divergence
+        
+        # 计算Earth Mover's Distance
+        emd = calculate_earth_movers_distance(hist_original, hist_2phase)
+        metrics['earth_movers_distance'] = emd
+    
+    # 4. 直方图统计信息对比
+    if hist_original.buckets and hist_2phase.buckets:
+        # 比较桶的分布范围
+        orig_ranges = [(bucket.min_value, bucket.max_value) for bucket in hist_original.buckets]
+        phase2_ranges = [(bucket.min_value, bucket.max_value) for bucket in hist_2phase.buckets]
+        
+        metrics['range_coverage_original'] = f"{orig_ranges[0][0]} to {orig_ranges[-1][1]}"
+        metrics['range_coverage_2phase'] = f"{phase2_ranges[0][0]} to {phase2_ranges[-1][1]}"
+        
+        # 比较桶的密度分布
+        orig_densities = [bucket.row_count for bucket in hist_original.buckets]
+        phase2_densities = [bucket.row_count for bucket in hist_2phase.buckets]
+        
+        metrics['density_variance_original'] = np.var(orig_densities) if orig_densities else 0
+        metrics['density_variance_2phase'] = np.var(phase2_densities) if phase2_densities else 0
+    
+    return metrics
+
+
+def calculate_kl_divergence(hist1: HistogramStats, hist2: HistogramStats) -> float:
+    """
+    计算两个直方图之间的KL散度
+    """
+    if not hist1.buckets or not hist2.buckets:
+        return float('inf')
+    
+    # 方法1：使用概率密度（推荐）
+    def get_probability_density(buckets):
+        """从累积频率计算概率密度"""
+        if not buckets:
+            return []
+        
+        probs = []
+        prev_cum_freq = 0.0
+        
+        for bucket in buckets:
+            # 当前桶的概率 = 当前累积频率 - 前一个累积频率
+            current_prob = bucket.cum_freq - prev_cum_freq
+            probs.append(max(0.0, current_prob))  # 确保非负
+            prev_cum_freq = bucket.cum_freq
+        
+        return probs
+    
+    # 方法2：使用桶的row_count（更直接）
+    def get_probability_from_counts(buckets):
+        """直接从桶的计数计算概率"""
+        if not buckets:
+            return []
+        
+        total_count = sum(bucket.row_count for bucket in buckets)
+        if total_count <= 0:
+            return []
+        
+        return [bucket.row_count / total_count for bucket in buckets]
+    
+    # 使用方法2（更简单直接）
+    probs1 = get_probability_from_counts(hist1.buckets)
+    probs2 = get_probability_from_counts(hist2.buckets)
+    
+    if not probs1 or not probs2:
+        return float('inf')
+    
+    # 确保长度一致
+    max_len = max(len(probs1), len(probs2))
+    probs1.extend([0.0] * (max_len - len(probs1)))
+    probs2.extend([0.0] * (max_len - len(probs2)))
+    
+    # 计算KL散度
+    kl_div = 0.0
+    for i in range(max_len):
+        p1 = probs1[i]
+        p2 = probs2[i]
+        
+        if p1 > 0 and p2 > 0:
+            kl_div += p1 * math.log(p1 / p2)
+        elif p1 > 0 and p2 == 0:
+            return float('inf')
+    
+    return max(0.0, kl_div)
+
+# def calculate_kl_divergence(hist1: HistogramStats, hist2: HistogramStats) -> float:
+#     """
+#     计算两个直方图之间的KL散度
+#     """
+#     if not hist1.buckets or not hist2.buckets:
+#         return float('inf')
+    
+#     # 获取两个直方图的累积频率
+#     cum_freq1 = [bucket.cum_freq for bucket in hist1.buckets]
+#     cum_freq2 = [bucket.cum_freq for bucket in hist2.buckets]
+    
+#     # 确保长度一致
+#     max_len = max(len(cum_freq1), len(cum_freq2))
+#     cum_freq1.extend([1.0] * (max_len - len(cum_freq1)))
+#     cum_freq2.extend([1.0] * (max_len - len(cum_freq2)))
+    
+#     # 计算KL散度
+#     kl_div = 0.0
+#     for i in range(max_len):
+#         p1 = cum_freq1[i] if i < len(cum_freq1) else 1.0
+#         p2 = cum_freq2[i] if i < len(cum_freq2) else 1.0
+        
+#         # 避免log(0)
+#         if p1 > 0 and p2 > 0:
+#             kl_div += p1 * math.log(p1 / p2)
+    
+#     return kl_div
+
+def calculate_earth_movers_distance(hist1: HistogramStats, hist2: HistogramStats) -> float:
+    """
+    计算两个直方图之间的Earth Mover's Distance
+    """
+    if not hist1.buckets or not hist2.buckets:
+        return float('inf')
+    
+    # 简化实现：计算累积频率的L1距离
+    cum_freq1 = [bucket.cum_freq for bucket in hist1.buckets]
+    cum_freq2 = [bucket.cum_freq for bucket in hist2.buckets]
+    
+    # 确保长度一致
+    max_len = max(len(cum_freq1), len(cum_freq2))
+    cum_freq1.extend([1.0] * (max_len - len(cum_freq1)))
+    cum_freq2.extend([1.0] * (max_len - len(cum_freq2)))
+    
+    # 计算L1距离
+    emd = sum(abs(p1 - p2) for p1, p2 in zip(cum_freq1, cum_freq2))
+    
+    return emd
+
 
 
 if __name__ == '__main__':

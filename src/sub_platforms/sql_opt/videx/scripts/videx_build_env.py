@@ -9,6 +9,7 @@ import logging
 import os
 
 from pymysql import InternalError
+import sys 
 
 from sub_platforms.sql_opt.env.rds_env import OpenMySQLEnv
 from sub_platforms.sql_opt.videx import videx_logging
@@ -91,6 +92,9 @@ if __name__ == "__main__":
     parser.add_argument('--fetch_method', type=str, default='fetch', help='fetch, partial_fetch, sampling')
     parser.add_argument('--task_id', type=str, default=None,
                         help='task id is to distinguish different videx tasks, if they have same database names.')
+    parser.add_argument('--hist_algo', type=str, default=None, 
+                   help='Histogram algorithm: None (default), block_2phase')
+
 
     """
     videx_server_ip_port: IP and port information, Videx MySQL will inform Videx Python about this address and send Videx queries to it.
@@ -157,7 +161,8 @@ if __name__ == "__main__":
         files = fetch_all_meta_with_one_file(meta_path=meta_path,
                                              env=target_env, target_db=target_db, all_table_names=all_table_names,
                                              n_buckets=16, hist_force=True,
-                                             hist_mem_size=200000000, drop_hist_after_fetch=True)
+                                             hist_mem_size=200000000, drop_hist_after_fetch=True,
+                                             hist_algo=args.hist_algo)
         stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
         meta_request = construct_videx_task_meta_from_local_files(task_id=args.task_id,
                                                                   videx_db=videx_db,
@@ -173,7 +178,93 @@ if __name__ == "__main__":
         # We will introduce the sampling-based method soon.
         # This method will generate metadata from the sample data.
         # Additionally, the sample data will be employed to estimate the ndv (the number of distinct values) and cardinality.
-        raise NotImplementedError
+        #raise NotImplementedError
+        logging.info("Using sampling mode to collect metadata")
+
+        if all_table_names is None:
+            sql = f"""
+                SELECT TABLE_NAME 
+                FROM information_schema.TABLES 
+                WHERE table_schema = '{target_db}' and ENGINE = 'InnoDB'
+            """
+            table_df = target_env.query_for_dataframe(sql)
+            all_table_names = [str(name).lower() for name in table_df['TABLE_NAME'].tolist()]
+            logging.info(f"Retrieved table names: {all_table_names}")
+
+        if not all_table_names:
+            logging.error("No tables found for sampling")
+            sys.exit(1)
+
+        
+        files = fetch_all_meta_with_one_file(
+            meta_path=meta_path,
+            env=target_env, 
+            target_db=target_db, 
+            all_table_names=all_table_names,
+            n_buckets=16, 
+            hist_force=True,
+            hist_mem_size=200000000, 
+            drop_hist_after_fetch=True
+        )
+        stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
+        # 收集采样数据
+        sample_file_dict = {}
+        for table_name in all_table_names:
+            try:
+                sample_sql = f"""
+                    SELECT * FROM `{target_db}`.`{table_name}` 
+                    ORDER BY RAND() 
+                    LIMIT {max(1000, 1000)}
+                """
+                sample_data = target_env.query_for_dataframe(sample_sql)
+                
+                if not sample_data.empty:
+                    sample_file_dict[table_name] = sample_data
+                    logging.info(f"Sampled {len(sample_data)} rows from {table_name}")
+                else:
+                    logging.warning(f"No sample data collected from {table_name}")
+
+            except Exception as e:
+                logging.error(f"Failed to sample data from {table_name}: {e}")
+                continue
+        
+        # 构造元数据请求，包含采样数据
+        meta_request = construct_videx_task_meta_from_local_files(
+            task_id=args.task_id,
+            videx_db=videx_db,
+            stats_file=stats_file_dict,  # 基础统计信息
+            hist_file={},  # 空的直方图
+            ndv_single_file={}, # 空的单列 NDV
+            ndv_mulcol_file={}, # 空的多列 NDV
+            gt_rec_in_ranges_file=None,
+            gt_req_resp_file=None,
+            raise_error=True,
+            sample_file_dict=sample_file_dict  # 添加采样数据
+        )
+
+        for table_name, sample_df in sample_file_dict.items():
+            # meta_request.meta_dict 的结构是 {db_name: {table_name: VidexTableStats}}
+            # 使用 meta_dict 而不是 stats_dict
+            for db_name, db_meta_dict in meta_request.meta_dict.items():
+                if table_name in db_meta_dict:
+                    table_stats_info = db_meta_dict[table_name]
+                    if hasattr(table_stats_info, 'sample_data'):
+                        table_stats_info.sample_data = sample_df
+                        logging.info(f"Set sample data for {table_name}: {len(sample_df)} rows")
+                        # 新增：落盘样本并设置 sample_file_info（服务端据此读取）
+                        save_dir = f"/tmp/videx_samples/{videx_db}"
+                        os.makedirs(save_dir, exist_ok=True)
+                        save_path = os.path.join(save_dir, f"{table_name}.parquet")
+
+                        try:
+                            # 使用 CSV 格式，更兼容
+                            csv_path = save_path.replace('.parquet', '.csv')
+                            sample_df.to_csv(csv_path, index=False, encoding='utf-8')
+                            table_stats_info.sample_file_info = {"path": csv_path, "format": "csv"}
+                            logging.info(f"Saved sample for {table_name} to {csv_path} (CSV format)")
+                        except Exception as e:
+                            logging.error(f"Failed to save sample for {table_name}: {e}")
+
     else:
         raise NotImplementedError(f"Fetching method `{args.fetch_method}` not implemented, "
                                   f"only support `analyze`, `sampling`.")
