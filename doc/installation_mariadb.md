@@ -73,7 +73,7 @@ cp $VIDEX_HOME/build/mariadb_my.cnf $MARIADB_HOME/mysql_build_output/etc/mariadb
 
 ### 3. CMake Build
 
-Completely follow the official MariaDB build command, with the only difference of -DPLUGIN_VIDEX=YES.
+Completely follow the official MariaDB build command, with the only difference of `-DPLUGIN_VIDEX=YES`.
 
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Debug \
