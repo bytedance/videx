@@ -5,30 +5,28 @@ VIDEX supports the following installation methods:
 1. Compile a complete MariaDB Server (including VIDEX engine)
 2. Use Docker image installation method
 
-## 1. Prepare Environment
-
-### 1.1 Download Code
+## 1. Download Code
 
 ```bash
 # Clone videx_server
 VIDEX_HOME=$(pwd)/videx_server
 MARIADB_HOME=$(pwd)/mariadb_server
-git clone -b adapt2mariadb-11.8 --single-branch https://github.com/YoungHypo/videx.git $VIDEX_HOME
+git clone https://github.com/bytedance/videx.git $VIDEX_HOME
 
 # Clone mariadb_server
-git clone -b videx-temp --single-branch https://github.com/YoungHypo/server.git $MARIADB_HOME
+git clone -b 11.8 --single-branch https://github.com/MariaDB/server.git $MARIADB_HOME
 ```
 
-### 1.2 Build Docker Image
-If you can configure the **Clang build environment** for MariaDB without Docker, you may skip to the next section.  
-Otherwise, please use Docker.
+## 2. Prepare Environment
+
+### 2.1 Docker Mode
+
+If you can configure the **Clang build environment** for MariaDB without Docker, you may skip this section. Otherwise, please use Docker.
 
 ```bash
 cd $VIDEX_HOME
 docker build -t mariadb11_build -f build/Dockerfile.mariadb .
 ```
-
-### 1.3 Start Docker Container
 
 Run the following command to start the container:
 
@@ -42,7 +40,7 @@ docker run -dit \
   sleep infinity
 ```
 
-### 1.4 Enter the Container
+Enter the container
 
 ```bash
 docker exec -it videx-mariadb /bin/bash
@@ -54,10 +52,31 @@ Once inside the container, execute the script:
 /root/videx_server/build/build_mariadb.sh
 ```
 
-## 2. CMake Build
+### 2.2 Non-docker Mode
+
+You already have a local environment capable of building MariaDB. Otherwise, refer to build/Dockerfile.mariadb or use the Docker mode.
+
+Create the build output directories
+```bash
+mkdir -p $MARIADB_HOME/mysql_build_output/{ccache,build,data,logs,etc,tmp}
+```
+
+Copy the VIDEX storage engine (MariaDB version) into the MariaDB source tree
+```bash
+cp -r $VIDEX_HOME/src/mariadb/videx $MARIADB_HOME/storage/videx
+```
+
+Copy the configuration file
+```bash
+cp $VIDEX_HOME/build/mariadb_my.cnf $MARIADB_HOME/mysql_build_output/etc/mariadb_my.cnf
+```
+
+### 3. CMake Build
+
+Completely follow the official MariaDB build command, with the only difference of `-DPLUGIN_VIDEX=YES`.
 
 ```bash
-/usr/bin/cmake -DCMAKE_BUILD_TYPE=Debug \
+cmake -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
   -G Ninja --fresh \
   -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
@@ -74,41 +93,45 @@ Once inside the container, execute the script:
   -DPLUGIN_PERFSCHEMA=NO \
   -DWITH_WSREP=OFF \
   -DPLUGIN_VIDEX=YES \
-  -S /root/mariadb_server \
-  -B /root/mariadb_server/mysql_build_output/build
+  -S $MARIADB_HOME \
+  -B $MARIADB_HOME/mysql_build_output/build
 ```
 
 
-## 3. Build and Install
+## 4. Build and Install
 
 ```bash
-/usr/bin/cmake --build /root/mariadb_server/mysql_build_output/build -j 10
+cmake --build $MARIADB_HOME/mysql_build_output/build -j 10
 ```
 
-### 4. Initialize the Database
+## 5. Initialize the Database
+
+Completely follow the official MariaDB build command.
 
 ```bash
-cd /root/mariadb_server/mysql_build_output/build
+cd $MARIADB_HOME/mysql_build_output/build
 ./scripts/mariadb-install-db \
-  --srcdir=/root/mariadb_server \
-  --builddir=/root/mariadb_server/mysql_build_output/build \
-  --datadir=/root/mariadb_server/mysql_build_output/data \
+  --srcdir=$MARIADB_HOME \
+  --builddir=$MARIADB_HOME/mysql_build_output/build \
+  --datadir=$MARIADB_HOME/mysql_build_output/data \
   --user=root \
   --auth-root-authentication-method=normal
 ```
 
-## 5. Start MariaDB Server
+## 6. Start MariaDB Server
+
+Completely follow the official MariaDB build command.
 
 ```bash
-cd /root/mariadb_server/mysql_build_output/build
+cd $MARIADB_HOME/mysql_build_output/build
 ./sql/mariadbd \
-    --defaults-file=/root/mariadb_server/mysql_build_output/etc/mariadb_my.cnf --user=root
+    --defaults-file=$MARIADB_HOME/mysql_build_output/etc/mariadb_my.cnf --user=root
 ```
 
-## 6. Create New User
+## 7. Create New User
 
 ```bash
-cd /root/mariadb_server/mysql_build_output/build
+cd $MARIADB_HOME/mysql_build_output/build
 ./client/mariadb -h127.0.0.1 -uroot -P13308 -e "
 CREATE USER 'videx'@'%' IDENTIFIED BY 'password';
 GRANT ALL ON *.* TO 'videx'@'%';
@@ -116,7 +139,7 @@ FLUSH PRIVILEGES;
 "
 ```
 
-## 7. Import Test Data
+## 8. Import Test Data
 ```bash
 cd $VIDEX_HOME
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
@@ -124,7 +147,7 @@ tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```
 
-## Use mysql-test
+## 9. Use mysql-test
 
 You do not need to start `mariadbd` to run the VIDEX engine tests. Build the tree and use the MariaDB Test Runner (MTR).
 
@@ -132,27 +155,27 @@ Test suite location: `src/mariadb/videx/mysql-test/videx`
 
 1) Build
 ```bash
-/usr/bin/cmake --build /root/mariadb_server/mysql_build_output/build -j 10
+cmake --build $MARIADB_HOME/mysql_build_output/build -j 10
 ```
 
 2) Run the VIDEX suite with MTR
 ```bash
-cd /root/mariadb_server/mysql-test
-MTR_BINDIR=/root/mariadb_server/mysql_build_output/build \
+cd $MARIADB_HOME/mysql-test
+MTR_BINDIR=$MARIADB_HOME/mysql_build_output/build \
   ./mariadb-test-run.pl --suite=videx
 ```
 
 3) Run a single test
 ```bash
-cd /root/mariadb_server/mysql-test
-MTR_BINDIR=/root/mariadb_server/mysql_build_output/build \
+cd $MARIADB_HOME/mysql-test
+MTR_BINDIR=$MARIADB_HOME/mysql_build_output/build \
   ./mariadb-test-run.pl --suite=videx --do-test=create-table-and-index
 ```
 
 Optional: record expected result files on the first run
 ```bash
-cd /root/mariadb_server/mysql-test
-MTR_BINDIR=/root/mariadb_server/mysql_build_output/build \
+cd $MARIADB_HOME/mysql-test
+MTR_BINDIR=$MARIADB_HOME/mysql_build_output/build \
   ./mariadb-test-run.pl --suite=videx --record create-table-and-index
 ```
 
