@@ -8,13 +8,14 @@ git config --global --add safe.directory /root/mariadb_server
 
 mkdir -p /root/mariadb_server/mysql_build_output/{ccache,build,data,logs,etc,tmp}
 
+export MARIADB_HOME=/root/mariadb_server
 export CCACHE_DIR=/root/mariadb_server/mysql_build_output/ccache
 
 if [ -d /root/mariadb_server/storage/videx ]; then
     echo "Videx directory already exists. Skipping copy."
 else
     echo "Copying videx to mariadb_server..."
-    cp -r /root/videx_server/src/mysql/videx /root/mariadb_server/storage/videx
+    cp -r /root/videx_server/src/mariadb/videx /root/mariadb_server/storage/videx
 fi
 
 if [ -f /root/mariadb_server/mysql_build_output/etc/mariadb_my.cnf ]; then
