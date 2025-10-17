@@ -73,6 +73,8 @@ cp $VIDEX_HOME/build/mariadb_my.cnf $MARIADB_HOME/mysql_build_output/etc/mariadb
 
 ### 3. CMake Build
 
+Completely follow the official MariaDB build command, with the only difference of -DPLUGIN_VIDEX=YES.
+
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_CXX_COMPILER=/usr/bin/clang++ \
@@ -104,6 +106,8 @@ cmake --build $MARIADB_HOME/mysql_build_output/build -j 10
 
 ## 5. Initialize the Database
 
+Completely follow the official MariaDB build command.
+
 ```bash
 cd $MARIADB_HOME/mysql_build_output/build
 ./scripts/mariadb-install-db \
@@ -115,6 +119,8 @@ cd $MARIADB_HOME/mysql_build_output/build
 ```
 
 ## 6. Start MariaDB Server
+
+Completely follow the official MariaDB build command.
 
 ```bash
 cd $MARIADB_HOME/mysql_build_output/build
