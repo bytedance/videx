@@ -11,6 +11,7 @@ CREATE TABLE `orders` (
 PRIMARY KEY (`O_ORDERKEY`),
 KEY `ORDERS_FK1` (`O_CUSTKEY`)
 ) ENGINE=VIDEX;
+SET SESSION videx_server_ip=NULL;
 SHOW CREATE TABLE orders;
 Table	Create Table
 orders	CREATE TABLE `orders` (
@@ -44,3 +45,4 @@ orders	CREATE TABLE `orders` (
   KEY `idx_orders_status_date` (`O_ORDERSTATUS`,`O_ORDERDATE`)
 ) ENGINE=VIDEX DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_uca1400_ai_ci
 DROP TABLE orders;
+SET SESSION videx_server_ip=DEFAULT;
