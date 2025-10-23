@@ -760,7 +760,8 @@ def force_generate_histogram_by_sdc_for_col(env: Env, db_name: str, table_name: 
         "null-values": None,
         "collation-id": MEANINGLESS_INT,
         "sampling-rate": 1.0,
-        "number-of-buckets-specified": None
+        "number-of-buckets-specified": None,
+        "database-type": None,
     }
     column = env.get_column_meta(db_name, table_name, col_name)
     if not column:
