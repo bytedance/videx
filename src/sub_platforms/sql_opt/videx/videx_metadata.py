@@ -1164,3 +1164,119 @@ class VidexMetaGetter(ABC):
             VidexDBTaskStats: The metadata of the task.
         """
         raise NotImplementedError
+
+
+def collect_sample_data_for_tables(env, target_db: str, all_table_names: List[str], 
+                                 sample_size: int = 1000) -> Dict[str, pd.DataFrame]:
+    """
+    Collect sample data from specified tables for NDV estimation.
+    
+    Args:
+        env: Database environment
+        target_db: Target database name
+        all_table_names: List of table names to sample
+        sample_size: Number of rows to sample per table
+        
+    Returns:
+        Dict mapping table names to sample DataFrames
+    """
+    sample_file_dict = {}
+    
+    for table_name in all_table_names:
+        try:
+            sample_sql = f"""
+                SELECT * FROM `{target_db}`.`{table_name}` 
+                ORDER BY RAND() 
+                LIMIT {max(sample_size, 1000)}
+            """
+            sample_data = env.query_for_dataframe(sample_sql)
+            
+            if not sample_data.empty:
+                sample_file_dict[table_name] = sample_data
+                logging.info(f"Sampled {len(sample_data)} rows from {table_name}")
+            else:
+                logging.warning(f"No sample data collected from {table_name}")
+
+        except Exception as e:
+            logging.error(f"Failed to sample data from {table_name}: {e}")
+            continue
+    
+    return sample_file_dict
+
+
+def save_sample_data_to_files(sample_file_dict: Dict[str, pd.DataFrame], 
+                            videx_db: str, 
+                            save_dir: str = "/tmp/videx_samples") -> Dict[str, Dict[str, str]]:
+    """
+    Save sample data to CSV files and return file info for metadata.
+    
+    Args:
+        sample_file_dict: Dict mapping table names to sample DataFrames
+        videx_db: VIDEX database name
+        save_dir: Directory to save sample files
+        
+    Returns:
+        Dict mapping table names to file info dictionaries
+    """
+    os.makedirs(save_dir, exist_ok=True)
+    sample_file_info_dict = {}
+    
+    for table_name, sample_df in sample_file_dict.items():
+        try:
+            # 使用 CSV 格式，更兼容
+            csv_path = os.path.join(save_dir, f"{table_name}.csv")
+            sample_df.to_csv(csv_path, index=False, encoding='utf-8')
+            sample_file_info_dict[table_name] = {"path": csv_path, "format": "csv"}
+            logging.info(f"Saved sample for {table_name} to {csv_path} (CSV format)")
+        except Exception as e:
+            logging.error(f"Failed to save sample for {table_name}: {e}")
+    
+    return sample_file_info_dict
+
+
+def construct_meta_request_with_samples(task_id: str, videx_db: str, 
+                                      stats_file_dict: Dict, 
+                                      sample_file_dict: Dict[str, pd.DataFrame],
+                                      sample_file_info_dict: Dict[str, Dict[str, str]]) -> 'VidexDBTaskStats':
+    """
+    Construct metadata request with sample data for NDV estimation.
+    
+    Args:
+        task_id: Task ID
+        videx_db: VIDEX database name
+        stats_file_dict: Statistics file dictionary
+        sample_file_dict: Sample data dictionary
+        sample_file_info_dict: Sample file info dictionary
+        
+    Returns:
+        VidexDBTaskStats object with sample data
+    """
+    # 构造元数据请求，包含采样数据
+    meta_request = construct_videx_task_meta_from_local_files(
+        task_id=task_id,
+        videx_db=videx_db,
+        stats_file=stats_file_dict,  # 基础统计信息
+        hist_file={},  # 空的直方图
+        ndv_single_file={}, # 空的单列 NDV
+        ndv_mulcol_file={}, # 空的多列 NDV
+        gt_rec_in_ranges_file=None,
+        gt_req_resp_file=None,
+        raise_error=True,
+        sample_file_dict=sample_file_dict  # 添加采样数据
+    )
+
+    # 设置样本文件信息
+    for table_name, sample_df in sample_file_dict.items():
+        # meta_request.meta_dict 的结构是 {db_name: {table_name: VidexTableStats}}
+        for db_name, db_meta_dict in meta_request.meta_dict.items():
+            if table_name in db_meta_dict:
+                table_stats_info = db_meta_dict[table_name]
+                if hasattr(table_stats_info, 'sample_data'):
+                    table_stats_info.sample_data = sample_df
+                    logging.info(f"Set sample data for {table_name}: {len(sample_df)} rows")
+                    
+                    # 设置样本文件信息（服务端据此读取）
+                    if table_name in sample_file_info_dict:
+                        table_stats_info.sample_file_info = sample_file_info_dict[table_name]
+    
+    return meta_request

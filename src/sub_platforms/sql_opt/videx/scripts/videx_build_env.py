@@ -14,7 +14,8 @@ import sys
 from sub_platforms.sql_opt.env.rds_env import OpenMySQLEnv
 from sub_platforms.sql_opt.videx import videx_logging
 from sub_platforms.sql_opt.videx.videx_metadata import fetch_all_meta_for_videx, \
-    construct_videx_task_meta_from_local_files, fetch_all_meta_with_one_file
+    construct_videx_task_meta_from_local_files, fetch_all_meta_with_one_file, \
+    collect_sample_data_for_tables, save_sample_data_to_files, construct_meta_request_with_samples
 from sub_platforms.sql_opt.videx.videx_service import create_videx_env_multi_db, \
     post_add_videx_meta
 from sub_platforms.sql_opt.videx.videx_utils import VIDEX_IP_WHITE_LIST
@@ -207,63 +208,31 @@ if __name__ == "__main__":
             drop_hist_after_fetch=True
         )
         stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
+        
         # 收集采样数据
-        sample_file_dict = {}
-        for table_name in all_table_names:
-            try:
-                sample_sql = f"""
-                    SELECT * FROM `{target_db}`.`{table_name}` 
-                    ORDER BY RAND() 
-                    LIMIT {max(1000, 1000)}
-                """
-                sample_data = target_env.query_for_dataframe(sample_sql)
-                
-                if not sample_data.empty:
-                    sample_file_dict[table_name] = sample_data
-                    logging.info(f"Sampled {len(sample_data)} rows from {table_name}")
-                else:
-                    logging.warning(f"No sample data collected from {table_name}")
-
-            except Exception as e:
-                logging.error(f"Failed to sample data from {table_name}: {e}")
-                continue
+        sample_file_dict = collect_sample_data_for_tables(
+            env=target_env,
+            target_db=target_db,
+            all_table_names=all_table_names,
+            sample_size=1000
+        )
+        
+        # 保存采样数据到文件
+        save_dir = f"/tmp/videx_samples/{videx_db}"
+        sample_file_info_dict = save_sample_data_to_files(
+            sample_file_dict=sample_file_dict,
+            videx_db=videx_db,
+            save_dir=save_dir
+        )
         
         # 构造元数据请求，包含采样数据
-        meta_request = construct_videx_task_meta_from_local_files(
+        meta_request = construct_meta_request_with_samples(
             task_id=args.task_id,
             videx_db=videx_db,
-            stats_file=stats_file_dict,  # 基础统计信息
-            hist_file={},  # 空的直方图
-            ndv_single_file={}, # 空的单列 NDV
-            ndv_mulcol_file={}, # 空的多列 NDV
-            gt_rec_in_ranges_file=None,
-            gt_req_resp_file=None,
-            raise_error=True,
-            sample_file_dict=sample_file_dict  # 添加采样数据
+            stats_file_dict=stats_file_dict,
+            sample_file_dict=sample_file_dict,
+            sample_file_info_dict=sample_file_info_dict
         )
-
-        for table_name, sample_df in sample_file_dict.items():
-            # meta_request.meta_dict 的结构是 {db_name: {table_name: VidexTableStats}}
-            # 使用 meta_dict 而不是 stats_dict
-            for db_name, db_meta_dict in meta_request.meta_dict.items():
-                if table_name in db_meta_dict:
-                    table_stats_info = db_meta_dict[table_name]
-                    if hasattr(table_stats_info, 'sample_data'):
-                        table_stats_info.sample_data = sample_df
-                        logging.info(f"Set sample data for {table_name}: {len(sample_df)} rows")
-                        # 新增：落盘样本并设置 sample_file_info（服务端据此读取）
-                        save_dir = f"/tmp/videx_samples/{videx_db}"
-                        os.makedirs(save_dir, exist_ok=True)
-                        save_path = os.path.join(save_dir, f"{table_name}.parquet")
-
-                        try:
-                            # 使用 CSV 格式，更兼容
-                            csv_path = save_path.replace('.parquet', '.csv')
-                            sample_df.to_csv(csv_path, index=False, encoding='utf-8')
-                            table_stats_info.sample_file_info = {"path": csv_path, "format": "csv"}
-                            logging.info(f"Saved sample for {table_name} to {csv_path} (CSV format)")
-                        except Exception as e:
-                            logging.error(f"Failed to save sample for {table_name}: {e}")
 
     else:
         raise NotImplementedError(f"Fetching method `{args.fetch_method}` not implemented, "
