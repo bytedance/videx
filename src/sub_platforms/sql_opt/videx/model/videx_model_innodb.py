@@ -51,24 +51,13 @@ class VidexModelInnoDB(VidexModelBase):
 
     def loading_ndv_model(self):
 
-        # print("--------LoADING NDV MODEL--------", flush=True)
-        # print(f"------Debug: table_stats = {self.table_stats is not None}", flush=True)
-        # print(f"------Debug: table_stats.table_stats.sample_file_info = {self.table_stats.sample_file_info is not None}", flush=True)
-
         if self.table_stats and self.table_stats.sample_file_info is not None:
             logging.info(f"loading ndv model: NDVEstimator, table_name={self.table_name}")
             st = time.perf_counter()
             table_rows = self.table_stats.records
             self.ndv_model = NDVEstimator(table_rows)
 
-            # print(f"------Debug: table_stats.sample_data = {self.table_stats.sample_data}", flush=True)
-            # print(f"------Debug: hasattr sample_data = {hasattr(self.table_stats, 'sample_data')}", flush=True)
-
             self.df_sample_raw = load_sample_file(self.table_stats)
-
-            # print(f"------Debug: df_sample_raw = {self.df_sample_raw}", flush=True)
-            # if self.df_sample_raw is not None:
-            #     print(f"------Debug: df_sample_raw shape = {self.df_sample_raw.shape}", flush=True)
 
             logging.info(f"loading ndv model: NDVEstimator, table_name={self.table_name}, "
                          f"use {time.perf_counter() - st:.2f} seconds")
