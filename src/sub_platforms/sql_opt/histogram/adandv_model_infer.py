@@ -90,7 +90,7 @@ class AdaNDVPredictor:
         self.model.eval()
 
     def predict(self, profile, estimate_list, total_rows=None):
-        pad_len = self.config.model_input_len - 3  # 实验默认=97
+        pad_len = self.config.model_input_len - 3  # Experimental default = 97
         profile = profile[:pad_len] + [0] * (pad_len - len(profile))
 
         logn = np.log(np.dot(np.arange(len(profile)), profile))
