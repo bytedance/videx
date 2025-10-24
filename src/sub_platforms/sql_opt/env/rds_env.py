@@ -374,7 +374,7 @@ class OpenMySQLEnv(DirectConnectMySQLEnv):
             port=config.port,
             usr=config.user,
             pwd=config.pwd,
-            db_name=config.schema,
+            db_name=config.database_name,
             read_timeout=config.read_timeout,
             write_timeout=config.write_timeout,
             connect_timeout=config.connect_timeout,
