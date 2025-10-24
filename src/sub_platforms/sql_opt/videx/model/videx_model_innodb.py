@@ -226,11 +226,9 @@ class VidexModelInnoDB(VidexModelBase):
         except Exception:
             options = {}
         
-        # Allow SQL: SET @VIDEX_OPTIONS='{"ndv_method":"PLM4NDV"}';
-        method_from_sql = options.get('ndv_method')
-        if method_from_sql:
-            self.ndv_method = method_from_sql  # Override the highest priority method for this instance of the request
-        
+        # This is a per-query setting, reset at the start of each SQL execution.
+        self.ndv_method = options.get('ndv_method', None)
+
         CONCAT = " #@# "
         res = {
             "stat_n_rows": self.table_stats.records,
