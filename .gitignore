@@ -5,6 +5,7 @@
 .vscode
 .coverage
 __pycache__/
+*.pth
 *.pyc
 span.log
 .DS_Store
