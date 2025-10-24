@@ -1,0 +1,65 @@
+EXPLAIN
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 4.7001848,
+    "nested_loop": [
+      {
+        "table": {
+          "table_name": "part",
+          "access_type": "ALL",
+          "possible_keys": ["PRIMARY"],
+          "loops": 1,
+          "rows": 2080,
+          "cost": 0.3678456,
+          "filtered": 100,
+          "attached_condition": "part.P_BRAND = 'Brand#35' and part.P_CONTAINER = 'LG CAN'"
+        }
+      },
+      {
+        "table": {
+          "table_name": "lineitem",
+          "access_type": "ref",
+          "possible_keys": ["LINEITEM_FK2"],
+          "key": "LINEITEM_FK2",
+          "key_length": "4",
+          "used_key_parts": ["L_PARTKEY"],
+          "ref": ["tpch_tiny.part.P_PARTKEY"],
+          "loops": 2080,
+          "rows": 1,
+          "cost": 4.3323392,
+          "filtered": 100,
+          "attached_condition": "lineitem.L_QUANTITY < (subquery#2)"
+        }
+      }
+    ],
+    "subqueries": [
+      {
+        "subquery_cache": {
+          "state": "uninitialized",
+          "query_block": {
+            "select_id": 2,
+            "cost": 0.00345856,
+            "nested_loop": [
+              {
+                "table": {
+                  "table_name": "lineitem",
+                  "access_type": "ref",
+                  "possible_keys": ["LINEITEM_FK2"],
+                  "key": "LINEITEM_FK2",
+                  "key_length": "4",
+                  "used_key_parts": ["L_PARTKEY"],
+                  "ref": ["tpch_tiny.part.P_PARTKEY"],
+                  "loops": 1,
+                  "rows": 1,
+                  "cost": 0.00345856,
+                  "filtered": 100
+                }
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

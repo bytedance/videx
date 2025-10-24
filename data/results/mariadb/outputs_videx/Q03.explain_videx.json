@@ -1,0 +1,58 @@
+EXPLAIN
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 6.5741502,
+    "filesort": {
+      "sort_key": "sum(lineitem.L_EXTENDEDPRICE * (1 - lineitem.L_DISCOUNT)) desc, orders.O_ORDERDATE",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "customer",
+              "access_type": "ALL",
+              "possible_keys": ["PRIMARY"],
+              "loops": 1,
+              "rows": 1545,
+              "cost": 0.278931,
+              "filtered": 100,
+              "attached_condition": "customer.C_MKTSEGMENT = 'BUILDING'"
+            }
+          },
+          {
+            "table": {
+              "table_name": "orders",
+              "access_type": "ref",
+              "possible_keys": ["PRIMARY", "ORDERS_FK1"],
+              "key": "ORDERS_FK1",
+              "key_length": "4",
+              "used_key_parts": ["O_CUSTKEY"],
+              "ref": ["videx_tpch_tiny.customer.C_CUSTKEY"],
+              "loops": 1545,
+              "rows": 1,
+              "cost": 2.9522304,
+              "filtered": 100,
+              "attached_condition": "orders.O_ORDERDATE < <cache>(str_to_date('1995-03-08','%Y-%m-%d'))"
+            }
+          },
+          {
+            "table": {
+              "table_name": "lineitem",
+              "access_type": "ref",
+              "possible_keys": ["LINEITEM_UK1", "LINEITEM_FK1"],
+              "key": "LINEITEM_FK1",
+              "key_length": "4",
+              "used_key_parts": ["L_ORDERKEY"],
+              "ref": ["videx_tpch_tiny.orders.O_ORDERKEY"],
+              "loops": 1545,
+              "rows": 1,
+              "cost": 3.3429888,
+              "filtered": 100,
+              "attached_condition": "lineitem.L_SHIPDATE > <cache>(str_to_date('1995-03-08','%Y-%m-%d'))"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

@@ -414,11 +414,11 @@ def fetch_ndv_single(env: Env, target_db: str, all_table_names: List[str]) \
         for c_id, col in enumerate(table_meta.columns):
             col: Column
             sql = f"SELECT COUNT(DISTINCT {col.name}) FROM `{target_db}`.`{table_name}`;"
-            logging.info(f"Fetch NDV for {table_name}.{col} [{c_id}/{len(table_meta.columns)}]: {sql}")
+            logging.info(f"fetch NDV for {table_name}.{col} [{c_id}/{len(table_meta.columns)}]: {sql}")
             try:
                 ndv = env.execute(sql, params=None)
             except Exception as e:
-                logging.error(f"fetch ndv error on {target_db}.{table_name}.{col}: {e}")
+                logging.error(f"fetch NDV error on {target_db}.{table_name}.{col}: {e}")
                 ndv = INVALID_VALUE
 
             res_tables[str(table_name).lower()][col.name] = int(np.squeeze(ndv))
@@ -852,7 +852,7 @@ def execute_sql_to_videx(sql: str, env: Env, videx_py_ip_port: str, videx_option
 
 
 def extract_rec_in_range_gt_from_explain(env: Env, sql: str,
-                                         target_version: MySQLVersion=MySQLVersion.MySQL_8,
+                                         target_version: MySQLVersion=MySQLVersion.MySQL_8 or MySQLVersion.MariaDB_11_8,
                                          videx_py_ip_port: str = None, videx_options: dict = None,
                                          ret_trace: bool = True,
                                          verbose: bool = True,

@@ -219,6 +219,7 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
     last_updated: Optional[str] = str(MEANINGLESS_INT)
     sampling_rate: Optional[float] = MEANINGLESS_INT
     number_of_buckets_specified: Optional[int] = MEANINGLESS_INT
+    database_type: Optional[str] = 'mysql'
 
     def model_post_init(self, __context: Any) -> None:
         if int(self.null_values) == MEANINGLESS_INT:
@@ -265,13 +266,30 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
             key_cum_freq = 0
         else:
             key_cum_freq = None
+            bucket_found = False
             for i in range(len(self.buckets)):
                 if i < len(self.buckets) and (self.buckets[i].max_value < value < self.buckets[i + 1].min_value):
                     logging.warning(f"!!!!!!!!! value(={value})%s is "
                                     f"between buckets-{i} and {i + 1}: {self.buckets[i]}, {self.buckets[i + 1]}")
                     value = self.buckets[i].max_value
                 cur: HistogramBucket = self.buckets[i]
-                if cur.min_value <= value <= cur.max_value:
+
+                if self.database_type == 'mariadb':
+                    # MariaDB: closed interval for the last bucket, open interval for the others
+                    if i == len(self.buckets) - 1:
+                        # the last bucket: closed interval [min_value, max_value]
+                        if cur.min_value <= value <= cur.max_value:
+                            bucket_found = True
+                    else:
+                        # other buckets: open interval [min_value, max_value)
+                        if cur.min_value <= value < cur.max_value:
+                            bucket_found = True
+                else:
+                    # MySQL bucket is closed interval
+                    if cur.min_value <= value <= cur.max_value:
+                        bucket_found = True
+                
+                if bucket_found:
                     # a float number between [0, 1], it's the width of one value in the bucket,
                     # 1 means that all values in the bucket are same.
                     one_value_width: float
@@ -369,9 +387,77 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
             last_updated=data.get('last-updated', None),
             sampling_rate=data.get('sampling-rate', MEANINGLESS_INT),  # a special value indicating no sampling rate
             histogram_type=data['histogram-type'],
-            number_of_buckets_specified=data['number-of-buckets-specified']
+            number_of_buckets_specified=data['number-of-buckets-specified'],
+            database_type=data['database-type']
         )
+    
+    @staticmethod
+    def init_from_mariadb_json(env: Env, dbname: str, table_name: str, col_name: str, hist_dict: dict):
+        """
+        init HistogramStats from mariadb json
+        MariaDB format:
+        {
+            "target_histogram_size": 16,
+            "collected_at": "2025-08-06 18:15:32",
+            "collected_by": "11.8.2-MariaDB-debug",
+            "histogram_hb": [
+                {
+                    "start": "AUTOMOBILE",
+                    "size": 0.201294498,
+                    "ndv": 1
+                },
+                {
+                    "start": "BUILDING",
+                    "end": "BUILDING",
+                    "size": 0.222006472,
+                    "ndv": 1
+                }
+            ]
+        }
+        """
+        buckets: List[HistogramBucket] = []
+    
+        if 'histogram_hb' in hist_dict:
+            histogram_hb = hist_dict['histogram_hb']
 
+            cumulative_freq = 0.0
+        
+            for i, bucket_raw in enumerate(histogram_hb):
+                start_value = bucket_raw.get('start', '')
+                size = bucket_raw.get('size', 0.0)
+                ndv = bucket_raw.get('ndv', 1)
+            
+                cumulative_freq += size
+            
+                if 'end' in bucket_raw:
+                    # if end is specified, use the specified value
+                    end_value = bucket_raw['end']
+                elif i < len(histogram_hb) - 1:
+                    # if not the last bucket, use the start of the next bucket as end
+                    end_value = histogram_hb[i + 1]['start']
+                else:
+                    # the last bucket, use start as end (equi-height bucket)
+                    end_value = start_value
+            
+                bucket = HistogramBucket(
+                    min_value=start_value,
+                    max_value=end_value,
+                    cum_freq= min(1, cumulative_freq),
+                    row_count=ndv   # MariaDB's ndv is the same as MySQL's row_count
+                )
+                buckets.append(bucket)
+
+        return HistogramStats(
+            buckets=buckets,
+            data_type=env.get_column_meta(dbname, table_name, col_name).data_type,
+            histogram_type='equi-height',  # MariaDB default use equi-height
+            null_values=0,  # MariaDB does not provide null value information, default is 0
+            collation_id=None,
+            last_updated=hist_dict.get('collected_at', None),
+            sampling_rate=MEANINGLESS_INT,
+            number_of_buckets_specified=hist_dict.get('target_histogram_size', MEANINGLESS_INT),
+            database_type='mariadb'
+        )
 
 def query_histogram(env: Env, dbname: str, table_name: str, col_name: str) -> Union[HistogramStats, None]:
     """
@@ -687,7 +773,8 @@ def force_generate_histogram_by_sdc_for_col(env: Env, db_name: str, table_name: 
         "null-values": None,
         "collation-id": MEANINGLESS_INT,
         "sampling-rate": 1.0,
-        "number-of-buckets-specified": None
+        "number-of-buckets-specified": None,
+        "database-type": None,
     }
     column = env.get_column_meta(db_name, table_name, col_name)
     if not column:
@@ -736,6 +823,8 @@ def force_generate_histogram_by_sdc_for_col(env: Env, db_name: str, table_name: 
             cum_freq,
             max(1, int(bucket_ndv)),
         ])
+
+    res_dict['database-type'] = 'mariadb' if env.get_version() == MySQLVersion.MariaDB_11_8 else 'mysql'
 
     return HistogramStats.init_from_mysql_json(res_dict)
 
@@ -975,6 +1064,106 @@ def fetch_col_histogram(env: Env, dbname: str, table_name: str, col_name: str, n
     assert res_update, 'Failed to update histogram'
     return query_histogram(env, dbname, table_name, col_name)
 
+def query_histogram_mariadb(env: Env, dbname: str, table_name: str, col_name: str, n_buckets: int) -> Union[HistogramStats, None]:
+    """
+    query histogram for a column in mariadb
+    """
+    sql = f"SELECT JSON_PRETTY(CONVERT(histogram USING utf8mb4)) AS HISTOGRAM " \
+          f"FROM mysql.column_stats WHERE db_name = '{dbname}' AND table_name = '{table_name}' AND column_name = '{col_name}';"
+    res = env.query_for_dataframe(sql)
+    if len(res) == 0:
+        return None
+    
+    assert len(res) == 1 and 'HISTOGRAM' in res.iloc[0].to_dict(), f"Invalid result from query_histogram: {res}"
+    
+    # Check if HISTOGRAM is None
+    histogram_value = res.iloc[0].to_dict()['HISTOGRAM']
+    if histogram_value is None:
+        logging.warning(f"HISTOGRAM is None, force generate histogram for {dbname=}, {table_name=}, {col_name=}")
+        return force_generate_histogram_by_sdc_for_col(env, dbname, table_name, col_name, n_buckets)
+    
+    hist_dict = json.loads(histogram_value)
+    
+    return HistogramStats.init_from_mariadb_json(env, dbname, table_name, col_name, hist_dict)
+
+def update_histogram_mariadb(env: Env, dbname: str, table_name: str, n_buckets: int = 32) -> bool:
+    """
+    update histogram for a column in mariadb
+    """
+    n_buckets = max(1, min(1024, int(n_buckets)))
+
+    conn = env.mysql_util.get_connection()
+    with conn.cursor() as cursor:
+        cursor.execute(f"SET histogram_size = {n_buckets};")
+        cursor.execute(f"ANALYZE TABLE `{dbname}`.`{table_name}` PERSISTENT FOR ALL;")
+        conn.commit()
+        return True
+
+    raise Exception(f"meet error when query: {res}")
+
+def drop_histogram_mariadb(env: Env, dbname: str) -> bool:
+    """
+    drop histogram for a column in mariadb
+    """
+    sql = f"DELETE FROM mysql.column_stats WHERE db_name = '{dbname}';"
+    # Use execute_query instead of query_for_dataframe, because DELETE statement does not need to return data
+    res = env.mysql_util.execute_query(sql)
+
+    if res is not None and len(res) == 1:
+        return True
+    return False
+
+def generate_fetch_histogram_mariadb(env: Env, target_db: str, all_table_names: List[str],
+                                     n_buckets: int, force: bool,
+                                     drop_hist_after_fetch: bool,
+                                     ret_json: bool = False
+                                     ) -> Dict[str, Dict[str, Union[HistogramStats, dict]]]:
+    """
+    generate histogram for all specifed tables in mariadb
+    """
+    res_tables = defaultdict(dict)
+    for table_name in all_table_names:
+        table_meta: Table = env.get_table_meta(target_db, table_name)
+        if not force:
+            for c_id, col in enumerate(table_meta.columns):
+                col: Column
+                hist = query_histogram_mariadb(env, target_db, table_name, col.name)
+                if hist is not None:
+                    if len(hist.buckets) == n_buckets:
+                        res_tables[str(table_name).lower()][col.name] = hist
+                        continue
+                    else:
+                        logging.debug(f"hist(`{target_db}`.`{table_name}`.`{col.name=}`) exists, "
+                                      f"but n_bucket mismatch (exists={len(hist.buckets)} != {n_buckets}), re-generate.")
+                else:
+                    logging.debug(f"Histogram(`{target_db}`.`{table_name}`.`{col.name=}`) not found. "
+                                  f"Generating with {n_buckets} n_buckets")
+        else:
+            logging.debug(f"force generate histogram for {target_db}.{table_name}")
+            
+        try:
+            res_update = update_histogram_mariadb(env, target_db, table_name, n_buckets)
+        except Exception as e:
+            logging.error(f"update histogram failed for {target_db=}, {table_name=}")
+            raise
+        assert res_update, 'Failed to update histogram'
+
+        for c_id, col in enumerate(table_meta.columns):
+            col: Column
+            logging.info(f"Generating Histogram for `{target_db}`.`{table_name}`.`{col.name}` "
+                         f"with {n_buckets} n_buckets")
+            hist = query_histogram_mariadb(env, target_db, table_name, col.name, n_buckets)
+            if hist is not None and ret_json:
+                hist = hist.to_dict()
+            res_tables[str(table_name).lower()][col.name] = hist
+    
+    if drop_hist_after_fetch:
+        try:
+            drop_histogram_mariadb(env, target_db)
+        except Exception as e:
+            logging.error(f"drop histogram failed for {target_db=}, {e=}")
+
+    return res_tables
 
 def generate_fetch_histogram(env: Env, target_db: str, all_table_names: List[str],
                              n_buckets: int, force: bool,
@@ -1009,12 +1198,13 @@ def generate_fetch_histogram(env: Env, target_db: str, all_table_names: List[str
 
     ndv_single_dict = ndv_single_dict or {}
 
-    only_sfw_fetch = env.get_version() == MySQLVersion.MySQL_57
+    version = env.get_version()
+    if version == MySQLVersion.MariaDB_11_8:
+        return generate_fetch_histogram_mariadb(env, target_db, all_table_names, n_buckets, force, drop_hist_after_fetch, ret_json)
 
     res_tables = defaultdict(dict)
     for table_name in all_table_names:
         table_meta: Table = env.get_table_meta(target_db, table_name)
-        # print(table_meta)
         for c_id, col in enumerate(table_meta.columns):
             col: Column
             ndv = ndv_single_dict.get(table_name, {}).get(col.name, None)
@@ -1022,10 +1212,10 @@ def generate_fetch_histogram(env: Env, target_db: str, all_table_names: List[str
             try:
                 logging.info(f"Generating Histogram for `{target_db}`.`{table_name}`.`{col.name}` "
                              f"with {n_buckets} n_buckets")
-                if only_sfw_fetch:
+                if version == MySQLVersion.MySQL_57:
                     hist = force_generate_histogram_by_sdc_for_col(env, target_db, table_name, col.name, n_buckets,
                                                                    ndv=ndv)
-                else:
+                elif version == MySQLVersion.MySQL_8:
                     hist = fetch_col_histogram(env, target_db, table_name, col.name, n_buckets, force=force,
                                                hist_mem_size=hist_mem_size,
                                                ndv=ndv,
@@ -1035,7 +1225,7 @@ def generate_fetch_histogram(env: Env, target_db: str, all_table_names: List[str
                                                r1_hint=r1_hint,
                                                histogram_builder=histogram_builder)
             finally:
-                if not only_sfw_fetch and drop_hist_after_fetch:
+                if drop_hist_after_fetch and version == MySQLVersion.MySQL_8:
                     try:
                         drop_histogram(env, target_db, table_name, col.name)
                     except Exception as e:

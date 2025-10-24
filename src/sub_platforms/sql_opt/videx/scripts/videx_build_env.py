@@ -128,7 +128,7 @@ if __name__ == "__main__":
     try:
         videx_env = OpenMySQLEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=videx_db,
                                  read_timeout=300, write_timeout=300, connect_timeout=10)
-    except InternalError as e:
+    except Exception as e:
         if f"Unknown database '{videx_db}'" in str(e):
             videx_env = OpenMySQLEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=None,
                                      read_timeout=300, write_timeout=300, connect_timeout=10)
