@@ -26,7 +26,3 @@ videx.egg-info
 tpch_tiny.sql
 videx_metadata_tpch_tiny.json
 dist
-data
-test_adandv.py
-test_estimators.py
-stats_estimators.py

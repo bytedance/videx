@@ -1,0 +1,109 @@
+EXPLAIN
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 7.79146985,
+    "filesort": {
+      "sort_key": "n1.N_NAME, n2.N_NAME, extract(year from lineitem.L_SHIPDATE)",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "n2",
+              "access_type": "ALL",
+              "possible_keys": ["PRIMARY"],
+              "loops": 1,
+              "rows": 25,
+              "cost": 0.0149298,
+              "filtered": 100,
+              "attached_condition": "n2.N_NAME = 'CANADA' or n2.N_NAME = 'IRAN'"
+            }
+          },
+          {
+            "table": {
+              "table_name": "customer",
+              "access_type": "ref",
+              "possible_keys": ["PRIMARY", "CUSTOMER_FK1"],
+              "key": "CUSTOMER_FK1",
+              "key_length": "4",
+              "used_key_parts": ["C_NATIONKEY"],
+              "ref": ["tpch_tiny.n2.N_NATIONKEY"],
+              "loops": 25,
+              "rows": 61,
+              "cost": 0.246001025,
+              "filtered": 100,
+              "using_index": true
+            }
+          },
+          {
+            "table": {
+              "table_name": "orders",
+              "access_type": "ref",
+              "possible_keys": ["PRIMARY", "ORDERS_FK1"],
+              "key": "ORDERS_FK1",
+              "key_length": "4",
+              "used_key_parts": ["O_CUSTKEY"],
+              "ref": ["tpch_tiny.customer.C_CUSTKEY"],
+              "loops": 1525,
+              "rows": 1,
+              "cost": 1.492634625,
+              "filtered": 100,
+              "using_index": true
+            }
+          },
+          {
+            "table": {
+              "table_name": "lineitem",
+              "access_type": "ref",
+              "possible_keys": ["LINEITEM_UK1", "LINEITEM_FK1"],
+              "key": "LINEITEM_FK1",
+              "key_length": "4",
+              "used_key_parts": ["L_ORDERKEY"],
+              "ref": ["tpch_tiny.orders.O_ORDERKEY"],
+              "loops": 1525,
+              "rows": 1,
+              "cost": 3.3065856,
+              "filtered": 100,
+              "attached_condition": "lineitem.L_SHIPDATE between <cache>(str_to_date('1995-01-01','%Y-%m-%d')) and <cache>(str_to_date('1996-12-31','%Y-%m-%d'))"
+            }
+          },
+          {
+            "table": {
+              "table_name": "supplier",
+              "access_type": "eq_ref",
+              "possible_keys": [
+                "PRIMARY",
+                "SUPPLIER_FK1",
+                "idx_S_NATIONKEY_S_SUPPKEY_S_NAME"
+              ],
+              "key": "PRIMARY",
+              "key_length": "4",
+              "used_key_parts": ["S_SUPPKEY"],
+              "ref": ["tpch_tiny.lineitem.L_SUPPKEY"],
+              "loops": 1525,
+              "rows": 1,
+              "cost": 1.3664786,
+              "filtered": 100
+            }
+          },
+          {
+            "table": {
+              "table_name": "n1",
+              "access_type": "eq_ref",
+              "possible_keys": ["PRIMARY"],
+              "key": "PRIMARY",
+              "key_length": "4",
+              "used_key_parts": ["N_NATIONKEY"],
+              "ref": ["tpch_tiny.supplier.S_NATIONKEY"],
+              "loops": 1525,
+              "rows": 1,
+              "cost": 1.3648402,
+              "filtered": 100,
+              "attached_condition": "n1.N_NAME = 'IRAN' and n2.N_NAME = 'CANADA' or n1.N_NAME = 'CANADA' and n2.N_NAME = 'IRAN'"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

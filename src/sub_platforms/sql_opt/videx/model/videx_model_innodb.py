@@ -47,6 +47,9 @@ class VidexModelInnoDB(VidexModelBase):
         self.ndv_model = None
         self.df_sample_raw = None
         self.loading_ndv_model()
+        self.inject_cardinality_dict = dict()
+        # self.inject_cardinality_dict["C_NATIONKEY = 15"] = 58
+        # self.inject_cardinality_dict["'1995-01-01' <= O_ORDERDATE <= '1996-12-31'"] = 4509
 
     def loading_ndv_model(self):
         if self.table_stats and self.table_stats.sample_file_info is not None:
@@ -67,6 +70,10 @@ class VidexModelInnoDB(VidexModelBase):
         return self.table_stats.innodb_buffer_pool_size
 
     def cardinality(self, idx_range_cond: IndexRangeCond) -> int:
+        condition_str = idx_range_cond.ranges_to_str()
+        if condition_str in self.inject_cardinality_dict:
+            return self.inject_cardinality_dict[condition_str]
+
         debug_msg = f"{idx_range_cond=}," \
                     f"idx_gt_pair_dict={json.dumps(self.table_stats.gt_return.idx_gt_pair_dict)}"
         try:
@@ -120,6 +127,7 @@ class VidexModelInnoDB(VidexModelBase):
             # the result 'Empty set' based on that. The accuracy is not guaranteed, and even if it were,
             # for a locking read we should anyway perform the search to set the next-key lock.
             # Add 1 to the value to make sure MySQL does not make the assumption!
+            logging.warning(f"records_in_ranges is 0, set to 1")
             records_in_ranges = 1
 
         return records_in_ranges
@@ -164,6 +172,7 @@ class VidexModelInnoDB(VidexModelBase):
             "data_file_length": self.table_stats.data_file_length,
             "index_file_length": self.table_stats.index_file_length,
             "data_free_length": self.table_stats.data_free_length,
+            "innodb_buffer_pool_size": self.table_stats.innodb_buffer_pool_size,
 
         }
         for i, key_json in enumerate(req_json_item['data']):

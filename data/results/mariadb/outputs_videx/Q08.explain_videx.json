@@ -1,0 +1,139 @@
+EXPLAIN
+{
+  "query_block": {
+    "select_id": 1,
+    "cost": 11.60259477,
+    "filesort": {
+      "sort_key": "extract(year from orders.O_ORDERDATE)",
+      "temporary_table": {
+        "nested_loop": [
+          {
+            "table": {
+              "table_name": "region",
+              "access_type": "ALL",
+              "possible_keys": ["PRIMARY"],
+              "loops": 1,
+              "rows": 5,
+              "cost": 0.0116698,
+              "filtered": 100,
+              "attached_condition": "region.R_NAME = 'AMERICA'"
+            }
+          },
+          {
+            "table": {
+              "table_name": "n1",
+              "access_type": "ref",
+              "possible_keys": ["PRIMARY", "NATION_FK1"],
+              "key": "NATION_FK1",
+              "key_length": "4",
+              "used_key_parts": ["N_REGIONKEY"],
+              "ref": ["videx_tpch_tiny.region.R_REGIONKEY"],
+              "loops": 5,
+              "rows": 5,
+              "cost": 0.008619925,
+              "filtered": 100,
+              "using_index": true
+            }
+          },
+          {
+            "table": {
+              "table_name": "customer",
+              "access_type": "ref",
+              "possible_keys": ["PRIMARY", "CUSTOMER_FK1"],
+              "key": "CUSTOMER_FK1",
+              "key_length": "4",
+              "used_key_parts": ["C_NATIONKEY"],
+              "ref": ["videx_tpch_tiny.n1.N_NATIONKEY"],
+              "loops": 25,
+              "rows": 61,
+              "cost": 0.246001025,
+              "filtered": 100,
+              "using_index": true
+            }
+          },
+          {
+            "table": {
+              "table_name": "orders",
+              "access_type": "ref",
+              "possible_keys": ["PRIMARY", "ORDERS_FK1"],
+              "key": "ORDERS_FK1",
+              "key_length": "4",
+              "used_key_parts": ["O_CUSTKEY"],
+              "ref": ["videx_tpch_tiny.customer.C_CUSTKEY"],
+              "loops": 1525,
+              "rows": 1,
+              "cost": 2.9158272,
+              "filtered": 100,
+              "attached_condition": "orders.O_ORDERDATE between <cache>(str_to_date('1995-01-01','%Y-%m-%d')) and <cache>(str_to_date('1996-12-31','%Y-%m-%d'))"
+            }
+          },
+          {
+            "table": {
+              "table_name": "lineitem",
+              "access_type": "ref",
+              "possible_keys": ["LINEITEM_UK1", "LINEITEM_FK1", "LINEITEM_FK2"],
+              "key": "LINEITEM_FK1",
+              "key_length": "4",
+              "used_key_parts": ["L_ORDERKEY"],
+              "ref": ["videx_tpch_tiny.orders.O_ORDERKEY"],
+              "loops": 1525,
+              "rows": 1,
+              "cost": 3.3065856,
+              "filtered": 100
+            }
+          },
+          {
+            "table": {
+              "table_name": "part",
+              "access_type": "eq_ref",
+              "possible_keys": ["PRIMARY"],
+              "key": "PRIMARY",
+              "key_length": "4",
+              "used_key_parts": ["P_PARTKEY"],
+              "ref": ["videx_tpch_tiny.lineitem.L_PARTKEY"],
+              "loops": 1525,
+              "rows": 1,
+              "cost": 1.3820434,
+              "filtered": 100,
+              "attached_condition": "part.P_TYPE = 'LARGE BURNISHED TIN'"
+            }
+          },
+          {
+            "table": {
+              "table_name": "supplier",
+              "access_type": "eq_ref",
+              "possible_keys": [
+                "PRIMARY",
+                "SUPPLIER_FK1",
+                "idx_S_NATIONKEY_S_SUPPKEY_S_NAME"
+              ],
+              "key": "PRIMARY",
+              "key_length": "4",
+              "used_key_parts": ["S_SUPPKEY"],
+              "ref": ["videx_tpch_tiny.lineitem.L_SUPPKEY"],
+              "loops": 1525,
+              "rows": 1,
+              "cost": 1.3664786,
+              "filtered": 100
+            }
+          },
+          {
+            "table": {
+              "table_name": "n2",
+              "access_type": "eq_ref",
+              "possible_keys": ["PRIMARY"],
+              "key": "PRIMARY",
+              "key_length": "4",
+              "used_key_parts": ["N_NATIONKEY"],
+              "ref": ["videx_tpch_tiny.supplier.S_NATIONKEY"],
+              "loops": 1525,
+              "rows": 1,
+              "cost": 1.3648402,
+              "filtered": 100
+            }
+          }
+        ]
+      }
+    }
+  }
+}
