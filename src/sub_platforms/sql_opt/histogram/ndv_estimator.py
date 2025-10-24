@@ -166,7 +166,7 @@ class NDVEstimator:
                     model_input_len=100,
                     estimator_num=9,
                     k=2,
-                    sample_rate=sample_rate
+                    total_rows=self.original_num
                 )
                 self.ada_model = AdaNDVPredictor(config)
             ndv = self.ada_estimate(r, profile)
@@ -191,7 +191,7 @@ class NDVEstimator:
                 estimate = sum(profile[i] for i in range(1, len(profile)))  # fallback if method not implemented fallback = d, d defaults to the sum of each bit of the sampled profile
             estimate_list.append(estimate)
 
-        ndv = self.ada_model.predict(profile, estimate_list)
+        ndv = self.ada_model.predict(profile, estimate_list, total_rows=self.original_num)
         return ndv
     
 
