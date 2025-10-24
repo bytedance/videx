@@ -217,10 +217,7 @@ class NDVEstimator:
         return ndv
     
     def plm4ndv_estimate(self, r: int, profile: List[int], column_name: str = "unknown", all_columns: List[str] = None, table_stats=None):
-        """
-        PLM4NDV估计方法
-        这个方法需要额外的列信息，这里提供一个基础实现,实际使用时需要传入完整的列信息
-        """
+
         self._ensure_plm4ndv_loaded()
         # Here we need actual column information, return a fallback value for now
         d = self.tools.profile_to_ndv(profile)
