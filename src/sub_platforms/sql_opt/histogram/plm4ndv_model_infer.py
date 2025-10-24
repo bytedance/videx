@@ -39,7 +39,7 @@ class MultiHeadSelfAttention(nn.Module):
         K = K.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
         V = V.view(batch_size, seq_len, self.num_heads, self.head_dim).transpose(1, 2)
 
-        # 计算注意力得分
+        # Calculate attention scores
         attn_scores = torch.matmul(Q, K.transpose(-2, -1)) / (self.head_dim ** 0.5) 
         mask = mask.unsqueeze(1).unsqueeze(2) 
         mask = mask.expand(-1, self.num_heads, -1, -1)  
@@ -111,12 +111,12 @@ class PLM4NDVModel(nn.Module):
 class PLM4NDVPredictor:
     def __init__(self, model_path: str = None, device: str = "cpu", use_sample: bool = True):
         """
-        初始化PLM4NDV预测器
+        Initialize the PLM4NDV predictor
         
         Args:
-            model_path: 模型权重文件路径
-            device: 计算设备
-            use_sample: 是否使用sample数据（对应原始代码中的args.sample）
+            model_path: model weight file path
+            device: compute device
+            use_sample: whether to use sample data (corresponds to args.sample in the original code)
         """
         # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.device = torch.device("cpu")
@@ -124,30 +124,30 @@ class PLM4NDVPredictor:
         self.plm_model = None
         self.use_sample = use_sample
         
-        # 模型参数 - 与原始训练代码保持一致
+        # Model parameters - consistent with the original training code
         self.EMB_SIZE = 768
         self.PROFILE_SIZE = 100
-        self.NUM_LAYERS = 1  # 对应原始代码中的args.layer，默认为1
-        self.NUM_HEADS = 8   # 对应原始代码中的args.head，默认为8
+        self.NUM_LAYERS = 1  # Corresponds to args.layer in the original code, default is 1
+        self.NUM_HEADS = 8   # Corresponds to args.head in the original code, default is 8
         
-        # 初始化模型
+        # Initialize models
         self._init_models(model_path)
     
     def _init_models(self, model_path: str):
-        """初始化embedding模型和PLM4NDV模型"""
+        """Initialize the embedding model and PLM4NDV model"""
         try:
-            # 初始化sentence transformer模型 - 优先使用plm4ndv项目中的本地模型
+            # Initialize the sentence transformer model - use the local model in the plm4ndv project first
             local_model_dir = "src/sub_platforms/sql_opt/histogram/resources/sentence-transformers/sentence-t5-large"
             if os.path.exists(local_model_dir):
-                print(f"使用plm4ndv项目中的本地模型: {local_model_dir}")
+                print(f"Using the local model in the plm4ndv project: {local_model_dir}")
                 self.embedding_model = SentenceTransformer(local_model_dir)
             else:
-                print("plm4ndv项目中的模型不存在，使用Hugging Face Hub模型...")
+                print("The model in the plm4ndv project does not exist, using the Hugging Face Hub model...")
                 self.embedding_model = SentenceTransformer('sentence-transformers/sentence-t5-large')
             
             self.embedding_model.to(self.device)
             
-            # 初始化PLM4NDV模型 - 与原始训练代码保持一致
+            # Initialize the PLM4NDV model - consistent with the original training code
             self.plm_model = PLM4NDVModel(
                 input_len=self.EMB_SIZE, 
                 profile_len=self.PROFILE_SIZE,
@@ -155,7 +155,7 @@ class PLM4NDVPredictor:
                 use_sample=self.use_sample
             )
             
-            # 加载预训练权重
+            # Load the pre-trained weights
             if model_path and os.path.exists(model_path):
                 self.plm_model.load_state_dict(torch.load(model_path, map_location=self.device))
                 print(f"PLM4NDV model loaded from {model_path}")
@@ -171,54 +171,54 @@ class PLM4NDVPredictor:
     
     def generate_column_embedding(self, column_name: str, column_type: str, N: int, D: int) -> np.ndarray:
         """
-        生成列的embedding，参考semantic_embedding.py的实现
+        Generate the column embedding, refer to the implementation of semantic_embedding.py
         
         Args:
-            column_name: 列名
-            column_type: 列类型
-            N: 表行数
-            D: 该列的NDV
+            column_name: column name
+            column_type: column type
+            N: table rows
+            D: NDV of this column
             
         Returns:
-            embedding: 768维向量
+            embedding: a 768-dimensional vector
         """
-        # 构建列描述，与plm4ndv训练时完全一致
-        # 格式: "列名, 类型, N, D" -> 去掉N,D -> "列名, 类型"
+        # Build the column description, consistent with the training of plm4ndv
+        # Format: "column name, type, N, D" -> remove N,D -> "column name, type"
         col_description = f"{column_name}, {column_type}, {N}, {D}"
-        # 去掉最后两个字段（N, D），与semantic_embedding.py第62行一致
+        # Remove the last two fields (N, D), consistent with the 62nd line of semantic_embedding.py
         col_description = ','.join(col_description.split(',')[:-2])
         
-        # 生成embedding
+        # Generate the embedding
         with torch.no_grad():
             embedding = self.embedding_model.encode([col_description], device=self.device)
         
-        return embedding[0]  # 返回第一个（也是唯一的）embedding
+        return embedding[0]  # Return the first (and only) embedding
     
     def predict_table(self, columns_info: List[Dict[str, Any]], max_column_num: int = None) -> List[float]:
         """
-        预测整个表格的NDV（多列估计，更接近原始训练设计）
+        Predict the NDV of the entire table (multi-column estimation, closer to the original training design)
         
         Args:
-            columns_info: 列信息列表，每个字典包含：
-                - profile: 频率分布
-                - N: 总行数
-                - D: 采样中的唯一值数量
-                - column_name: 列名
-                - column_type: 列类型
-            max_column_num: 最大列数（用于填充，如果为None则使用实际列数）
+            columns_info: list of column information, each dictionary contains:
+                - profile: frequency distribution
+                - N: total rows
+                - D: unique values in the sampled data
+                - column_name: column name
+                - column_type: column type
+            max_column_num: maximum number of columns (for padding, if None, use the actual number of columns)
                 
         Returns:
-            predicted_ndvs: 预测的NDV列表
+            predicted_ndvs: list of predicted NDVs
         """
         try:
             if not columns_info:
                 return []
             
-            # 确定是否需要填充
+            # Determine if padding is needed
             if max_column_num is None:
                 max_column_num = len(columns_info)
             
-            # 生成所有列的embedding
+            # Generate the embedding for all columns
             embeddings = []
             N_list = []
             D_list = []
@@ -235,7 +235,7 @@ class PLM4NDVPredictor:
                 N_list.append(col_info['N'])
                 D_list.append(col_info['D'])
                 
-                # 处理profile
+                # Process the profile
                 profile = col_info['profile']
                 if len(profile) < self.PROFILE_SIZE + 1:
                     profile_padded = profile + [0] * (self.PROFILE_SIZE + 1 - len(profile))
@@ -243,10 +243,10 @@ class PLM4NDVPredictor:
                     profile_padded = profile[:self.PROFILE_SIZE + 1]
                 profiles.append(profile_padded)
             
-            # 如果需要填充，添加占位列
+            # If padding is needed, add placeholder columns
             pad_len = max_column_num - len(columns_info)
             if pad_len > 0:
-                # 添加填充的embedding
+                # Add the embedding of the padded columns
                 zero_embedding = np.zeros(self.EMB_SIZE)
                 embeddings.extend([zero_embedding] * pad_len)
                 N_list.extend([1] * pad_len)
@@ -254,38 +254,38 @@ class PLM4NDVPredictor:
                 zero_profile = [0] * (self.PROFILE_SIZE + 1)
                 profiles.extend([zero_profile] * pad_len)
             
-            # 准备输入数据 - 使用固定长度，与训练时保持一致
+            # Prepare the input data - use fixed length, consistent with the training
             emb = torch.tensor(embeddings, dtype=torch.float32).unsqueeze(0)  # [1, max_column_num, 768]
             N_tensor = torch.tensor(N_list, dtype=torch.float32).unsqueeze(0)  # [1, max_column_num]
             profile_tensor = torch.tensor(profiles, dtype=torch.float32).unsqueeze(0)  # [1, max_column_num, 101]
             mask = torch.tensor([1] * len(columns_info) + [0] * pad_len, dtype=torch.float32).unsqueeze(0)  # [1, max_column_num]
             
-            # 移动到设备
+            # Move to the device
             emb = emb.to(self.device)
             N_tensor = N_tensor.to(self.device)
             profile_tensor = profile_tensor.to(self.device)
             mask = mask.to(self.device)
             
-            # 推理
+            # Inference
             with torch.no_grad():
                 predicted_ndvs = self.plm_model.inference(emb, N_tensor.unsqueeze(-1), profile_tensor, mask)
             
-            # 只返回真实列的预测结果
-            # 处理不同维度的输出
+            # Only return the predicted results for the real columns
+            # Process the output of different dimensions
             if predicted_ndvs.dim() == 0:
-                # 0维张量：单列预测，返回单个值
+                # 0-dimensional tensor: single column prediction, return a single value
                 result = predicted_ndvs.cpu().numpy().tolist()
                 return [result]
             elif predicted_ndvs.dim() == 1:
-                # 1维张量：多列预测，返回前len(columns_info)个结果
+                # 1-dimensional tensor: multiple column prediction, return the first len(columns_info) results
                 return predicted_ndvs[:len(columns_info)].cpu().numpy().tolist()
             else:
-                # 2维张量：batch预测，返回第一行的前len(columns_info)个结果
+                # 2-dimensional tensor: batch prediction, return the first len(columns_info) results of the first row
                 return predicted_ndvs[0][:len(columns_info)].cpu().numpy().tolist()
             
         except Exception as e:
             print(f"Error in PLM4NDV table prediction: {e}")
-            # 返回fallback值
+            # Return the fallback value
             return [col_info['D'] * 2 for col_info in columns_info]
     
 

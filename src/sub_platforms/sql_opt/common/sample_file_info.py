@@ -15,17 +15,17 @@ from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMix
 UNKNOWN_LOAD_ROWS: int = -1
 
 def serialize_dataframe(df: DataFrame) -> Dict[str, Any]:
-    """将 DataFrame 序列化为字典"""
+    """Serialize a DataFrame into a dictionary"""
     if df is None:
         return None
     return {
-        'data': df.to_dict('records'),  # 转换为记录列表
+        'data': df.to_dict('records'),  # Convert to a list of records
         'columns': df.columns.tolist(),
         'index': df.index.tolist()
     }
 
 def deserialize_dataframe(data: Dict[str, Any]) -> DataFrame:
-    """从字典反序列化为 DataFrame"""
+    """Deserialize a dictionary to a DataFrame"""
     if data is None:
         return None
     return DataFrame(data['data'], columns=data['columns'], index=data['index'])
@@ -58,9 +58,9 @@ class SampleFileInfo(BaseModel, PydanticDataClassJsonMixin):
             return self.table_load_rows.get(db).get(table)
 
     def model_post_init(self, __context: Any) -> None:
-        """在初始化后处理 DataFrame 对象"""
+        """Process the DataFrame object after initialization"""
         if self.sample_file_dict:
-            # 将 DataFrame 对象转换为可序列化的格式
+            # Convert the DataFrame object to a serializable format
             serializable_dict = {}
             for table_name, data in self.sample_file_dict.items():
                 if isinstance(data, DataFrame):
@@ -70,7 +70,7 @@ class SampleFileInfo(BaseModel, PydanticDataClassJsonMixin):
             self.sample_file_dict = serializable_dict
     
     def get_dataframe(self, table_name: str) -> Optional[DataFrame]:
-        """获取指定表的 DataFrame 对象"""
+        """Get the DataFrame object for the specified table"""
         if table_name not in self.sample_file_dict:
             return None
         

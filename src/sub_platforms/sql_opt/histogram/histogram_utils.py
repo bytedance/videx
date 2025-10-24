@@ -31,12 +31,11 @@ def load_sample_file(table_stats):
         logging.info(f"No sample data available for {table_stats.table_name}")
         return None
 
-    # 兼容 dict 和对象
+    # Compatible with dict and objects
     if isinstance(info, dict):
         path = info.get('path') or info.get('local_path')
         fmt = (info.get('format') or 'parquet').lower()
     else:
-        # 如果是对象，按你现有字段名兜底
         if getattr(info, 'local_path_prefix', None) == 'RowFetchNone':
             logging.info(f"No sample data available for {table_stats.table_name}")
             return None
@@ -70,14 +69,14 @@ def calculate_optimal_buckets(samples: List[Any], data_type: str, ndv: int = Non
     n = len(samples)
     unique_count = len(set(samples))
     
-    # 基础桶数
+    # Base number of buckets
     base_buckets = min(32, max(4, int(math.sqrt(n))))
     
-    # 根据唯一值数量调整
+    # Adjust based on the number of unique values
     if ndv:
         base_buckets = min(base_buckets, ndv)
     
-    # 根据数据类型调整
+    # Adjust based on the data type
     if data_type in ['int', 'bigint']:
         base_buckets = min(base_buckets * 2, 64)
     elif data_type in ['varchar', 'char', 'text']:
@@ -101,7 +100,7 @@ def block_level_sample(env: "Env", db: str, table: str, col: str,
     samples: List[Any] = []
     col_q = f"`{col}`"
 
-    # 添加采样质量检查
+    # Add sampling quality check
     max_attempts = 50
     attempt_count = 0
     consecutive_empty = 0
@@ -182,10 +181,10 @@ def block_level_sample(env: "Env", db: str, table: str, col: str,
                     new_samples = df[col].tolist()
                     samples.extend(new_samples)
 
-                    # 添加调试信息
+                    # Add debug information
                     print(f"Attempt {attempt_count}: got {len(new_samples)} samples, total: {len(samples)}")
 
-                    # 如果已经达到目标，停止采样
+                    # If we have reached the target, stop sampling
                     if len(samples) >= rows_target:
                         break
 

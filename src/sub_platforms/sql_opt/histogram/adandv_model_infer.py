@@ -8,14 +8,14 @@ class AdaNDVConfig:
     def __init__(self,
                  model_path: str,
                  model_input_len: int = 100,
-                 estimator_num: int = 9, 
+                 estimator_num: int = 9,
                  k: int = 2,
-                 sample_rate: float = 0.01):
+                 total_rows: int = None):
         self.model_path = model_path
         self.model_input_len = model_input_len
         self.estimator_num = estimator_num
         self.k = k
-        self.sample_rate = sample_rate
+        self.total_rows = total_rows
 
 class Ranker(nn.Module):
     def __init__(self, input_len, output_len):
@@ -89,13 +89,19 @@ class AdaNDVPredictor:
         self.model.load_state_dict(torch.load(config.model_path, map_location=device))
         self.model.eval()
 
-    def predict(self, profile, estimate_list):
-        pad_len = self.config.model_input_len - 3  # 实验默认=97
+    def predict(self, profile, estimate_list, total_rows=None):
+        pad_len = self.config.model_input_len - 3  # Experimental default = 97
         profile = profile[:pad_len] + [0] * (pad_len - len(profile))
 
         logn = np.log(np.dot(np.arange(len(profile)), profile))
         logd = np.log(np.sum(profile))
-        logN = np.log(np.dot(np.arange(len(profile)), profile) / self.config.sample_rate)
+
+        if total_rows is not None:
+            logN = np.log(total_rows)
+        elif self.config.total_rows is not None:
+            logN = np.log(self.config.total_rows)
+        else:
+            raise ValueError("total_rows is required for AdaNDV (pass via predict(..., total_rows=...) or config.total_rows)")
 
         data_input = profile + [logn, logd, logN]
         x = torch.tensor([data_input], dtype=torch.float32)

@@ -209,7 +209,7 @@ if __name__ == "__main__":
         )
         stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
         
-        # 收集采样数据
+        # Collect sampling data
         sample_file_dict = collect_sample_data_for_tables(
             env=target_env,
             target_db=target_db,
@@ -217,7 +217,7 @@ if __name__ == "__main__":
             sample_size=1000
         )
         
-        # 保存采样数据到文件
+        # Save the sampled data to a file
         save_dir = f"/tmp/videx_samples/{videx_db}"
         sample_file_info_dict = save_sample_data_to_files(
             sample_file_dict=sample_file_dict,
@@ -225,7 +225,7 @@ if __name__ == "__main__":
             save_dir=save_dir
         )
         
-        # 构造元数据请求，包含采样数据
+        # Construct the metadata request, including the sampled data
         meta_request = construct_meta_request_with_samples(
             task_id=args.task_id,
             videx_db=videx_db,

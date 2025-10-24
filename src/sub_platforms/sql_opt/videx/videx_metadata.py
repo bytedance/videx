@@ -953,14 +953,14 @@ def meta_dict_to_sample_file(
             # table_raw_stat_dict: Dict[str, Any] = self.stats_dict.get(db_name, {}).get(table_name, {})
             table_stat_info = TableStatisticsInfo(db_name=db_name, table_name=table_name)
 
-            # 安全地获取 NDV 数据，如果不存在则使用空字典
+            # Safely retrieve NDV data, using an empty dictionary if not present
             if db_name in ndv_single_dict and table_name in ndv_single_dict[db_name]:
                 table_stat_info.ndv_dict = ndv_single_dict[db_name][table_name]
             else:
                 table_stat_info.ndv_dict = {}
 
 
-            # 安全地获取 NDV 数据，如果不存在则使用空字典
+            # Safely get NDV data, use an empty dictionary if not present
             if db_name in hist_dict and table_name in hist_dict[db_name]:
                 histogram_data = hist_dict[db_name][table_name]
             else:
@@ -1223,7 +1223,7 @@ def save_sample_data_to_files(sample_file_dict: Dict[str, pd.DataFrame],
     
     for table_name, sample_df in sample_file_dict.items():
         try:
-            # 使用 CSV 格式，更兼容
+            # Use CSV format, more compatible
             csv_path = os.path.join(save_dir, f"{table_name}.csv")
             sample_df.to_csv(csv_path, index=False, encoding='utf-8')
             sample_file_info_dict[table_name] = {"path": csv_path, "format": "csv"}
@@ -1251,23 +1251,23 @@ def construct_meta_request_with_samples(task_id: str, videx_db: str,
     Returns:
         VidexDBTaskStats object with sample data
     """
-    # 构造元数据请求，包含采样数据
+    # Construct the metadata request, including the sampled data
     meta_request = construct_videx_task_meta_from_local_files(
         task_id=task_id,
         videx_db=videx_db,
-        stats_file=stats_file_dict,  # 基础统计信息
-        hist_file={},  # 空的直方图
-        ndv_single_file={}, # 空的单列 NDV
-        ndv_mulcol_file={}, # 空的多列 NDV
+        stats_file=stats_file_dict,  # Basic statistics information
+        hist_file={},  # Empty histogram
+        ndv_single_file={}, # Empty single column NDV
+        ndv_mulcol_file={}, # Empty multi-column NDV
         gt_rec_in_ranges_file=None,
         gt_req_resp_file=None,
         raise_error=True,
-        sample_file_dict=sample_file_dict  # 添加采样数据
+        sample_file_dict=sample_file_dict  # Add sampled data
     )
 
-    # 设置样本文件信息
+    # Set sample file information
     for table_name, sample_df in sample_file_dict.items():
-        # meta_request.meta_dict 的结构是 {db_name: {table_name: VidexTableStats}}
+        # The structure of meta_request.meta_dict is {db_name: {table_name: VidexTableStats}}
         for db_name, db_meta_dict in meta_request.meta_dict.items():
             if table_name in db_meta_dict:
                 table_stats_info = db_meta_dict[table_name]
@@ -1275,7 +1275,7 @@ def construct_meta_request_with_samples(task_id: str, videx_db: str,
                     table_stats_info.sample_data = sample_df
                     logging.info(f"Set sample data for {table_name}: {len(sample_df)} rows")
                     
-                    # 设置样本文件信息（服务端据此读取）
+                    # Set sample file information (server reads it)
                     if table_name in sample_file_info_dict:
                         table_stats_info.sample_file_info = sample_file_info_dict[table_name]
     

@@ -46,7 +46,7 @@ class VidexModelInnoDB(VidexModelBase):
         self.ndv_cache = TTLCache(maxsize=1000, ttl=1200)
         self.ndv_model = None
         self.df_sample_raw = None
-        self.ndv_method = None  # 本次请求优先级最高，由 @VIDEX_OPTIONS 注入
+        self.ndv_method = None  # The highest priority for this request, injected by @VIDEX_OPTIONS
         self.loading_ndv_model()
         self.inject_cardinality_dict = dict()
         # self.inject_cardinality_dict["C_NATIONKEY = 15"] = 58
@@ -145,7 +145,7 @@ class VidexModelInnoDB(VidexModelBase):
                 rows = float(self.table_stats.records)
                 st = time.perf_counter()
                 
-                # 优先用 @VIDEX_OPTIONS 注入的方法，其次环境变量，最后默认 'hybrid'
+                # Use the method injected by @VIDEX_OPTIONS first, then the environment variable, finally default 'hybrid'
                 import os
                 ndv_method = (self.ndv_method or os.getenv('VIDEX_NDV_METHOD') or 'hybrid')
                 methods = ['PLM4NDV', 'Ada', 'GEE', 'scale'] if ndv_method == 'hybrid' else [ndv_method]
@@ -154,9 +154,9 @@ class VidexModelInnoDB(VidexModelBase):
                 for m in methods:
                     try:
                         if len(field_list) == 1:
-                            # 单列：直接调用 estimator 方法
+                            # Single column: directly call the estimator method
                             if m == 'PLM4NDV':
-                                # PLM4NDV需要所有列信息，即使单列估计
+                                # PLM4NDV needs all column information, even for single column estimation
                                 all_table_columns = list(self.df_sample_raw.columns)
                                 col_data = safe_tolist(self.df_sample_raw[field_list[0]].dropna())
                                 profile = self.ndv_model.build_column_profile(col_data)
@@ -166,7 +166,7 @@ class VidexModelInnoDB(VidexModelBase):
                                     table_stats=self.table_stats
                                 )
                             else:
-                                # 其他方法正常处理
+                                # Other methods handle normally
                                 col_data = safe_tolist(self.df_sample_raw[field_list[0]].dropna())
                                 if len(col_data) == 0:
                                     v = 1.0
@@ -178,7 +178,7 @@ class VidexModelInnoDB(VidexModelBase):
                                         table_stats=self.table_stats
                                     )
                         else:
-                            # 多列：调用多列估计
+                            # Multiple columns: call the multi-column estimation
                             v = self.ndv_model.estimate_multi_columns(
                                 self.df_sample_raw, field_list, method=m, table_stats=self.table_stats
                             )
@@ -189,7 +189,7 @@ class VidexModelInnoDB(VidexModelBase):
                         print(f"NDV({m}) failed: {e}", flush=True)
                 
                 if ndv_candidates:
-                    ndv = min(v for _, v in ndv_candidates)  # 保守取最小；可改中位数等
+                    ndv = min(v for _, v in ndv_candidates)  # Take the minimum; can be changed to the median, etc.
                     chosen = [m for m, v in ndv_candidates if v == ndv][0]
                 else:
                     ndv, chosen = rows, 'fallback_rows'
@@ -197,7 +197,7 @@ class VidexModelInnoDB(VidexModelBase):
                 print(f"LOG: Using Sample to estimate NDV({ndv_method}|chosen={chosen}): {ndv}", flush=True)
                 print(f"LOG: estimation took {time.perf_counter() - st:.3f}s", flush=True)
             else:
-                # 兜底逻辑
+                # Fallback logic
                 ndv = calc_mulcol_ndv_independent(field_list, self.table_stats.ndvs_single,
                                                    self.table_stats.records)
 
@@ -218,7 +218,7 @@ class VidexModelInnoDB(VidexModelBase):
             - rec_per_key: table_rows / ndv
             - srv_innodb_stats_method，or set to default
         """
-        # 解析 @VIDEX_OPTIONS 中的 ndv_method
+        # Parse the ndv_method in @VIDEX_OPTIONS
         properties = req_json_item.get('properties', {})
         options_str = properties.get('videx_options', '{}')
         try:
@@ -226,10 +226,10 @@ class VidexModelInnoDB(VidexModelBase):
         except Exception:
             options = {}
         
-        # 允许 SQL 里：SET @VIDEX_OPTIONS='{"ndv_method":"PLM4NDV"}';
+        # Allow SQL: SET @VIDEX_OPTIONS='{"ndv_method":"PLM4NDV"}';
         method_from_sql = options.get('ndv_method')
         if method_from_sql:
-            self.ndv_method = method_from_sql  # 覆盖本实例本次请求的优先方法
+            self.ndv_method = method_from_sql  # Override the highest priority method for this instance of the request
         
         CONCAT = " #@# "
         res = {
