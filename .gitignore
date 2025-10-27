@@ -26,3 +26,4 @@ videx.egg-info
 tpch_tiny.sql
 videx_metadata_tpch_tiny.json
 dist
+data
