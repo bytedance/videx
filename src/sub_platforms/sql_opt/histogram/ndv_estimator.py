@@ -9,12 +9,24 @@ from collections import Counter
 from typing import List, Any, Dict
 
 import numpy as np
-from estndv import ndvEstimator
+# from estndv import ndvEstimator
 from pandas import DataFrame
+from scipy.optimize import broyden1, broyden2
 
-from adandv_model_infer import AdaNDVPredictor, AdaNDVConfig
+from .adandv_model_infer import AdaNDVPredictor, AdaNDVConfig
+from .plm4ndv_model_infer import PLM4NDVPredictor
 
-from sub_platforms.sql_opt.videx.videx_utils import safe_tolist
+# from sub_platforms.sql_opt.videx.videx_utils import safe_tolist  # 暂时注释掉，路径问题
+
+# Simple safe_tolist implementation
+def safe_tolist(series):
+    # Safely convert to list, handling None values
+    if series is None:
+        return []
+    try:
+        return series.tolist()
+    except:
+        return list(series)
 
 
 class NEVUtils:
@@ -118,14 +130,18 @@ class NEVUtils:
 
 class NDVEstimator:
     def __init__(self, original_num) -> None:
-        self.original_num = original_num # 原表行数
+        # Add this in your ndv_estimator or histogram algorithm:
+        print("----This is new NDV Estimator from 5002 port----", flush=True)
+        self.original_num = original_num # Original table rows
         self.tools = NEVUtils()
         self.ada_model = None
+        self.plm4ndv_model = None
 
-    def estimator(self, r: int, profile: List[int], method: str = 'GEE'):
+    def estimator(self, r: int, profile: List[int], method: str = 'GEE', column_name: str = "unknown", all_columns: List[str] = None, table_stats=None):
         """
         [error_bound, GEE, Chao, scale, shlosser, ChaoLee, LS]
         """
+        print(f"----This is new NDV Estimator from 5002 port - method: {method}----", flush=True)
         if method == 'error_bound':
             ndv = self.error_bound_estimate(r, profile)
         elif method == 'GEE':
@@ -166,10 +182,16 @@ class NDVEstimator:
                     model_input_len=100,
                     estimator_num=9,
                     k=2,
-                    total_rows=self.original_num
+                    sample_rate=sample_rate
                 )
                 self.ada_model = AdaNDVPredictor(config)
             ndv = self.ada_estimate(r, profile)
+        elif method == 'PLM4NDV':
+            if self.plm4ndv_model is None:
+                # model_path = "src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth"
+                model_path = "src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth"
+                self.plm4ndv_model = PLM4NDVPredictor(model_path=model_path)
+            ndv = self.plm4ndv_estimate(r, profile, column_name=column_name, all_columns=all_columns, table_stats=table_stats)
         else:
             raise ValueError(f"Unsupported NDV estimation method: {method}")
         return ndv
@@ -191,13 +213,60 @@ class NDVEstimator:
                 estimate = sum(profile[i] for i in range(1, len(profile)))  # fallback if method not implemented fallback = d, d defaults to the sum of each bit of the sampled profile
             estimate_list.append(estimate)
 
-        ndv = self.ada_model.predict(profile, estimate_list, total_rows=self.original_num)
+        ndv = self.ada_model.predict(profile, estimate_list)
         return ndv
+    
+    def plm4ndv_estimate(self, r: int, profile: List[int], column_name: str = "unknown", all_columns: List[str] = None, table_stats=None):
+
+        self._ensure_plm4ndv_loaded()
+        # Here we need actual column information, return a fallback value for now
+        d = self.tools.profile_to_ndv(profile)
+        if r == 0 or d == 0:
+            return 0.0
+         
+        # If there is no PLM4NDV model, use fallback method
+        if self.plm4ndv_model is None:
+            return self.scale_estimate(r, profile)
+        
+        # Use PLM4NDV model for prediction
+        try:
+            # Multiple columns: construct a real profile covering the current column, with placeholders for other columns
+            if all_columns and len(all_columns) > 1:
+                columns_info = self._build_columns_info(
+                    all_sampled_data=None,
+                    target_columns=list(all_columns) if hasattr(all_columns, 'tolist') else all_columns,
+                    table_stats=table_stats,
+                    override_profile=profile,
+                    override_d=d,
+                    target_column=column_name,
+                    use_placeholders_for_others=True,
+                )
+                predicted_ndvs = self._predict_ndv_list(columns_info)
+                all_columns_list = list(all_columns) if hasattr(all_columns, 'tolist') else all_columns
+                current_col_idx = all_columns_list.index(column_name)
+                return predicted_ndvs[current_col_idx]
+            # Single column: construct a real profile covering the current column, with placeholders for other columns
+            columns_info = self._build_columns_info(
+                all_sampled_data=None,
+                target_columns=[column_name],
+                table_stats=table_stats,
+                override_profile=profile,
+                override_d=d,
+                target_column=column_name,
+                use_placeholders_for_others=False,
+            )
+            predicted_ndvs = self._predict_ndv_list(columns_info)
+            return predicted_ndvs[0]
+            
+        except Exception as e:
+            print(f"PLM4NDV prediction failed: {e}, falling back to scale estimate")
+            return self.scale_estimate(r, profile)
     
 
     def estimate(self, all_sampled_data: DataFrame) -> Dict[str, float]:
         """input all data and estimate NDV
         """
+        print("----This is NDVEstimator.estimate() called from 5002 port----", flush=True)
         columns = all_sampled_data.columns
         ndv_dict = {}
         data_len = len(all_sampled_data)
@@ -205,9 +274,9 @@ class NDVEstimator:
             col_data = safe_tolist(all_sampled_data[column].dropna())
             profile = self.build_column_profile(col_data)
             if len(profile) <= 1:
-                ndv_dict[column] = 0.01 # 没采到数据，直接返回0.01，不让ndv为0，影响后续计算
+                ndv_dict[column] = 0.01 # No data sampled, return 0.01 to prevent ndv from being 0, affecting subsequent calculations
                 continue
-            ndv = self.estimator(data_len, profile)
+            ndv = self.estimator(data_len, profile, column_name=column, all_columns=columns, table_stats=None)
             ndv_dict[column] = ndv
         return ndv_dict
 
@@ -471,7 +540,7 @@ class NDVEstimator:
 
     def block_split_estimate(self, tuple_list):
         """
-        sqlbrain初版NDV估计算法
+        SQLBrain's first version of NDV estimation algorithm
         """
         block_size = 100
         data_blocks = self.tools.split_list_into_blocks(tuple_list, block_size)
@@ -496,8 +565,8 @@ class NDVEstimator:
 
     def error_bound_estimate(self, r: int, profile: List[int]):
         """e=sqrt{{n}/{r}} f_1^{+}+sum_{j=2}^r f_j, 1 <= j <= r
-        输入采样行数和对应的profile，返回估计的NDV
-        r: 采样行数
+        Input the number of sampled rows and the corresponding profile, return the estimated NDV
+        r: number of sampled rows
         """
         scale_factor = math.sqrt(self.original_num / r)
         estimated = np.sum(profile) - profile[1]
@@ -507,8 +576,8 @@ class NDVEstimator:
 
     def gee_estimate(self, r: int, profile: List[int]):
         """e=sqrt{{n}/{r}} f_1+sum_{j=2}^r f_j, 1 <= j <= r
-        输入采样行数和对应的profile，返回估计的NDV
-        r: 采样行数
+        Input the number of sampled rows and the corresponding profile, return the estimated NDV
+        r: number of sampled rows
         """
         scale_factor = math.sqrt(self.original_num / r)
         estimated = np.sum(profile) - profile[1]
@@ -518,8 +587,8 @@ class NDVEstimator:
 
     def chao_estimate(self, r: int, profile: List[int]):
         """e=d+f_1^2/f_2, 1 <= j <= r
-        输入采样行数和对应的profile，返回估计的NDV
-        r: 采样行数
+        Input the number of sampled rows and the corresponding profile, return the estimated NDV
+        r: number of sampled rows
         """
         d = self.tools.profile_to_ndv(profile)
         if len(profile) <= 2:
@@ -559,25 +628,130 @@ class NDVEstimator:
         return estimated
 
     def LS_estimate(self, profile: List[int]):
-        estimator = ndvEstimator()
-        estimated = estimator.profile_predict(f=profile, N=self.original_num)
-        return estimated
+        # estimator = ndvEstimator()
+        # estimated = estimator.profile_predict(f=profile, N=self.original_num)
+        # return estimated
+        return 1
 
-    def estimate_multi_columns(self, all_sampled_data: DataFrame, target_columns: List[str], method='error_bound') -> float:
-        """输入全部的采样数据和目标列（可以为多列），估计其NDV"""
+    def _ensure_plm4ndv_loaded(self):
+        if self.plm4ndv_model is None:
+            model_path = "src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth"
+            self.plm4ndv_model = PLM4NDVPredictor(model_path=model_path)
+
+
+
+    def estimate_multi_columns(self, all_sampled_data: DataFrame, target_columns: List[str], method='error_bound', table_stats=None) -> float:
+        """Input all sampled data and target columns (can be multiple columns), estimate the NDV"""
         if target_columns[0] not in all_sampled_data.columns:
             target_columns = [target_column.upper() for target_column in target_columns]
-        # 暂时忽略没有采样的列，返回mock值10
+        # Temporarily ignore columns that have not been sampled, return mock value 10
         if not all(col in all_sampled_data.columns for col in target_columns):
-            # 如果出现缺列，我们倾向于高估其代价。这意味着 ndv(col) as 1, cardinality as table_rows
-            # 过滤 target_columns，我们仅估计 all_sampled_data.columns 中有的数据
+            # If there are missing columns, we tend to overestimate their cost. This means ndv(col) as 1, cardinality as table_rows
+            # Filter target_columns, we only estimate the data in all_sampled_data.columns
             target_columns = [col for col in target_columns if col in all_sampled_data.columns]
             if len(target_columns) == 0:
                 return 1
-        tuple_list = list(zip(*[all_sampled_data[col] for col in target_columns]))
-        profile = self.build_column_profile(tuple_list)
+        
+        # Special handling for methods that truly support multiple columns
         if method == 'block_split':
-            ndv = self.block_split_estimate(tuple_list)
+            tuple_list = list(zip(*[all_sampled_data[col] for col in target_columns]))
+            return self.block_split_estimate(tuple_list)
         else:
-            ndv = self.estimator(len(all_sampled_data), profile, method)
-        return ndv
+            # For all single-column methods (including PLM4NDV), use the independent assumption to synthesize multiple column NDVs
+            return self._estimate_multi_columns_independent(all_sampled_data, target_columns, method)
+    
+    def _get_column_type(self, column_name: str, table_stats=None) -> str:
+        """Get the column type from the table metadata"""
+        if table_stats and hasattr(table_stats, 'table_meta') and table_stats.table_meta:
+            for col in table_stats.table_meta.columns:
+                if col.name and col.name.lower() == column_name.lower():
+                    return col.data_type or 'unknown'
+        return 'unknown'
+    
+
+    def _build_columns_info(self, all_sampled_data: DataFrame, target_columns: List[str], table_stats=None,
+                             override_profile: List[int] = None, override_d: float = None,
+                             target_column: str = None, use_placeholders_for_others: bool = False) -> List[dict]:
+        """
+        Construct columns_info:
+        - When all_sampled_data is available, build real profile/D/type by column
+        - Can specify the override value for a target column via override_profile/override_d
+        - Use placeholders for other columns when use_placeholders_for_others=True
+        """
+        columns_info: List[dict] = []
+        for col in target_columns:
+            if override_profile is not None and target_column is not None and col == target_column:
+                prof = override_profile
+                d_val = override_d if override_d is not None else self.tools.profile_to_ndv(prof)
+                columns_info.append({
+                    'profile': prof,
+                    'N': self.original_num,
+                    'D': d_val,
+                    'column_name': col,
+                    'column_type': self._get_column_type(col, table_stats)
+                })
+                continue
+
+            if all_sampled_data is not None and col in all_sampled_data.columns:
+                col_data = safe_tolist(all_sampled_data[col].dropna())
+                if len(col_data) > 0:
+                    prof = self.build_column_profile(col_data)
+                    d_val = self.tools.profile_to_ndv(prof)
+                    columns_info.append({
+                        'profile': prof,
+                        'N': self.original_num,
+                        'D': d_val,
+                        'column_name': col,
+                        'column_type': self._get_column_type(col, table_stats)
+                    })
+                    continue
+
+            if use_placeholders_for_others:
+                columns_info.append({
+                    'profile': [0] * 101,
+                    'N': self.original_num,
+                    'D': 1,
+                    'column_name': col,
+                    'column_type': self._get_column_type(col, table_stats)
+                })
+        return columns_info
+
+    def _predict_ndv_list(self, columns_info: List[dict]) -> List[float]:
+        predicted_ndvs = self.plm4ndv_model.predict_table(columns_info)
+        return [max(1.0, min(float(x), self.original_num)) for x in predicted_ndvs]
+
+    def _estimate_multi_columns_independent(self, all_sampled_data: DataFrame, target_columns: List[str], method: str) -> float:
+        """
+        Use the independent assumption to synthesize multiple column NDVs: estimate the NDV for each column separately, then synthesize
+        Applicable to traditional single-column estimation methods (Ada, GEE, Chao, scale, etc.)
+        """
+        if len(target_columns) == 1:
+            # Single column directly estimate
+            col_data = safe_tolist(all_sampled_data[target_columns[0]].dropna())
+            profile = self.build_column_profile(col_data)
+            return float(self.estimator(len(all_sampled_data), profile, method))
+        
+        # Multiple columns: estimate the NDV for each column separately, then synthesize using the independent assumption
+        individual_ndvs = []
+        for col in target_columns:
+            col_data = safe_tolist(all_sampled_data[col].dropna())
+            if len(col_data) == 0:
+                individual_ndvs.append(1.0)
+                continue
+            profile = self.build_column_profile(col_data)
+            try:
+                ndv = self.estimator(len(all_sampled_data), profile, method)
+                individual_ndvs.append(max(1.0, float(ndv)))
+            except Exception as e:
+                print(f"NDV estimation failed for column {col} with method {method}: {e}", flush=True)
+                individual_ndvs.append(1.0)
+        
+        # Independent assumption synthesis: rows / product(rows / ndv_i)
+        rows = float(self.original_num)
+        from math import prod
+        rec_per_keys = [max(1.0, rows / x) for x in individual_ndvs]
+        combined_rpk = min(rows, prod(rec_per_keys))
+        ndv_multi = max(1.0, min(rows, rows / combined_rpk))
+        
+        print(f"Independent assumption: {target_columns} -> {individual_ndvs} -> {ndv_multi}", flush=True)
+        return ndv_multi

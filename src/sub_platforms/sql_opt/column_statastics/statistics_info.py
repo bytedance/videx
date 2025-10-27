@@ -3,6 +3,7 @@ Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
 from typing import Dict, List, Any, Optional
+import pandas as pd
 from pydantic import BaseModel, Field, PrivateAttr, PlainSerializer, BeforeValidator
 from typing_extensions import Annotated
 
@@ -22,6 +23,9 @@ def large_number_decoder(y):
 
 
 class TableStatisticsInfo(BaseModel, PydanticDataClassJsonMixin):
+
+    model_config = {"arbitrary_types_allowed": True}
+    
     db_name: str
     table_name: str
     # {col_name: col ndv}
@@ -52,6 +56,7 @@ class TableStatisticsInfo(BaseModel, PydanticDataClassJsonMixin):
     histogram_error_dict: Optional[Dict[str, float]] = Field(default_factory=dict)
     msg: Optional[str] = None
     extra_info: Optional[Dict[str, Any]] = Field(default_factory=dict)
+    sample_data: Optional[pd.DataFrame] = Field(default=None, exclude=True)
 
     _version: Optional[str] = PrivateAttr(default='1.0.0')
 
