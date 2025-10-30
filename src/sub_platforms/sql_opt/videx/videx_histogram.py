@@ -91,7 +91,7 @@ def convert_str_by_type(raw, data_type: str, str_in_base4: bool = True):
         if raw in NULL_STR_SET:
             return None
         return float(raw)
-    elif data_type in ['string', 'str', 'varchar', 'char']:
+    elif data_type in ['string', 'str', 'varchar', 'char', 'enum']:
         # "base64:type254:YXhhaGtyc2I="
         if is_base64(str_in_base4, raw):
             res = decode_base64(raw)
@@ -103,7 +103,7 @@ def convert_str_by_type(raw, data_type: str, str_in_base4: bool = True):
                 (res.startswith('"') and res.endswith('"')):
             res = res[1:-1]
         return res
-    elif data_type in ['datetime', 'date']:
+    elif data_type in ['datetime', 'date', 'timestamp']:
         if '0000-00-00' in str(raw) or '1-01-01 00:00:00' in str(raw):
             return raw
         return reformat_datetime_str(str(raw))
@@ -249,6 +249,12 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
         Returns:
 
         """
+        # Handle empty histogram
+        if len(self.buckets) == 0:
+            if value is None:
+                return 0 if side == BTreeKeySide.left else self.null_values
+            return self.null_values
+        
         value = convert_str_by_type(value, self.data_type, str_in_base4=False)  # histogram is base4 encoding，but request is raw string
 
         if value is None:
@@ -310,8 +316,8 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                         elif self.data_type in ['float', 'double', 'decimal']:
                             # we thought the width of float number can be close to 0 temporarily
                             one_value_offset = (value - cur.min_value) / (cur.max_value - cur.min_value)
-                        elif self.data_type in ['string', 'varchar', 'char']:
-                            # Strings only support comparison and do not support addition or subtraction,
+                        elif self.data_type in ['string', 'varchar', 'char', 'enum']:
+                            # Strings and enums only support comparison and do not support addition or subtraction,
                             # so we only compare the two ends.
                             # For values that are neither the minimum (min) nor the maximum (max), we take 1/2.
                             if value == cur.min_value:
@@ -336,7 +342,7 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                             one_value_width = max(1 / total_days, one_value_width)
                             one_value_offset = (value_date - min_date).days / total_days
 
-                        elif self.data_type in ['datetime']:
+                        elif self.data_type in ['datetime', 'timestamp']:
                             min_datetime = parse_datetime(cur.min_value)
                             max_datetime = parse_datetime(cur.max_value)
                             value_datetime = parse_datetime(value)
@@ -545,9 +551,9 @@ def _format_value_by_type_in_sql(value, data_type_upper):
         return str(float(value))
     elif 'DATE' in data_type_upper:
         return f"'{value}'"
-    elif 'DATETIME' in data_type_upper:
+    elif 'DATETIME' in data_type_upper or 'TIMESTAMP' in data_type_upper:
         return f"'{value}'"
-    elif 'CHAR' in data_type_upper or 'TEXT' in data_type_upper:
+    elif 'CHAR' in data_type_upper or 'TEXT' in data_type_upper or 'ENUM' in data_type_upper:
         return f"'%s'" % value.replace("'", "''")
     else:
         return str(value)
@@ -576,8 +582,8 @@ def _get_uniform_buckets(env: Env, db_name, table_name, col_name, min_value, max
         for i in range(n_buckets + 1):
             bounds.append(min_val + i * step)
 
-    # date and char
-    elif 'CHAR' in data_type_upper or 'TEXT' in data_type_upper or 'DATE' in data_type_upper or 'DATETIME' in data_type_upper:
+    # date and char and enum
+    elif 'CHAR' in data_type_upper or 'TEXT' in data_type_upper or 'DATE' in data_type_upper or 'DATETIME' in data_type_upper or 'TIMESTAMP' in data_type_upper or 'ENUM' in data_type_upper:
         # random sampling some data, note that it's costly for online instance
         sample_sql = f"""
         SELECT {col_name} FROM {db_name}.{table_name} 
@@ -680,7 +686,7 @@ def get_bucket_bounds(env: Env, table_name, col_name,
         WHERE {col_name} {left_op} {l_str} AND {col_name} {right_op} {u_str}
 
     Notes:
-    1. For int, float, datetime, date, generation can be based on a uniform distribution;
+    1. For int, float, datetime, date, timestamp, generation can be based on a uniform distribution;
     2. For string, random sampling is needed, and then generation;
 
     Args:
@@ -1153,7 +1159,23 @@ def generate_fetch_histogram_mariadb(env: Env, target_db: str, all_table_names: 
             logging.info(f"Generating Histogram for `{target_db}`.`{table_name}`.`{col.name}` "
                          f"with {n_buckets} n_buckets")
             hist = query_histogram_mariadb(env, target_db, table_name, col.name, n_buckets)
-            if hist is not None and ret_json:
+
+            if hist is None:
+                logging.warning(f"HISTOGRAM is None for `{target_db}`.`{table_name}`.`{col.name}`, "
+                                f"creating empty HistogramStats")
+                hist = HistogramStats(
+                    buckets=[],
+                    data_type=col.data_type,
+                    histogram_type='equi-height',
+                    null_values=0,
+                    collation_id=None,
+                    last_updated=None,
+                    sampling_rate=MEANINGLESS_INT,
+                    number_of_buckets_specified=0,
+                    database_type='mariadb'
+                )
+            
+            if ret_json:
                 hist = hist.to_dict()
             res_tables[str(table_name).lower()][col.name] = hist
     
