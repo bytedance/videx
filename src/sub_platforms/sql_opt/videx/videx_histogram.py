@@ -388,7 +388,7 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
             sampling_rate=data.get('sampling-rate', MEANINGLESS_INT),  # a special value indicating no sampling rate
             histogram_type=data['histogram-type'],
             number_of_buckets_specified=data['number-of-buckets-specified'],
-            database_type=data['database-type']
+            database_type=data.get('database-type')
         )
     
     @staticmethod
