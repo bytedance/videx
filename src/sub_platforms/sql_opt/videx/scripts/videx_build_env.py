@@ -176,10 +176,8 @@ if __name__ == "__main__":
                                                                   raise_error=True,
                                                                   )
     elif args.fetch_method == 'sampling':
-        # We will introduce the sampling-based method soon.
         # This method will generate metadata from the sample data.
         # Additionally, the sample data will be employed to estimate the ndv (the number of distinct values) and cardinality.
-        #raise NotImplementedError
         logging.info("Using sampling mode to collect metadata")
 
         if all_table_names is None:
