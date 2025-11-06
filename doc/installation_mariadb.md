@@ -61,6 +61,12 @@ Create the build output directories
 mkdir -p $MARIADB_HOME/mysql_build_output/{ccache,build,data,logs,etc,tmp}
 ```
 
+To avoid weird bugs, remove existing files first if they exist:
+```bash
+rm -rf $MARIADB_HOME/storage/videx
+rm -rf $MARIADB_HOME/mysql_build_output/etc/mariadb_my.cnf
+```
+
 Copy the VIDEX storage engine (MariaDB version) into the MariaDB source tree
 ```bash
 cp -r $VIDEX_HOME/src/mariadb/videx $MARIADB_HOME/storage/videx
