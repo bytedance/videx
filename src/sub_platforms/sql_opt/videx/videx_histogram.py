@@ -249,15 +249,29 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
         Returns:
 
         """
-        value = convert_str_by_type(value, self.data_type, str_in_base4=False)  # histogram is base4 encoding，but request is raw string
-
+        # Handle the universal case where the query boundary is NULL.
+        # The position of NULLs is conceptually at the beginning of the sorted data.
+        # This logic is independent of whether the histogram for non-null values exists.
         if value is None:
             if side == BTreeKeySide.left:
+                # Cumulative records *before* all NULLs is 0.
                 return 0
             elif side == BTreeKeySide.right:
+                # Cumulative records *including* all NULLs is the count of NULLs.
                 return self.null_values
             else:
                 raise ValueError(f"only support key pos side left and right, but get {side}")
+
+        # From this point onwards, 'value' is guaranteed to be a non-NULL value.
+
+        # Handle the case of an empty histogram for non-NULL values.
+        # This means the column has no "non-NULL" values.
+        if len(self.buckets) == 0:
+            # Any non-NULL value is conceptually after all existing NULLs.
+            # So, the cumulative count up to this value includes all NULLs.
+            return self.null_values
+
+        value = convert_str_by_type(value, self.data_type, str_in_base4=False)  # histogram is base4 encoding，but request is raw string
 
         # convert to 0
         if value > self.buckets[-1].max_value:
@@ -1153,7 +1167,23 @@ def generate_fetch_histogram_mariadb(env: Env, target_db: str, all_table_names: 
             logging.info(f"Generating Histogram for `{target_db}`.`{table_name}`.`{col.name}` "
                          f"with {n_buckets} n_buckets")
             hist = query_histogram_mariadb(env, target_db, table_name, col.name, n_buckets)
-            if hist is not None and ret_json:
+
+            if hist is None:
+                logging.warning(f"HISTOGRAM is None for `{target_db}`.`{table_name}`.`{col.name}`, "
+                                f"creating empty HistogramStats")
+                hist = HistogramStats(
+                    buckets=[],
+                    data_type=col.data_type,
+                    histogram_type='equi-height',
+                    null_values=0,
+                    collation_id=None,
+                    last_updated=None,
+                    sampling_rate=MEANINGLESS_INT,
+                    number_of_buckets_specified=0,
+                    database_type='mariadb'
+                )
+            
+            if ret_json:
                 hist = hist.to_dict()
             res_tables[str(table_name).lower()][col.name] = hist
     

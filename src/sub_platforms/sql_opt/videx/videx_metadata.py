@@ -454,7 +454,9 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
                CREATE_TIME, UPDATE_TIME, CHECK_TIME, TABLE_COLLATION, 
                CHECKSUM, CREATE_OPTIONS, TABLE_COMMENT 
         FROM information_schema.TABLES 
-        WHERE table_schema = '%s' and ENGINE = 'InnoDB'
+        WHERE table_schema = '%s'
+          AND ENGINE = 'InnoDB'
+          AND TABLE_TYPE = 'BASE TABLE'
     """ % target_dbname
 
     basic_list: pd.DataFrame = env.query_for_dataframe(sql).to_dict(orient='records')
