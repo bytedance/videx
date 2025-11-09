@@ -140,6 +140,7 @@ class HistogramBucket(BaseModel, PydanticDataClassJsonMixin):
     cum_freq: float
     row_count: float  # note，row_count is "ndv" in bucket，we use float since algorithm may return non-integer
     size: int = 0
+    bucket_freq: float = None  # =buckets[i+1].cum_freq - buckets[i].cum_freq. For now, it's only used to sort singleton buckets.
 
 
 def init_bucket_by_type(bucket_raw: list, data_type: str, hist_type: str) -> HistogramBucket:
@@ -236,6 +237,50 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                     bucket.cum_freq = bucket.cum_freq * scale_factor
                 self.buckets[-1].cum_freq = 1
 
+            # calculate bucket_freq
+            self.buckets[0].bucket_freq = self.buckets[0].cum_freq
+            for i in range(len(self.buckets) - 1):
+                self.buckets[i + 1].bucket_freq = self.buckets[i + 1].cum_freq - self.buckets[i].cum_freq
+                assert self.buckets[i + 1].bucket_freq > 0, f"bucket_freq must > 0, but got {self.buckets[i]=}, {self.buckets[i+1]=}"
+
+        if len(self.buckets) == 0:
+            return
+
+        # if row_count (i.e., ndv) is 1, let bucket.max -> bucket.min
+        for bucket in self.buckets:
+            if bucket.row_count == 1 and bucket.min_value != bucket.max_value:
+                logging.info(f"bucket row_count is 1, set bucket.max_value = bucket.min_value: {bucket}")
+                bucket.max_value = bucket.min_value
+
+        # check the buckets order and histogram_type
+        if all(bucket.row_count == 1 for bucket in self.buckets):
+            self.histogram_type = 'singleton'
+        # check bucket [min, max] is monotonically increasing
+        for i, bucket in enumerate(self.buckets):
+            assert bucket.min_value <= bucket.max_value, f"bucket[{i}] min_value > max_value: {bucket}"
+
+        # if buckets [start,end] is not monotonically increasing, fix it or raise exception
+        monotonically_increasing = True
+        for i in range(len(self.buckets) - 1):
+            if self.buckets[i].max_value > self.buckets[i + 1].min_value:
+                monotonically_increasing = False
+                break
+        if not monotonically_increasing:
+            # Currently, we can only handle the non-monotonically increasing issue for the singleton type.
+            if self.histogram_type == 'singleton':
+                # 1. Sort the buckets based on their min_value.
+                # This puts the buckets in the correct monotonic order.
+                self.buckets.sort(key=lambda b_: b_.min_value)
+                # 2. Recalculate the cumulative frequency (cum_freq) for the sorted buckets.
+                running_cumulative_freq = 0.0
+                for bucket in self.buckets:
+                    # The new cumulative frequency is the running total plus the bucket's own frequency.
+                    running_cumulative_freq += bucket.bucket_freq
+                    bucket.cum_freq = running_cumulative_freq
+                self.buckets[-1].cum_freq = 1.0
+            else:
+                raise ValueError(f"Buckets must have monotonically increasing, but got {self}")
+
     def find_nearest_key_pos(self, value, side: BTreeKeySide) -> Union[int, float]:
         """
         Scan from left to right, find the first bucket that contains the value.
@@ -288,8 +333,10 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                     value = self.buckets[i].max_value
                 cur: HistogramBucket = self.buckets[i]
 
-                if self.database_type == 'mariadb':
+                if self.database_type == 'mariadb' and not self.histogram_type == 'singleton':
                     # MariaDB: closed interval for the last bucket, open interval for the others
+                    # As we handled in model_post, in singleton mode,
+                    # the MariaDB bucket ranges are also closed on both ends (i.e., [a, b] intervals).
                     if i == len(self.buckets) - 1:
                         # the last bucket: closed interval [min_value, max_value]
                         if cur.min_value <= value <= cur.max_value:
@@ -446,6 +493,9 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                 if 'end' in bucket_raw:
                     # if end is specified, use the specified value
                     end_value = bucket_raw['end']
+                elif ndv == 1:
+                    # ndv == 1 means there are only one distinct value in this bucket.
+                    end_value = start_value
                 elif i < len(histogram_hb) - 1:
                     # if not the last bucket, use the start of the next bucket as end
                     end_value = histogram_hb[i + 1]['start']
