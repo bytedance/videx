@@ -1,3 +1,7 @@
+"""
+Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
+SPDX-License-Identifier: MIT
+"""
 import os
 import torch
 import torch.nn as nn
