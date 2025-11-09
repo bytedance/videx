@@ -3,31 +3,17 @@
 Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
+import logging
 import math
 from math import factorial
 from collections import Counter
 from typing import List, Any, Dict
 
 import numpy as np
-# from estndv import ndvEstimator
 from pandas import DataFrame
 from scipy.optimize import broyden1, broyden2
 
-from .adandv_model_infer import AdaNDVPredictor, AdaNDVConfig
-from .plm4ndv_model_infer import PLM4NDVPredictor
-
-# from sub_platforms.sql_opt.videx.videx_utils import safe_tolist  # 暂时注释掉，路径问题
-
-# Simple safe_tolist implementation
-def safe_tolist(series):
-    # Safely convert to list, handling None values
-    if series is None:
-        return []
-    try:
-        return series.tolist()
-    except:
-        return list(series)
-
+from sub_platforms.sql_opt.videx.videx_utils import safe_tolist
 
 class NEVUtils:
     def __init__(self) -> None:
@@ -131,7 +117,7 @@ class NEVUtils:
 class NDVEstimator:
     def __init__(self, original_num) -> None:
         # Add this in your ndv_estimator or histogram algorithm:
-        print("----This is new NDV Estimator from 5002 port----", flush=True)
+        logging.info("----This is new NDV Estimator from 5002 port----")
         self.original_num = original_num # Original table rows
         self.tools = NEVUtils()
         self.ada_model = None
@@ -141,7 +127,7 @@ class NDVEstimator:
         """
         [error_bound, GEE, Chao, scale, shlosser, ChaoLee, LS]
         """
-        print(f"----This is new NDV Estimator from 5002 port - method: {method}----", flush=True)
+        logging.info(f"----This is new NDV Estimator from 5002 port - method: {method}----")
         if method == 'error_bound':
             ndv = self.error_bound_estimate(r, profile)
         elif method == 'GEE':
@@ -176,19 +162,18 @@ class NDVEstimator:
             ndv = self.Smoothed_Jackknife_estimate(r, profile)
         elif method == 'Ada':
             if self.ada_model is None:
-                sample_rate = r / self.original_num
+                from sub_platforms.sql_opt.histogram.adandv_model_infer import AdaNDVPredictor, AdaNDVConfig
                 config = AdaNDVConfig(
                     model_path="src/sub_platforms/sql_opt/histogram/resources/adandv.pth",
                     model_input_len=100,
                     estimator_num=9,
-                    k=2,
-                    sample_rate=sample_rate
+                    k=2
                 )
                 self.ada_model = AdaNDVPredictor(config)
             ndv = self.ada_estimate(r, profile)
         elif method == 'PLM4NDV':
             if self.plm4ndv_model is None:
-                # model_path = "src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth"
+                from sub_platforms.sql_opt.histogram.plm4ndv_model_infer import PLM4NDVPredictor
                 model_path = "src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth"
                 self.plm4ndv_model = PLM4NDVPredictor(model_path=model_path)
             ndv = self.plm4ndv_estimate(r, profile, column_name=column_name, all_columns=all_columns, table_stats=table_stats)
@@ -259,14 +244,14 @@ class NDVEstimator:
             return predicted_ndvs[0]
             
         except Exception as e:
-            print(f"PLM4NDV prediction failed: {e}, falling back to scale estimate")
+            logging.info(f"PLM4NDV prediction failed: {e}, falling back to scale estimate")
             return self.scale_estimate(r, profile)
     
 
     def estimate(self, all_sampled_data: DataFrame) -> Dict[str, float]:
         """input all data and estimate NDV
         """
-        print("----This is NDVEstimator.estimate() called from 5002 port----", flush=True)
+        logging.info("----This is NDVEstimator.estimate() called from 5002 port----")
         columns = all_sampled_data.columns
         ndv_dict = {}
         data_len = len(all_sampled_data)
@@ -635,6 +620,7 @@ class NDVEstimator:
 
     def _ensure_plm4ndv_loaded(self):
         if self.plm4ndv_model is None:
+            from sub_platforms.sql_opt.histogram.plm4ndv_model_infer import PLM4NDVPredictor
             model_path = "src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth"
             self.plm4ndv_model = PLM4NDVPredictor(model_path=model_path)
 
@@ -743,7 +729,7 @@ class NDVEstimator:
                 ndv = self.estimator(len(all_sampled_data), profile, method)
                 individual_ndvs.append(max(1.0, float(ndv)))
             except Exception as e:
-                print(f"NDV estimation failed for column {col} with method {method}: {e}", flush=True)
+                logging.info(f"NDV estimation failed for column {col} with method {method}: {e}")
                 individual_ndvs.append(1.0)
         
         # Independent assumption synthesis: rows / product(rows / ndv_i)
@@ -753,5 +739,5 @@ class NDVEstimator:
         combined_rpk = min(rows, prod(rec_per_keys))
         ndv_multi = max(1.0, min(rows, rows / combined_rpk))
         
-        print(f"Independent assumption: {target_columns} -> {individual_ndvs} -> {ndv_multi}", flush=True)
+        logging.info(f"Independent assumption: {target_columns} -> {individual_ndvs} -> {ndv_multi}")
         return ndv_multi
