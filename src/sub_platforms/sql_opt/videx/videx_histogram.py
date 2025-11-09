@@ -255,9 +255,12 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
         # check the buckets order and histogram_type
         if all(bucket.row_count == 1 for bucket in self.buckets):
             self.histogram_type = 'singleton'
+        # TODO: Temporarily disable min/max validation due to Python's default sort differing from DB collation.
+        #  Will fix in the next PR using natural sort (like natsort).
+        #  e.g., Python considers Category_155_Mouse < Category_1_Desk, but MariaDB behaves the opposite way.
         # check bucket [min, max] is monotonically increasing
-        for i, bucket in enumerate(self.buckets):
-            assert bucket.min_value <= bucket.max_value, f"bucket[{i}] min_value > max_value: {bucket}"
+        # for i, bucket in enumerate(self.buckets):
+        #     assert bucket.min_value <= bucket.max_value, f"bucket[{i}] min_value > max_value: {bucket}"
 
         # if buckets [start,end] is not monotonically increasing, fix it or raise exception
         monotonically_increasing = True
