@@ -36,8 +36,9 @@ def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pw
                 "\n"
                 f"-- Connect VIDEX-MySQL: mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} -D{videx_db}\n"
                 f"USE {videx_db};\n"
-                f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
+                f"SET @VIDEX_SERVER='{videx_server_ip_port}'; -- For MySQL \n"
                 f"SET @VIDEX_OPTIONS='{videx_options}';\n"
+                f"SET SESSION VIDEX_SERVER_IP='127.0.0.1:5001'; -- For MariaDB \n"
                 f"-- EXPLAIN YOUR_SQL;\n"
                 f"{mysql57_msg}")
     else:
@@ -47,7 +48,8 @@ def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pw
                 "\n"
                 f"-- Connect VIDEX-MySQL: mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} -D{videx_db}\n"
                 f"USE {videx_db};\n"
-                f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
+                f"SET @VIDEX_SERVER='{videx_server_ip_port}'; -- For MySQL \n"
+                f"SET SESSION VIDEX_SERVER_IP='127.0.0.1:5001'; -- For MariaDB \n"
                 f"-- EXPLAIN YOUR_SQL;\n"
                 f"{mysql57_msg}")
 

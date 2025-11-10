@@ -434,6 +434,19 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
         return key_cum_freq + self.null_values
 
     @staticmethod
+    def init_all_null_histogram(data_type: str):
+        """
+        Init a histogram with all null values
+        """
+        return HistogramStats(
+            buckets=[],
+            data_type=data_type,
+            null_values=1,
+            histogram_type='singleton',
+            number_of_buckets_specified=0
+        )
+
+    @staticmethod
     def init_from_mysql_json(data: dict):
         """
         Init from data that is obtained from mysql, but not json or dataclass
@@ -856,6 +869,11 @@ def force_generate_histogram_by_sdc_for_col(env: Env, db_name: str, table_name: 
     null_values = env.mysql_util.query_for_value(
         f"SELECT COUNT(1) FROM {db_name}.{table_name} WHERE {col_name} IS NULL;")
     total_rows = env.mysql_util.query_for_value(f"SELECT COUNT(1) FROM {db_name}.{table_name}")
+
+    if int(null_values) == int(total_rows):
+        # All values are NULL
+        return HistogramStats.init_all_null_histogram(data_type)
+
     null_values = null_values / total_rows if total_rows > 0 else 0  # null_values is in [0, 1]
     n_buckets = min(total_rows, n_buckets)
     if total_rows > 0 and data_type_is_int(data_type):
