@@ -877,7 +877,10 @@ def force_generate_histogram_by_sdc_for_col(env: Env, db_name: str, table_name: 
     null_values = null_values / total_rows if total_rows > 0 else 0  # null_values is in [0, 1]
     n_buckets = min(total_rows, n_buckets)
     if total_rows > 0 and data_type_is_int(data_type):
-        n_buckets = min(n_buckets, max_val - min_val + 1)
+        if max_val is not None and min_val is not None:
+            n_buckets = min(n_buckets, max_val - min_val + 1)
+        else:
+            logging.warning(f"Column {col_name} has all NULL values, skipping n_buckets adjustment")
 
     res_dict['data-type'] = data_type
     res_dict['null-values'] = null_values
