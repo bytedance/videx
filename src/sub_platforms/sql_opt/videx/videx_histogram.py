@@ -91,7 +91,7 @@ def convert_str_by_type(raw, data_type: str, str_in_base4: bool = True):
         if raw in NULL_STR_SET:
             return None
         return float(raw)
-    elif data_type in ['string', 'str', 'varchar', 'char']:
+    elif data_type in ['string', 'str', 'varchar', 'char', 'enum']:
         # "base64:type254:YXhhaGtyc2I="
         if is_base64(str_in_base4, raw):
             res = decode_base64(raw)
@@ -103,7 +103,7 @@ def convert_str_by_type(raw, data_type: str, str_in_base4: bool = True):
                 (res.startswith('"') and res.endswith('"')):
             res = res[1:-1]
         return res
-    elif data_type in ['datetime', 'date']:
+    elif data_type in ['datetime', 'date', 'timestamp']:
         if '0000-00-00' in str(raw) or '1-01-01 00:00:00' in str(raw):
             return raw
         return reformat_datetime_str(str(raw))
@@ -140,6 +140,7 @@ class HistogramBucket(BaseModel, PydanticDataClassJsonMixin):
     cum_freq: float
     row_count: float  # note，row_count is "ndv" in bucket，we use float since algorithm may return non-integer
     size: int = 0
+    bucket_freq: float = None  # =buckets[i+1].cum_freq - buckets[i].cum_freq. For now, it's only used to sort singleton buckets.
 
 
 def init_bucket_by_type(bucket_raw: list, data_type: str, hist_type: str) -> HistogramBucket:
@@ -236,6 +237,53 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                     bucket.cum_freq = bucket.cum_freq * scale_factor
                 self.buckets[-1].cum_freq = 1
 
+            # calculate bucket_freq
+            self.buckets[0].bucket_freq = self.buckets[0].cum_freq
+            for i in range(len(self.buckets) - 1):
+                self.buckets[i + 1].bucket_freq = self.buckets[i + 1].cum_freq - self.buckets[i].cum_freq
+                assert self.buckets[i + 1].bucket_freq > 0, f"bucket_freq must > 0, but got {self.buckets[i]=}, {self.buckets[i+1]=}"
+
+        if len(self.buckets) == 0:
+            return
+
+        # if row_count (i.e., ndv) is 1, let bucket.max -> bucket.min
+        for bucket in self.buckets:
+            if bucket.row_count == 1 and bucket.min_value != bucket.max_value:
+                logging.info(f"bucket row_count is 1, set bucket.max_value = bucket.min_value: {bucket}")
+                bucket.max_value = bucket.min_value
+
+        # check the buckets order and histogram_type
+        if all(bucket.row_count == 1 for bucket in self.buckets):
+            self.histogram_type = 'singleton'
+        # TODO: Temporarily disable min/max validation due to Python's default sort differing from DB collation.
+        #  Will fix in the next PR using natural sort (like natsort).
+        #  e.g., Python considers Category_155_Mouse < Category_1_Desk, but MariaDB behaves the opposite way.
+        # check bucket [min, max] is monotonically increasing
+        # for i, bucket in enumerate(self.buckets):
+        #     assert bucket.min_value <= bucket.max_value, f"bucket[{i}] min_value > max_value: {bucket}"
+
+        # if buckets [start,end] is not monotonically increasing, fix it or raise exception
+        monotonically_increasing = True
+        for i in range(len(self.buckets) - 1):
+            if self.buckets[i].max_value > self.buckets[i + 1].min_value:
+                monotonically_increasing = False
+                break
+        if not monotonically_increasing:
+            # Currently, we can only handle the non-monotonically increasing issue for the singleton type.
+            if self.histogram_type == 'singleton':
+                # 1. Sort the buckets based on their min_value.
+                # This puts the buckets in the correct monotonic order.
+                self.buckets.sort(key=lambda b_: b_.min_value)
+                # 2. Recalculate the cumulative frequency (cum_freq) for the sorted buckets.
+                running_cumulative_freq = 0.0
+                for bucket in self.buckets:
+                    # The new cumulative frequency is the running total plus the bucket's own frequency.
+                    running_cumulative_freq += bucket.bucket_freq
+                    bucket.cum_freq = running_cumulative_freq
+                self.buckets[-1].cum_freq = 1.0
+            else:
+                raise ValueError(f"Buckets must have monotonically increasing, but got {self}")
+
     def find_nearest_key_pos(self, value, side: BTreeKeySide) -> Union[int, float]:
         """
         Scan from left to right, find the first bucket that contains the value.
@@ -288,8 +336,10 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                     value = self.buckets[i].max_value
                 cur: HistogramBucket = self.buckets[i]
 
-                if self.database_type == 'mariadb':
+                if self.database_type == 'mariadb' and not self.histogram_type == 'singleton':
                     # MariaDB: closed interval for the last bucket, open interval for the others
+                    # As we handled in model_post, in singleton mode,
+                    # the MariaDB bucket ranges are also closed on both ends (i.e., [a, b] intervals).
                     if i == len(self.buckets) - 1:
                         # the last bucket: closed interval [min_value, max_value]
                         if cur.min_value <= value <= cur.max_value:
@@ -324,8 +374,8 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                         elif self.data_type in ['float', 'double', 'decimal']:
                             # we thought the width of float number can be close to 0 temporarily
                             one_value_offset = (value - cur.min_value) / (cur.max_value - cur.min_value)
-                        elif self.data_type in ['string', 'varchar', 'char']:
-                            # Strings only support comparison and do not support addition or subtraction,
+                        elif self.data_type in ['string', 'varchar', 'char', 'enum']:
+                            # Strings and enums only support comparison and do not support addition or subtraction,
                             # so we only compare the two ends.
                             # For values that are neither the minimum (min) nor the maximum (max), we take 1/2.
                             if value == cur.min_value:
@@ -350,7 +400,7 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                             one_value_width = max(1 / total_days, one_value_width)
                             one_value_offset = (value_date - min_date).days / total_days
 
-                        elif self.data_type in ['datetime']:
+                        elif self.data_type in ['datetime', 'timestamp']:
                             min_datetime = parse_datetime(cur.min_value)
                             max_datetime = parse_datetime(cur.max_value)
                             value_datetime = parse_datetime(value)
@@ -382,6 +432,19 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
         # We follow the in-equation format, i.e.
         # 0, null_values(ratio), null_values + buckets[0].min, null_values + buckets[-1].max(almost 1)
         return key_cum_freq + self.null_values
+
+    @staticmethod
+    def init_all_null_histogram(data_type: str):
+        """
+        Init a histogram with all null values
+        """
+        return HistogramStats(
+            buckets=[],
+            data_type=data_type,
+            null_values=1,
+            histogram_type='singleton',
+            number_of_buckets_specified=0
+        )
 
     @staticmethod
     def init_from_mysql_json(data: dict):
@@ -446,6 +509,9 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                 if 'end' in bucket_raw:
                     # if end is specified, use the specified value
                     end_value = bucket_raw['end']
+                elif ndv == 1:
+                    # ndv == 1 means there are only one distinct value in this bucket.
+                    end_value = start_value
                 elif i < len(histogram_hb) - 1:
                     # if not the last bucket, use the start of the next bucket as end
                     end_value = histogram_hb[i + 1]['start']
@@ -559,9 +625,9 @@ def _format_value_by_type_in_sql(value, data_type_upper):
         return str(float(value))
     elif 'DATE' in data_type_upper:
         return f"'{value}'"
-    elif 'DATETIME' in data_type_upper:
+    elif 'DATETIME' in data_type_upper or 'TIMESTAMP' in data_type_upper:
         return f"'{value}'"
-    elif 'CHAR' in data_type_upper or 'TEXT' in data_type_upper:
+    elif 'CHAR' in data_type_upper or 'TEXT' in data_type_upper or 'ENUM' in data_type_upper:
         return f"'%s'" % value.replace("'", "''")
     else:
         return str(value)
@@ -590,8 +656,8 @@ def _get_uniform_buckets(env: Env, db_name, table_name, col_name, min_value, max
         for i in range(n_buckets + 1):
             bounds.append(min_val + i * step)
 
-    # date and char
-    elif 'CHAR' in data_type_upper or 'TEXT' in data_type_upper or 'DATE' in data_type_upper or 'DATETIME' in data_type_upper:
+    # date and char and enum
+    elif 'CHAR' in data_type_upper or 'TEXT' in data_type_upper or 'DATE' in data_type_upper or 'DATETIME' in data_type_upper or 'TIMESTAMP' in data_type_upper or 'ENUM' in data_type_upper:
         # random sampling some data, note that it's costly for online instance
         sample_sql = f"""
         SELECT {col_name} FROM {db_name}.{table_name} 
@@ -694,7 +760,7 @@ def get_bucket_bounds(env: Env, table_name, col_name,
         WHERE {col_name} {left_op} {l_str} AND {col_name} {right_op} {u_str}
 
     Notes:
-    1. For int, float, datetime, date, generation can be based on a uniform distribution;
+    1. For int, float, datetime, date, timestamp, generation can be based on a uniform distribution;
     2. For string, random sampling is needed, and then generation;
 
     Args:
@@ -803,10 +869,18 @@ def force_generate_histogram_by_sdc_for_col(env: Env, db_name: str, table_name: 
     null_values = env.mysql_util.query_for_value(
         f"SELECT COUNT(1) FROM {db_name}.{table_name} WHERE {col_name} IS NULL;")
     total_rows = env.mysql_util.query_for_value(f"SELECT COUNT(1) FROM {db_name}.{table_name}")
+
+    if int(null_values) == int(total_rows):
+        # All values are NULL
+        return HistogramStats.init_all_null_histogram(data_type)
+
     null_values = null_values / total_rows if total_rows > 0 else 0  # null_values is in [0, 1]
     n_buckets = min(total_rows, n_buckets)
     if total_rows > 0 and data_type_is_int(data_type):
-        n_buckets = min(n_buckets, max_val - min_val + 1)
+        if max_val is not None and min_val is not None:
+            n_buckets = min(n_buckets, max_val - min_val + 1)
+        else:
+            logging.warning(f"Column {col_name} has all NULL values, skipping n_buckets adjustment")
 
     res_dict['data-type'] = data_type
     res_dict['null-values'] = null_values
