@@ -2,30 +2,14 @@
 Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
-import math
 from enum import Enum
-from pydantic import BaseModel, Field, BeforeValidator, ConfigDict
-from typing import List, Optional, Any, Union, Annotated
-
+from pydantic import BaseModel, Field
+from typing import List, Optional, Any, Union
+from sub_platforms.sql_opt.meta_base import BaseTableId,BaseColumn,BaseIndexColumn,BaseIndex,BaseTable
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 
 
-def clean_int(value) -> Optional[int]:
-    """Convert various types of values to int or None"""
-    if value is None:
-        return None
-    elif isinstance(value, float):
-        if math.isnan(value):
-            return None
-        return int(value)
-    else:
-        return int(value)
-
-
-CleanInt = Annotated[Optional[int], BeforeValidator(clean_int)]
-
-
-class TableId(BaseModel, PydanticDataClassJsonMixin):
+class TableId(BaseTableId):
     db_name: Optional[str]
     table_name: Optional[str]
 
@@ -46,7 +30,7 @@ class TableId(BaseModel, PydanticDataClassJsonMixin):
             return False
 
 
-class Column(BaseModel, PydanticDataClassJsonMixin):
+class Column(BaseColumn):
     name: Optional[str] = None  # it may be None when column is an expression
     table: str = None
     db: Optional[str] = None
@@ -89,7 +73,7 @@ class Column(BaseModel, PydanticDataClassJsonMixin):
 
     def __str__(self):
         return f"{self.db}.{self.table}.{self.name}"
-
+    
 
 class OrderColumn(Column, BaseModel, PydanticDataClassJsonMixin):
     asc: bool = True
@@ -110,16 +94,14 @@ class IndexType(Enum):
     FOREIGN_KEY = 'FOREIGN_KEY'
 
 
-class IndexColumn(BaseModel, PydanticDataClassJsonMixin):
+class IndexColumn(BaseIndexColumn):
     """
         It's the column class in index. We distinct it from Column class because:
         1. The information obtained from Index Column is limited, we will complement more information later.
         2. Cardinality is the value of prefix in index, it's different in different index.
     """
-    model_config = ConfigDict(validate_assignment=True)  # to enable validation, avoid type warnings during `to_json`
-
-    name: Optional[str] = None  # may be expression or None
-    cardinality: Optional[CleanInt] = None
+    name: Optional[str] = None  # 可能是表达式，所以可以为空
+    cardinality: Optional[int] = None
     sub_part: Optional[int] = 0
     expression: Optional[str] = None
     collation: Optional[str] = 'asc'
@@ -175,17 +157,7 @@ class IndexColumn(BaseModel, PydanticDataClassJsonMixin):
             and self.name == other.name and self.expression == other.expression \
             and self.sub_part == other.sub_part and self.collation == other.collation
 
-
-class IndexBasicInfo(BaseModel, PydanticDataClassJsonMixin):
-    db_name: Optional[str] = Field(default=None)
-    table_name: Optional[str] = Field(default=None)
-    columns: Optional[List[IndexColumn]] = Field(default_factory=list)
-
-    def get_column_names(self):
-        return [column.name for column in self.columns]
-
-
-class Index(IndexBasicInfo, BaseModel, PydanticDataClassJsonMixin):
+class Index(BaseIndex):
     type: Optional[IndexType] = Field(default=None)
     name: Optional[str] = Field(default=None)
     is_unique: Optional[bool] = Field(default=False)
@@ -201,7 +173,7 @@ class Index(IndexBasicInfo, BaseModel, PydanticDataClassJsonMixin):
         return self.table_name
 
 
-class Table(BaseModel, PydanticDataClassJsonMixin):
+class Table(BaseTable):
     name: str = None
     db: str = None
     engine: Optional[str] = None
@@ -298,6 +270,8 @@ class JoinItem(BaseModel, PydanticDataClassJsonMixin):
 
     def __str__(self):
         return f"{self.left} {self.operation} {self.right}"
+
+
 
 
 # json multi array is a special and more complex function index,

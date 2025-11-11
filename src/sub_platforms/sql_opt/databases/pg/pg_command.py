@@ -6,7 +6,6 @@ from enum import Enum
 from typing import List
 
 import numpy as np
-from numpy import datetime64
 
 from sub_platforms.sql_opt.videx.videx_mysql_utils import AbstractMySQLUtils
 from sub_platforms.sql_opt.pg_meta import PGTable, PGColumn, PGIndex, PGIndexColumn, IndexType
@@ -27,7 +26,7 @@ def get_pg_version(pg_util: AbstractMySQLUtils):
 def datetime64_to_datetime(date_obj):
     if date_obj is None:
         return date_obj
-    if isinstance(date_obj, datetime64):
+    if isinstance(date_obj, np.datetime64):
         return datetime.datetime.fromtimestamp(date_obj.tolist() / 1000000000)
     return date_obj
 
@@ -38,8 +37,13 @@ class PGCommand:
 
     def get_table_columns(self, db_name, table_name, schema_name = 'public') -> List[PGColumn]:
         sql = f"""
-            select * from information_schema.columns 
-            where table_catalog = '{db_name}' and table_name = '{table_name}'
+            select 
+                * 
+            from 
+                information_schema.columns 
+            where 
+                table_catalog = '{db_name}' 
+                and table_name = '{table_name}'
         """
         df = self.pg_util.query_for_dataframe(sql)
         columns = []
@@ -59,7 +63,7 @@ class PGCommand:
         return columns
     
     def get_table_indexes(self, db_name, table_name,schema_name = 'public') -> List[PGIndex]:
-        #we should gurantee that we are in the correct database
+        # we should gurantee that we are in the correct database
         sql = f"""
             SELECT
                 c.relname AS index_name,  -- index_name
@@ -76,14 +80,23 @@ class PGCommand:
             JOIN 
                 pg_am a ON c.relam = a.oid
             WHERE 
-                i.indrelid = (SELECT oid as tbname FROM pg_class WHERE relname = '{table_name}' AND relkind = 'r'
-                AND n.nspname = '{schema_name}')
+                i.indrelid = (
+                    SELECT 
+                        oid as tbname 
+                    FROM 
+                        pg_class 
+                    WHERE 
+                        relname = '{table_name}' 
+                        AND relkind = 'r'
+                        AND n.nspname = '{schema_name}'
+                )
         """
         df = self.pg_util.query_for_dataframe(sql)
         if len(df) == 0:
             return []
         indexs = []
         for idx_info in df:
+            # determine index type
             is_unique = idx_info['indisunique'].values[0] != 'f'
             is_primary = idx_info['indisprimary'].values[0] != 'f'
             if is_unique and is_primary:
@@ -92,6 +105,7 @@ class PGCommand:
                 type = IndexType.UNIQUE
             else:
                 type = IndexType.NORMAL
+            
             index = PGIndex(
                 type = type,
                 db_name = db_name,
@@ -99,9 +113,11 @@ class PGCommand:
                 is_unique = is_unique,
                 is_visible = True,
             )
+
+            # set type of underlying data structures, e.g., btree, hash, gin, gist
             index_type = idx_info['index_type'].values[0]
             index.index_type = index_type
-
+            # get index columns
             index.columns = []
             indexrelid = idx_info['indexrelid'].values[0]
             sql = f"""
@@ -131,12 +147,20 @@ class PGCommand:
     def get_table_meta(self, db_name, schema_table_name):
         from sub_platforms.sql_opt.videx.videx_utils import pg_deserialize_schema_table
         schema_name,table_name = pg_deserialize_schema_table(schema_table_name)
+        # get table ddl
         dump_text = self.pg_util.pg_dump(db_name,schema_name,table_name)
         sql = f"""
-            SELECT relpages,reltuples, relallvisible
-            FROM pg_class c
-            JOIN pg_namespace n ON c.relnamespace = n.oid
-            WHERE c.relname = '{table_name}' AND n.nspname = '{schema_name}'
+            SELECT 
+                relpages, reltuples, relallvisible
+            FROM 
+                pg_class c
+            JOIN 
+                pg_namespace n 
+            ON 
+                c.relnamespace = n.oid
+            WHERE 
+                c.relname = '{table_name}' 
+                AND n.nspname = '{schema_name}'
         """
         df = self.pg_util.query_for_dataframe(sql)
         table = PGTable(

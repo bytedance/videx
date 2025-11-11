@@ -98,6 +98,7 @@ class VidexFunc(enum.Enum):
     get_memory_buffer_size = "get_memory_buffer_size"
     records_in_range = "records_in_range"
     info_low = "info_low"
+    videx_get_relation_stats = "videx_get_relation_stats"
     not_supported = "not_supported"
 
 
@@ -316,8 +317,7 @@ class VidexSingleton:
             #  Note: Do not replace `gt_rr_dict[table_name]` with `x.get(y)`, as `gt_rr_dict` is a `defaultdict(GT_Table_Return)`.
             # It returns a default `GT_Table_Return` only when calling `gt_rr_dict[table_name]`.
             # `gt_rr_dict.get(table_name)` would return `None` if the key does not exist.
-            gt_rec_in_ranges=gt_rr_dict[table_name],
-            sample_data=table_stats_info.sample_data
+            gt_rec_in_ranges=gt_rr_dict[table_name]
         )
         table_model = self.VidexModelClass(table_stats, **self.model_kwargs)
         task_cache.add_table_model_cache(db_name, table_name, table_model)
@@ -614,6 +614,29 @@ def create_videx_env_multi_db(videx_env: Env,
         finally:
             videx_env.set_default_db(videx_default_db)
 
+def create_videx_env_multi_db_for_pg(videx_env: Env,
+                              meta_dict: dict,
+                              new_engine: str = 'VIDEX',
+                              ):
+    for target_db, table_dict in meta_dict.items():
+        #TODO: In Postgresql, you cannot drop a database if you are connected to it.
+        videx_env._switch_db("postgres")
+        videx_env.execute(f"DROP DATABASE IF EXISTS {target_db}")
+        videx_env.execute(f"CREATE DATABASE {target_db}")
+        videx_env._switch_db(target_db)
+        videx_env.execute(f"CREATE EXTENSION VIDEX")
+        videx_default_db = videx_env.default_db
+        try:
+            videx_env.set_default_db(target_db)
+            print(f"taget_database: {target_db}, table_size: {len(table_dict)}")
+            for table in table_dict.values():
+                dump_text = table.ddl
+                pattern = r'(CREATE TABLE\s+[\w\.]+\s*\(\s*.*?\s*\))\s*;'
+                replacement = rf'\1 USING {new_engine};'
+                videx_dump_text = re.sub(pattern, replacement, dump_text, flags=re.DOTALL)
+                videx_env.execute(videx_dump_text)
+        finally:
+            videx_env.set_default_db(videx_default_db)
 
 def post_to_clear_videx_server_cache(videx_server: str, task_ids: List[str]) -> Response:
     """Send a request to the specified server to clear the specified task IDs.

@@ -108,7 +108,7 @@ videx_table_block_relation_estimate_size(Relation rel, int32 *attr_widths,
 	BlockNumber relallvisible;
 	double		density;
 
-	/* skip videx_relation_size , let curpage equal to relpages directly */
+	/* it should have storage, so we can call the smgr */
 	curpages = (BlockNumber) rel->rd_rel->relpages;
 
 	/* coerce values in pg_class to more desirable types */

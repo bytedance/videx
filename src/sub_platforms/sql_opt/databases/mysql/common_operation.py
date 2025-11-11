@@ -16,6 +16,7 @@ from sub_platforms.sql_opt.common.exceptions import UnsupportedException
 from sqlglot.dialects.mysql import MySQL
 
 
+
 def parse_from_expression(expression):
     ast = sqlglot.parse_one(expression, read=MySQL)
     for node in ast.dfs():
