@@ -540,22 +540,22 @@ If you find this code useful, we would appreciate citations to our paper:
 
 ### Plugin-Mode Support List
 
-| Database System | Version Range | Support Status | Remarks                                        |
-|-----------------|---------------|----------------|------------------------------------------------|
-| Percona         | 8.0.34-26     | ✅ Supported    | Tested in all `TPC-H` and `JOB` scenarios      |
-| MySQL           | 8.0.42        | ✅ Supported    | Branch `compatibility/mysql8.0.42`             |
-| MariaDB         | —             | ⏳ Planning     | Ongoing discussions with the MariaDB community |
-| PG              | -             | 🔮 Future Work | Anticipating discussions with contributors     |
+| Database System | Version Range | Support Status | Remarks                                                                                             |
+|-----------------|--------------|----------------|-----------------------------------------------------------------------------------------------------|
+| Percona         | 8.0.34-26    | ✅ Supported    | Tested in all `TPC-H` and `JOB` scenarios                                                           |
+| MySQL           | 8.0.42       | ✅ Supported    | Branch `compatibility/mysql8.0.42`                                                                  |
+| MariaDB         | 11.8.2       | ✅ Supported     | The [PR-4217](https://github.com/MariaDB/server/pull/4217) is under review by the MariaDB community |
+| PG              | -            | 🔮 Future Work | Anticipating discussions with contributors                                                          |
 
 ### Standalone-Mode Support List
 
-| Database System | Version Range | Support Status   | Remarks                                        |
-|-----------------|---------------|------------------|------------------------------------------------|
-| Percona         | 8.0.34-26+    | ✅ Supported | Tested in all `TPC-H` and `JOB` scenarios      |
-| MySQL           | 8.0.x         | ✅ Supported      | Tested in some `TPC-H` scenarios               |
-| MySQL           | 5.7.x         | ✅ Supported      | Tested in some `TPC-H` scenarios               |
-| MariaDB         | 11.8.2        | ✅ Supported       | Tested in some `TPC-H` scenarios                       |
-| PG              | -             | 🔮 Future Work   | Anticipating discussions with contributors     |
+| Database System | Version Range | Support Status   | Remarks                                                                                                                                |
+|-----------------|---------------|------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| Percona         | 8.0.34-26+    | ✅ Supported | Tested in all `TPC-H` and `JOB` scenarios                                                                                              |
+| MySQL           | 8.0.x         | ✅ Supported      | Tested in some `TPC-H` scenarios                                                                                                       |
+| MySQL           | 5.7.x         | ✅ Supported      | Tested in some `TPC-H` scenarios                                                                                                       |
+| MariaDB         | 11.8.2        | ✅ Supported       | Tested in some `TPC-H` scenarios. The [PR-4217](https://github.com/MariaDB/server/pull/4217) is under review by the MariaDB community. |
+| PG              | -             | ⏳ WIP   | Work in progress by open source contributors.                                                                                             |
 
 ## Authors
 

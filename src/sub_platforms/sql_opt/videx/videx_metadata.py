@@ -170,6 +170,9 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
     """
     Represents the statistics of a HA table.
     """
+
+    model_config = {"arbitrary_types_allowed": True}
+
     dbname: str
     table_name: str
 
@@ -243,6 +246,8 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
     # records metadata about table schema
     table_meta: Optional[Table] = None
 
+    sample_data: Optional[pd.DataFrame] = Field(default=None)
+
     def get_col_hist(self, col: str) -> Optional[HistogramStats]:
         return self.hist_columns.get(col)
 
@@ -273,7 +278,8 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
                   db_config: VariablesAboutIndex,
                   ideal_ndvs: dict, single_ndvs: dict,
                   pct_cached: dict,
-                  gt_rec_in_ranges: GT_Table_Return):
+                  gt_rec_in_ranges: GT_Table_Return,
+                  sample_data: Optional[pd.DataFrame] = None):
         """
         Args:
             dbname:
@@ -285,6 +291,11 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
         Returns:
 
         """
+
+        if sample_data is None and sample_file_info and sample_file_info.sample_file_dict:
+            sample_data = sample_file_info.get_dataframe(table_name)
+    
+
         # index lowercase
         hist_columns = {col: None if not hist else HistogramStats.from_dict(hist) for col, hist in
                         hist_columns.items()}
@@ -344,6 +355,7 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
             ndvs_multi_col_gt=ideal_ndvs,
             gt_return=gt_rec_in_ranges,
             table_meta=raw_meta_dict,
+            sample_data=sample_data,
         )
         # for k, v in res.hist_columns.items():
         #     if v is not None:
@@ -442,7 +454,9 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
                CREATE_TIME, UPDATE_TIME, CHECK_TIME, TABLE_COLLATION, 
                CHECKSUM, CREATE_OPTIONS, TABLE_COMMENT 
         FROM information_schema.TABLES 
-        WHERE table_schema = '%s' and ENGINE = 'InnoDB'
+        WHERE table_schema = '%s'
+          AND ENGINE = 'InnoDB'
+          AND TABLE_TYPE = 'BASE TABLE'
     """ % target_dbname
 
     basic_list: pd.DataFrame = env.query_for_dataframe(sql).to_dict(orient='records')
@@ -567,6 +581,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
                              drop_hist_after_fetch: bool = True,
                              hist_mem_size: int = None,
                              histogram_data: dict = None,
+                             hist_algo: Optional[str] = None,
                              ) -> Tuple[dict, dict, dict, dict]:
     """
 
@@ -591,7 +606,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
         raise Exception(f"given env ({env.instance=}) is not in BLACKLIST, cannot fetch raw metadata directly")
     # 如果非空，则将数据写入到指定目录的文件中
     logging.info(
-        f"fetch_all_meta_for_videx. {target_db=} {result_dir=} {n_buckets=} {hist_force=} {hist_mem_size=} {all_table_names=}")
+        f"fetch_all_meta_for_videx. {target_db=} {result_dir=} {n_buckets=} {hist_force=} {hist_mem_size=} {all_table_names=} {hist_algo=}")
     stats_file = f'videx_{target_db}_info_stats.json'
     hist_file = f'videx_{target_db}_histogram.json'
     ndv_single_file = f'videx_{target_db}_ndv_single.json'
@@ -646,6 +661,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
                                                  ret_json=True,
                                                  hist_mem_size=hist_mem_size,
                                                  ndv_single_dict=ndv_single_dict,
+                                                 algo=hist_algo,
                                                  )
         hist_dict.update(tmp_hist_dict)
 
@@ -687,6 +703,7 @@ def fetch_all_meta_with_one_file(meta_path: Union[str, dict],
                                  drop_hist_after_fetch: bool = True,
                                  hist_mem_size: int = None,
                                  histogram_data: dict = None,
+                                 hist_algo: Optional[str] = None, 
                                  ) -> Tuple[dict, dict, dict, dict]:
     """Fetch all metadata and store/load it in a single file.
 
@@ -733,7 +750,7 @@ def fetch_all_meta_with_one_file(meta_path: Union[str, dict],
         # Recursively process the loaded dictionary
         return fetch_all_meta_with_one_file(metadata, env, target_db, all_table_names,
                                             n_buckets, hist_force, drop_hist_after_fetch,
-                                            hist_mem_size, histogram_data)
+                                            hist_mem_size, histogram_data, hist_algo)
 
     # Generate new metadata if file is None, or file doesn't exist
     # Create temporary directory with timestamp
@@ -749,7 +766,8 @@ def fetch_all_meta_with_one_file(meta_path: Union[str, dict],
             hist_force=hist_force,
             drop_hist_after_fetch=drop_hist_after_fetch,
             hist_mem_size=hist_mem_size,
-            histogram_data=histogram_data
+            histogram_data=histogram_data,
+            hist_algo=hist_algo
         )
 
         if isinstance(meta_path, str):
@@ -937,9 +955,19 @@ def meta_dict_to_sample_file(
             # table_raw_stat_dict: Dict[str, Any] = self.stats_dict.get(db_name, {}).get(table_name, {})
             table_stat_info = TableStatisticsInfo(db_name=db_name, table_name=table_name)
 
-            table_stat_info.ndv_dict = ndv_single_dict[db_name][table_name]
+            # Safely retrieve NDV data, using an empty dictionary if not present
+            if db_name in ndv_single_dict and table_name in ndv_single_dict[db_name]:
+                table_stat_info.ndv_dict = ndv_single_dict[db_name][table_name]
+            else:
+                table_stat_info.ndv_dict = {}
 
-            histogram_data = hist_dict[db_name][table_name]
+
+            # Safely get NDV data, use an empty dictionary if not present
+            if db_name in hist_dict and table_name in hist_dict[db_name]:
+                histogram_data = hist_dict[db_name][table_name]
+            else:
+                histogram_data = {} 
+
             if histogram_data and isinstance(list(histogram_data.values())[0], dict):
                 # if histogram_dict is a dict, convert it to HistogramStats object
                 histogram_data = {
@@ -981,6 +1009,7 @@ def construct_videx_task_meta_from_local_files(task_id, videx_db,
                                                gt_rec_in_ranges_file: Union[str, dict] = None,
                                                gt_req_resp_file: Union[str, dict] = None,
                                                raise_error: bool = False,
+                                               sample_file_dict: dict = None,
                                                ) -> VidexDBTaskStats:
     """
     Add task metadata from a local file.
@@ -1104,11 +1133,20 @@ def construct_videx_task_meta_from_local_files(task_id, videx_db,
             cluster_index_size=table_dict['CLUSTERED_INDEX_SIZE'],
             other_index_sizes=table_dict['SUM_OF_OTHER_INDEX_SIZES'],
         )
+    
+    sample_file_info = None
+    if sample_file_dict:
+        sample_file_info = SampleFileInfo(
+            local_path_prefix='RowFetchNone',
+            tos_path_prefix='RowFetchNone',
+            sample_file_dict=sample_file_dict,
+        )
 
     req_obj = VidexDBTaskStats(task_id=task_id,
                                meta_dict=meta_dict,
                                stats_dict=db_stat_dict,
                                db_config=db_config,
+                               sample_file_info=sample_file_info,
                                )
     return req_obj
 
@@ -1128,3 +1166,119 @@ class VidexMetaGetter(ABC):
             VidexDBTaskStats: The metadata of the task.
         """
         raise NotImplementedError
+
+
+def collect_sample_data_for_tables(env, target_db: str, all_table_names: List[str], 
+                                 sample_size: int = 1000) -> Dict[str, pd.DataFrame]:
+    """
+    Collect sample data from specified tables for NDV estimation.
+    
+    Args:
+        env: Database environment
+        target_db: Target database name
+        all_table_names: List of table names to sample
+        sample_size: Number of rows to sample per table
+        
+    Returns:
+        Dict mapping table names to sample DataFrames
+    """
+    sample_file_dict = {}
+    
+    for table_name in all_table_names:
+        try:
+            sample_sql = f"""
+                SELECT * FROM `{target_db}`.`{table_name}` 
+                ORDER BY RAND() 
+                LIMIT {max(sample_size, 1000)}
+            """
+            sample_data = env.query_for_dataframe(sample_sql)
+            
+            if not sample_data.empty:
+                sample_file_dict[table_name] = sample_data
+                logging.info(f"Sampled {len(sample_data)} rows from {table_name}")
+            else:
+                logging.warning(f"No sample data collected from {table_name}")
+
+        except Exception as e:
+            logging.error(f"Failed to sample data from {table_name}: {e}")
+            continue
+    
+    return sample_file_dict
+
+
+def save_sample_data_to_files(sample_file_dict: Dict[str, pd.DataFrame], 
+                            videx_db: str, 
+                            save_dir: str = "/tmp/videx_samples") -> Dict[str, Dict[str, str]]:
+    """
+    Save sample data to CSV files and return file info for metadata.
+    
+    Args:
+        sample_file_dict: Dict mapping table names to sample DataFrames
+        videx_db: VIDEX database name
+        save_dir: Directory to save sample files
+        
+    Returns:
+        Dict mapping table names to file info dictionaries
+    """
+    os.makedirs(save_dir, exist_ok=True)
+    sample_file_info_dict = {}
+    
+    for table_name, sample_df in sample_file_dict.items():
+        try:
+            # Use CSV format, more compatible
+            csv_path = os.path.join(save_dir, f"{table_name}.csv")
+            sample_df.to_csv(csv_path, index=False, encoding='utf-8')
+            sample_file_info_dict[table_name] = {"path": csv_path, "format": "csv"}
+            logging.info(f"Saved sample for {table_name} to {csv_path} (CSV format)")
+        except Exception as e:
+            logging.error(f"Failed to save sample for {table_name}: {e}")
+    
+    return sample_file_info_dict
+
+
+def construct_meta_request_with_samples(task_id: str, videx_db: str, 
+                                      stats_file_dict: Dict, 
+                                      sample_file_dict: Dict[str, pd.DataFrame],
+                                      sample_file_info_dict: Dict[str, Dict[str, str]]) -> 'VidexDBTaskStats':
+    """
+    Construct metadata request with sample data for NDV estimation.
+    
+    Args:
+        task_id: Task ID
+        videx_db: VIDEX database name
+        stats_file_dict: Statistics file dictionary
+        sample_file_dict: Sample data dictionary
+        sample_file_info_dict: Sample file info dictionary
+        
+    Returns:
+        VidexDBTaskStats object with sample data
+    """
+    # Construct the metadata request, including the sampled data
+    meta_request = construct_videx_task_meta_from_local_files(
+        task_id=task_id,
+        videx_db=videx_db,
+        stats_file=stats_file_dict,  # Basic statistics information
+        hist_file={},  # Empty histogram
+        ndv_single_file={}, # Empty single column NDV
+        ndv_mulcol_file={}, # Empty multi-column NDV
+        gt_rec_in_ranges_file=None,
+        gt_req_resp_file=None,
+        raise_error=True,
+        sample_file_dict=sample_file_dict  # Add sampled data
+    )
+
+    # Set sample file information
+    for table_name, sample_df in sample_file_dict.items():
+        # The structure of meta_request.meta_dict is {db_name: {table_name: VidexTableStats}}
+        for db_name, db_meta_dict in meta_request.meta_dict.items():
+            if table_name in db_meta_dict:
+                table_stats_info = db_meta_dict[table_name]
+                if hasattr(table_stats_info, 'sample_data'):
+                    table_stats_info.sample_data = sample_df
+                    logging.info(f"Set sample data for {table_name}: {len(sample_df)} rows")
+                    
+                    # Set sample file information (server reads it)
+                    if table_name in sample_file_info_dict:
+                        table_stats_info.sample_file_info = sample_file_info_dict[table_name]
+    
+    return meta_request

@@ -12,7 +12,7 @@ from typing import List
 import numpy as np
 from cachetools import TTLCache
 
-from sub_platforms.sql_opt.histogram.ndv_estimator import NDVEstimator
+from sub_platforms.sql_opt.histogram.ndv_estimator import NDVEstimator, safe_tolist
 from sub_platforms.sql_opt.histogram.histogram_utils import load_sample_file
 from sub_platforms.sql_opt.videx.videx_histogram import MEANINGLESS_INT
 from sub_platforms.sql_opt.videx.videx_metadata import VidexTableStats, PCT_CACHED_MODE_PREFER_META
@@ -46,18 +46,22 @@ class VidexModelInnoDB(VidexModelBase):
         self.ndv_cache = TTLCache(maxsize=1000, ttl=1200)
         self.ndv_model = None
         self.df_sample_raw = None
+        self.ndv_method = None  # The highest priority for this request, injected by @VIDEX_OPTIONS
         self.loading_ndv_model()
         self.inject_cardinality_dict = dict()
         # self.inject_cardinality_dict["C_NATIONKEY = 15"] = 58
         # self.inject_cardinality_dict["'1995-01-01' <= O_ORDERDATE <= '1996-12-31'"] = 4509
 
     def loading_ndv_model(self):
+
         if self.table_stats and self.table_stats.sample_file_info is not None:
             logging.info(f"loading ndv model: NDVEstimator, table_name={self.table_name}")
             st = time.perf_counter()
             table_rows = self.table_stats.records
             self.ndv_model = NDVEstimator(table_rows)
+
             self.df_sample_raw = load_sample_file(self.table_stats)
+
             logging.info(f"loading ndv model: NDVEstimator, table_name={self.table_name}, "
                          f"use {time.perf_counter() - st:.2f} seconds")
 
@@ -134,18 +138,69 @@ class VidexModelInnoDB(VidexModelBase):
 
     def ndv(self, index_name, field_list: List[str]) -> int:
         ndv = self.table_stats.get_ideal_ndv(index_name, field_list)
+        print("----GET_IDEAL_NDV   NDV IS :", ndv, "----", flush=True)
         if ndv is None:
-            if self.table_stats.sample_file_info is not None:
-                table_rows = self.table_stats.records
-                # table_ndv_estimator = NDVEstimator(table_rows)
+            if self.df_sample_raw is not None:
+                print(f"------Using sampling data with {len(self.df_sample_raw)} rows", flush=True)
+                rows = float(self.table_stats.records)
                 st = time.perf_counter()
-                ndv = self.ndv_model.estimate_multi_columns(self.df_sample_raw, field_list, table_rows)
-                # ndv = table_ndv_estimator.estimate_multi_columns(df_sample_raw, field_list)
-                elapsed_time = time.perf_counter() - st
-                logging.info(f"ndv calculate: {ndv=} {elapsed_time=:.2f}s")
+                
+                # Use the method injected by @VIDEX_OPTIONS first, then the environment variable, finally default 'hybrid'
+                import os
+                ndv_method = (self.ndv_method or os.getenv('VIDEX_NDV_METHOD') or 'hybrid')
+                methods = ['PLM4NDV', 'Ada', 'GEE', 'scale'] if ndv_method == 'hybrid' else [ndv_method]
+                
+                ndv_candidates = []
+                for m in methods:
+                    try:
+                        if len(field_list) == 1:
+                            # Single column: directly call the estimator method
+                            if m == 'PLM4NDV':
+                                # PLM4NDV needs all column information, even for single column estimation
+                                all_table_columns = list(self.df_sample_raw.columns)
+                                col_data = safe_tolist(self.df_sample_raw[field_list[0]].dropna())
+                                profile = self.ndv_model.build_column_profile(col_data)
+                                v = self.ndv_model.estimator(
+                                    len(self.df_sample_raw), profile, method=m, 
+                                    column_name=field_list[0], all_columns=all_table_columns,  # 传入所有列
+                                    table_stats=self.table_stats
+                                )
+                            else:
+                                # Other methods handle normally
+                                col_data = safe_tolist(self.df_sample_raw[field_list[0]].dropna())
+                                if len(col_data) == 0:
+                                    v = 1.0
+                                else:
+                                    profile = self.ndv_model.build_column_profile(col_data)
+                                    v = self.ndv_model.estimator(
+                                        len(self.df_sample_raw), profile, method=m, 
+                                        column_name=field_list[0], all_columns=[field_list[0]], 
+                                        table_stats=self.table_stats
+                                    )
+                        else:
+                            # Multiple columns: call the multi-column estimation
+                            v = self.ndv_model.estimate_multi_columns(
+                                self.df_sample_raw, field_list, method=m, table_stats=self.table_stats
+                            )
+                        v = max(1.0, min(float(v), rows))
+                        ndv_candidates.append((m, v))
+                        print(f"NDV({m}) = {v}", flush=True)
+                    except Exception as e:
+                        print(f"NDV({m}) failed: {e}", flush=True)
+                
+                if ndv_candidates:
+                    ndv = min(v for _, v in ndv_candidates)  # Take the minimum; can be changed to the median, etc.
+                    chosen = [m for m, v in ndv_candidates if v == ndv][0]
+                else:
+                    ndv, chosen = rows, 'fallback_rows'
+                
+                print(f"LOG: Using Sample to estimate NDV({ndv_method}|chosen={chosen}): {ndv}", flush=True)
+                print(f"LOG: estimation took {time.perf_counter() - st:.3f}s", flush=True)
             else:
+                # Fallback logic
                 ndv = calc_mulcol_ndv_independent(field_list, self.table_stats.ndvs_single,
-                                                  self.table_stats.records)
+                                                   self.table_stats.records)
+
         return ndv
 
     def info_low(self, req_json_item: dict) -> dict:
@@ -163,6 +218,17 @@ class VidexModelInnoDB(VidexModelBase):
             - rec_per_key: table_rows / ndv
             - srv_innodb_stats_method，or set to default
         """
+        # Parse the ndv_method in @VIDEX_OPTIONS
+        properties = req_json_item.get('properties', {})
+        options_str = properties.get('videx_options', '{}')
+        try:
+            options = json.loads(options_str) if isinstance(options_str, str) else (options_str or {})
+        except Exception:
+            options = {}
+        
+        # This is a per-query setting, reset at the start of each SQL execution.
+        self.ndv_method = options.get('ndv_method', None)
+
         CONCAT = " #@# "
         res = {
             "stat_n_rows": self.table_stats.records,

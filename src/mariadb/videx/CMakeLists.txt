@@ -1,5 +1,5 @@
 # Copyright (c) 2025 Bytedance Ltd. and its affiliates.
-# 
+#
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License, version 2.0,
 # as published by the Free Software Foundation.
@@ -37,25 +37,12 @@ INCLUDE_DIRECTORIES(
 )
 
 SET(VIDEX_SOURCES
-        videx_json_item.cc
-        videx_log_utils.cc
+        videx_utils.cc
         ha_videx.cc
 )
 
-IF (PLUGIN_VIDEX STREQUAL "STATIC" OR PLUGIN_VIDEX STREQUAL "YES")
-        MESSAGE(STATUS "Building VIDEX as static plugin (default)")
-        MYSQL_ADD_PLUGIN(videx
-                ${VIDEX_SOURCES}
-                STORAGE_ENGINE
-                STATIC_ONLY
-                LINK_LIBRARIES ${ZLIB_LIBRARIES} ${CURL_LIBRARIES}
-        )
-ELSEIF (PLUGIN_VIDEX STREQUAL "DYNAMIC")
-        MESSAGE(STATUS "Building VIDEX as dynamic plugin only")
-        MYSQL_ADD_PLUGIN(videx
-                ${VIDEX_SOURCES}
-                STORAGE_ENGINE
-                MODULE_ONLY
-                LINK_LIBRARIES ${ZLIB_LIBRARIES} ${CURL_LIBRARIES}
-        )
-ENDIF()
+MYSQL_ADD_PLUGIN(videx
+        ${VIDEX_SOURCES}
+        STORAGE_ENGINE
+        LINK_LIBRARIES ${ZLIB_LIBRARIES} ${CURL_LIBRARIES}
+)

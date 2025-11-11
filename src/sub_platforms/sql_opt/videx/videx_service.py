@@ -316,7 +316,8 @@ class VidexSingleton:
             #  Note: Do not replace `gt_rr_dict[table_name]` with `x.get(y)`, as `gt_rr_dict` is a `defaultdict(GT_Table_Return)`.
             # It returns a default `GT_Table_Return` only when calling `gt_rr_dict[table_name]`.
             # `gt_rr_dict.get(table_name)` would return `None` if the key does not exist.
-            gt_rec_in_ranges=gt_rr_dict[table_name]
+            gt_rec_in_ranges=gt_rr_dict[table_name],
+            sample_data=table_stats_info.sample_data
         )
         table_model = self.VidexModelClass(table_stats, **self.model_kwargs)
         task_cache.add_table_model_cache(db_name, table_name, table_model)

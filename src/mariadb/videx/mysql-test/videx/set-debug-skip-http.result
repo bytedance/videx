@@ -10,10 +10,17 @@ CREATE TABLE `part` (
 `P_COMMENT` varchar(23) NOT NULL,
 PRIMARY KEY (`P_PARTKEY`)
 ) ENGINE=VIDEX;
-SET @DEBUG_SKIP_HTTP='True';
-SELECT @DEBUG_SKIP_HTTP;
-@DEBUG_SKIP_HTTP
-True
+SET SESSION videx_server_ip=NULL;
+SHOW SESSION VARIABLES LIKE 'videx%';
+Variable_name	Value
+videx_options	{}
+videx_server_ip	
 EXPLAIN SELECT COUNT(*) from part;
 id	select_type	table	type	possible_keys	key	key_len	ref	rows	Extra
 1	SIMPLE	part	ALL	NULL	NULL	NULL	NULL	0	
+DROP TABLE part;
+SET SESSION videx_server_ip=DEFAULT;
+SHOW SESSION VARIABLES LIKE 'videx%';
+Variable_name	Value
+videx_options	{}
+videx_server_ip	127.0.0.1:5001

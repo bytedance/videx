@@ -48,7 +48,8 @@ dependencies = [
     "cachetools~=5.3.3",
     "estndv==0.0.2",
     "sqlglot==25.4.1",
-    "pydantic==2.10.4"
+    "pydantic==2.10.4",
+    "scipy==1.13.1"
 ]
 
 [project.urls]

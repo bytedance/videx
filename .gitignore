@@ -5,6 +5,7 @@
 .vscode
 .coverage
 __pycache__/
+*.pth
 *.pyc
 span.log
 .DS_Store
@@ -25,3 +26,4 @@ videx.egg-info
 tpch_tiny.sql
 videx_metadata_tpch_tiny.json
 dist
+data
