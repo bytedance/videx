@@ -43,4 +43,4 @@ class VidexModelExample(VidexModelInnoDB):
         return 10
 
     def ndv(self, index_name, field_list: List[str]) -> int:
-        return 1
+        return 10

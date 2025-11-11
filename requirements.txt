@@ -2,8 +2,8 @@ DBUtils==3.0.3
 msgpack==1.0.5
 numpy==1.24.4
 pandas==2.0.3
-pyarrow==12.0.1
-PyMySQL==0.9.3
+pyarrow==14.0.1
+PyMySQL==1.1.1
 requests==2.29.0
 SQLAlchemy==2.0.18
 dataclasses-json==0.5.13
@@ -22,3 +22,4 @@ cachetools~=5.3.3
 estndv==0.0.2
 sqlglot==25.4.1
 pydantic==2.10.4
+scipy==1.13.1
