@@ -534,7 +534,9 @@ VIDEX-Optimizer 将基于用户指定的地址，通过 `HTTP` 请求索引元�
 }
 ```
 
-## 版本支持
+## 版本支持与能力限制
+
+更详细的能力限制请参考 [Limitations.md](./doc/Limitations.md)。
 
 ### Plugin-Mode 支持列表
 
