@@ -536,7 +536,9 @@ If you find this code useful, we would appreciate citations to our paper:
 }
 ```
 
-## Version Support
+## Version Support and Limitations
+
+Detailed limitations are described in [Limitations.md](./doc/Limitations.md).
 
 ### Plugin-Mode Support List
 
