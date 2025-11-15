@@ -107,9 +107,14 @@ int ask_from_videx_http(VidexJsonItem &request, VidexStringMap &res_json, THD* t
       curl_easy_setopt(curl, CURLOPT_FORBID_REUSE, 1L);
 
       trace_http.add_utf8("request", request_str.c_str());
+      auto start_time = std::chrono::high_resolution_clock::now();
       res_code = curl_easy_perform(curl);
+      auto end_time = std::chrono::high_resolution_clock::now();
+      ulong duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+
       if (res_code != CURLE_OK) {
         trace_http.add("success", false)
+            .add("elapsed_time", duration)
             .add_utf8("reason", "res_code != CURLE_OK")
             .add_utf8("detail", curl_easy_strerror(res_code));
         trace_http.end();
@@ -123,18 +128,20 @@ int ask_from_videx_http(VidexJsonItem &request, VidexStringMap &res_json, THD* t
           if (error) {
               std::cout << "!__!__!__!__!__! JSON parse error: " << message << '\n';
               trace_http.add("success", false)
+                  .add("elapsed_time", duration)
                   .add_utf8("reason", "res_json.HasParseError")
                   .add_utf8("detail", readBuffer.c_str());
               trace_http.end();
               return 1;
           } else {
               if (message == "OK") {
-                  trace_http.add("success", true).add_utf8("detail", readBuffer.c_str());
+                  trace_http.add("success", true).add("elapsed_time", duration).add_utf8("detail", readBuffer.c_str());
                   trace_http.end();
                   std::cout << "access videx_server success: " << host_ip << std::endl;
                   return 0;
               } else {
                   trace_http.add("success", false)
+                      .add("elapsed_time", duration)
                       .add_utf8("reason", "msg != OK")
                       .add_utf8("detail", readBuffer.c_str());
                   trace_http.end();
@@ -145,6 +152,7 @@ int ask_from_videx_http(VidexJsonItem &request, VidexStringMap &res_json, THD* t
       }
   }
   trace_http.add("success", false)
+      .add("elapsed_time", -1)
       .add_utf8("reason", "curl = false");
   trace_http.end();
   std::cout << "access videx_server failed curl = false: " << host_ip << std::endl;
@@ -266,7 +274,7 @@ static int videx_init_func(void *p) {
        HTON_SUPPORTS_SECONDARY_ENGINE |  // Supports secondary storage engine
        //      HTON_SUPPORTS_TABLE_ENCRYPTION |  // Supports table encryption (commented out)
        //      HTON_SUPPORTS_ONLINE_BACKUPS |    // Supports online backups (commented out)
-       HTON_SUPPORTS_COMPRESSED_COLUMNS |  // Supports compressed columns
+//       HTON_SUPPORTS_COMPRESSED_COLUMNS |  // Supports compressed columns
        HTON_SUPPORTS_GENERATED_INVISIBLE_PK;  // Supports generated invisible primary keys
 
   // Set the is_supported_system_table function pointer to videx_is_supported_system_table.
@@ -1109,11 +1117,14 @@ int ha_videx::multi_range_read_next(char **range_info) {
   return (m_ds_mrr.dsmrr_next(range_info));
 }
 
-ha_rows ha_videx::multi_range_read_info_const(uint keyno, RANGE_SEQ_IF *seq,
-                                                 void *seq_init_param,
-                                                 uint n_ranges, uint *bufsz,
-                                                 uint *flags,
-                                                 Cost_estimate *cost) {
+//ha_rows ha_videx::multi_range_read_info_const(uint keyno, RANGE_SEQ_IF *seq,
+//                                                 void *seq_init_param,
+//                                                 uint n_ranges, uint *bufsz,
+//                                                 uint *flags,
+//                                                 Cost_estimate *cost) {
+ha_rows ha_videx::multi_range_read_info_const(
+    uint keyno, RANGE_SEQ_IF *seq, void *seq_init_param, uint n_ranges,
+    uint *bufsz, uint *flags, bool *force_default_mrr, Cost_estimate *cost){
   videx_log_ins.markHaFuncPassby(FUNC_FILE_LINE);
   /* See comments in ha_myisam::multi_range_read_info_const */
   m_ds_mrr.init(table);
