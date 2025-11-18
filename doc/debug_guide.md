@@ -1,6 +1,6 @@
 # CLion GDB Remote Debugging VIDEX Guide
 
-This guide shows how to mount the `mysql8` and `videx` projects into a container using Docker, creating a debugging environment isolated from the host environment. The code in the container can be affected by local modifications in real-time, facilitating development and debugging.
+This guide shows how to mount the `MySQL8` and `videx` projects into a container using Docker, creating a debugging environment isolated from the host environment. The code in the container can be affected by local modifications in real-time, facilitating development and debugging.
 
 **Note: This guide is currently only applicable for macOS.**
 
