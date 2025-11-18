@@ -28,7 +28,7 @@ class MySQLConnectionConfig(BaseModel, PydanticDataClassJsonMixin):
     dbtype: DBTYPE
     host: Optional[str] = "127.0.0.1"
     port: Optional[int] = 3306
-    schema: Optional[str] = None
+    database_name: Optional[str] = None
     user: Optional[str] = None
     pwd: Optional[str] = None
     consul: Optional[str] = None
@@ -192,7 +192,7 @@ class OpenMySQLUtils(AbstractMySQLUtils):
     """
 
     def __init__(self, config: MySQLConnectionConfig):
-        super().__init__('open_mysql', config.schema, config.charset,
+        super().__init__('open_mysql', config.database_name, config.charset,
                          config.read_timeout, config.write_timeout, config.connect_timeout)
         self.host = config.host
         self.port = config.port

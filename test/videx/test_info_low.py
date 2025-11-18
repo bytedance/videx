@@ -62,6 +62,7 @@ class Test_info_low(unittest.TestCase):
                 'stat_sum_of_other_index_sizes': 69962,
                 "data_file_length": 936378368,
                 'index_file_length': 1146257408,
+                'innodb_buffer_pool_size': 4294967296,
                 "data_free_length": 2097152,
                 # note, you can specify pct_cached to use gt, 0, or 1 as default
                 'pct_cached #@# LINEITEM_FK1': 1,
@@ -123,6 +124,7 @@ class Test_info_low(unittest.TestCase):
             {'data_file_length': 936378368,
              'data_free_length': 2097152,
              'index_file_length': 1146257408,
+             'innodb_buffer_pool_size': 4294967296,
              # 注意，pct_cached 是否使用 gt、默认值取 0 或者 1 ，是根据策略而定的。当策略更新后，直接把 expect 改掉即可
              # 修改后
              # 'pct_cached #@# LINEITEM_FK1': 0,

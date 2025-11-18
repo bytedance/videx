@@ -9,11 +9,13 @@ import logging
 import os
 
 from pymysql import InternalError
+import sys 
 
 from sub_platforms.sql_opt.env.rds_env import OpenMySQLEnv
 from sub_platforms.sql_opt.videx import videx_logging
 from sub_platforms.sql_opt.videx.videx_metadata import fetch_all_meta_for_videx, \
-    construct_videx_task_meta_from_local_files, fetch_all_meta_with_one_file
+    construct_videx_task_meta_from_local_files, fetch_all_meta_with_one_file, \
+    collect_sample_data_for_tables, save_sample_data_to_files, construct_meta_request_with_samples
 from sub_platforms.sql_opt.videx.videx_service import create_videx_env_multi_db, \
     post_add_videx_meta
 from sub_platforms.sql_opt.videx.videx_utils import VIDEX_IP_WHITE_LIST
@@ -34,8 +36,9 @@ def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pw
                 "\n"
                 f"-- Connect VIDEX-MySQL: mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} -D{videx_db}\n"
                 f"USE {videx_db};\n"
-                f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
+                f"SET @VIDEX_SERVER='{videx_server_ip_port}'; -- For MySQL \n"
                 f"SET @VIDEX_OPTIONS='{videx_options}';\n"
+                f"SET SESSION VIDEX_SERVER_IP='127.0.0.1:5001'; -- For MariaDB \n"
                 f"-- EXPLAIN YOUR_SQL;\n"
                 f"{mysql57_msg}")
     else:
@@ -45,7 +48,8 @@ def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pw
                 "\n"
                 f"-- Connect VIDEX-MySQL: mysql -h{videx_ip} -P{videx_port} -u{videx_user} -p{videx_pwd} -D{videx_db}\n"
                 f"USE {videx_db};\n"
-                f"SET @VIDEX_SERVER='{videx_server_ip_port}';\n"
+                f"SET @VIDEX_SERVER='{videx_server_ip_port}'; -- For MySQL \n"
+                f"SET SESSION VIDEX_SERVER_IP='127.0.0.1:5001'; -- For MariaDB \n"
                 f"-- EXPLAIN YOUR_SQL;\n"
                 f"{mysql57_msg}")
 
@@ -91,6 +95,9 @@ if __name__ == "__main__":
     parser.add_argument('--fetch_method', type=str, default='fetch', help='fetch, partial_fetch, sampling')
     parser.add_argument('--task_id', type=str, default=None,
                         help='task id is to distinguish different videx tasks, if they have same database names.')
+    parser.add_argument('--hist_algo', type=str, default=None, 
+                   help='Histogram algorithm: None (default), block_2phase')
+
 
     """
     videx_server_ip_port: IP and port information, Videx MySQL will inform Videx Python about this address and send Videx queries to it.
@@ -123,7 +130,7 @@ if __name__ == "__main__":
     try:
         videx_env = OpenMySQLEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=videx_db,
                                  read_timeout=300, write_timeout=300, connect_timeout=10)
-    except InternalError as e:
+    except Exception as e:
         if f"Unknown database '{videx_db}'" in str(e):
             videx_env = OpenMySQLEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=None,
                                      read_timeout=300, write_timeout=300, connect_timeout=10)
@@ -157,7 +164,8 @@ if __name__ == "__main__":
         files = fetch_all_meta_with_one_file(meta_path=meta_path,
                                              env=target_env, target_db=target_db, all_table_names=all_table_names,
                                              n_buckets=16, hist_force=True,
-                                             hist_mem_size=200000000, drop_hist_after_fetch=True)
+                                             hist_mem_size=200000000, drop_hist_after_fetch=True,
+                                             hist_algo=args.hist_algo)
         stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
         meta_request = construct_videx_task_meta_from_local_files(task_id=args.task_id,
                                                                   videx_db=videx_db,
@@ -170,10 +178,62 @@ if __name__ == "__main__":
                                                                   raise_error=True,
                                                                   )
     elif args.fetch_method == 'sampling':
-        # We will introduce the sampling-based method soon.
         # This method will generate metadata from the sample data.
         # Additionally, the sample data will be employed to estimate the ndv (the number of distinct values) and cardinality.
-        raise NotImplementedError
+        logging.info("Using sampling mode to collect metadata")
+
+        if all_table_names is None:
+            sql = f"""
+                SELECT TABLE_NAME 
+                FROM information_schema.TABLES 
+                WHERE table_schema = '{target_db}' and ENGINE = 'InnoDB'
+            """
+            table_df = target_env.query_for_dataframe(sql)
+            all_table_names = [str(name).lower() for name in table_df['TABLE_NAME'].tolist()]
+            logging.info(f"Retrieved table names: {all_table_names}")
+
+        if not all_table_names:
+            logging.error("No tables found for sampling")
+            sys.exit(1)
+
+        
+        files = fetch_all_meta_with_one_file(
+            meta_path=meta_path,
+            env=target_env, 
+            target_db=target_db, 
+            all_table_names=all_table_names,
+            n_buckets=16, 
+            hist_force=True,
+            hist_mem_size=200000000, 
+            drop_hist_after_fetch=True
+        )
+        stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
+        
+        # Collect sampling data
+        sample_file_dict = collect_sample_data_for_tables(
+            env=target_env,
+            target_db=target_db,
+            all_table_names=all_table_names,
+            sample_size=1000
+        )
+        
+        # Save the sampled data to a file
+        save_dir = f"/tmp/videx_samples/{videx_db}"
+        sample_file_info_dict = save_sample_data_to_files(
+            sample_file_dict=sample_file_dict,
+            videx_db=videx_db,
+            save_dir=save_dir
+        )
+        
+        # Construct the metadata request, including the sampled data
+        meta_request = construct_meta_request_with_samples(
+            task_id=args.task_id,
+            videx_db=videx_db,
+            stats_file_dict=stats_file_dict,
+            sample_file_dict=sample_file_dict,
+            sample_file_info_dict=sample_file_info_dict
+        )
+
     else:
         raise NotImplementedError(f"Fetching method `{args.fetch_method}` not implemented, "
                                   f"only support `analyze`, `sampling`.")
