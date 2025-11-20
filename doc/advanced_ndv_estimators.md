@@ -71,7 +71,7 @@ ndv = estimator.estimator(
 
 #### Model Files
 
-- **Pre-trained Model**: `src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth`
+- **Pre-trained Model**: `src/sub_platforms/sql_opt/histogram/resources/plm4ndv.pth` (For instructions on how to obtain the model file, please refer to the Training Guidelines section.)
 - **Sentence Transformer**: `resources/sentence-transformers/sentence-t5-large/` (auto-downloaded if missing)
 
 #### Performance Characteristics
@@ -126,7 +126,7 @@ ndv = estimator.estimator(r=len(col_data), profile=profile, method='Ada')
 
 #### Model Files
 
-- **Pre-trained Model**: `src/sub_platforms/sql_opt/histogram/resources/adandv.pth`
+- **Pre-trained Model**: `src/sub_platforms/sql_opt/histogram/resources/adandv.pth`(For instructions on how to obtain the model file, please refer to the Training Guidelines section.)
 
 #### Performance Characteristics
 
@@ -337,6 +337,24 @@ ls src/sub_platforms/sql_opt/histogram/resources/
 # Expected: plm4ndv.pth, adandv.pth, sentence-transformers/
 ```
 
+
+### Selecting an NDV Estimator at Runtime
+
+VIDEX chooses the NDV estimator based on `@VIDEX_OPTIONS`.  
+
+```bash
+   #force PLM4NDV for the next EXPLAIN
+   SET @VIDEX_OPTIONS='{"ndv_method":"PLM4NDV"}';
+
+   #force AdaNDV
+   SET @VIDEX_OPTIONS='{" ndv_method":"Ada"}';
+
+  #hybrid (default): let VIDEX auto-select
+   SET @VIDEX_OPTIONS='{"ndv_method":"hybrid"}';   
+```
+`@VIDEX_OPTIONS` is parsed in `VidexModelInnoDB.info_low` and is **per query** (reset every `EXPLAIN`).  
+   To define a global default, set the environment variable `VIDEX_NDV_METHOD` before starting `videx_server`.
+
 ### Using with videx_build_env.py
 
 ```bash
@@ -347,7 +365,8 @@ python src/sub_platforms/sql_opt/videx/scripts/videx_build_env.py \
     --fetch_method sampling \
     --hist_algo block_2phase
 
-# Advanced NDV estimators (PLM4NDV/AdaNDV) are used automatically
+# 
+
 # 2PHASE histogram is used when --hist_algo block_2phase is specified
 ```
 
@@ -366,8 +385,33 @@ ndv = estimator.estimator(
     method='PLM4NDV'  # or 'Ada', 'GEE', etc.
 )
 ```
-
 ---
+
+## References
+
+<details>
+   <summary><strong>Q: Does --hist_algo block_2phase automatically enable PLM4NDV/AdaNDV?</strong></summary>
+
+   **A:** No. Histogram algorithm is independent from NDV estimator selection. Use SET @VIDEX_OPTIONS = '{"ndv_method": "PLM4NDV"}' or VIDEX_NDV_METHOD to pick the NDV model per query or globally.
+</details>
+
+<details>
+   <summary><strong>Q: Do I still need to collect samples if PLM4NDV/AdaNDV and --hist_algo block_2phase are enabled? </strong></summary>
+
+   **A:** 
+   
+   Yes. videx_build_env.py must still collect ~1 k sampled rows per table. Those samples feed both the advanced NDV estimators (they build frequency profiles from df_sample_raw) and the 2PHASE histogram pipeline (which runs recursive cross-validation on the sampled rows). block_2phase only replaces how histograms are built once the samples exist; it does not reuse MySQL’s histograms or eliminate sampling.
+
+   In the current version, --hist_algo block_2phase drives a PK-aware sampler (numeric PK: progressive ranges; non-numeric/composite PK: keyset pagination; fallback: limited OFFSET). All samples still come from videx_build_env.py, so enabling Ada/PLM4ndv + block_2phase does not remove the metadata-collection requirement.
+</details>
+
+<details>
+   <summary><strong>Q: How do I supply model files and what are the license restrictions? </strong></summary>
+
+   **A:** Train PLM4NDV/AdaNDV using the repositories referenced in the Training Guidelines, then copy the resulting .pth files into src/sub_platforms/sql_opt/histogram/resources/ (ensure Torch is available on the VIDEX server). If you use the reference checkpoints trained on TabLib, they inherit TabLib’s CC-BY-NC-style restriction—research and testing only. For commercial deployments, retrain on your own data or obtain explicit permission before shipping the models.
+</details>
+
+
 
 ## References
 
