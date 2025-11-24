@@ -1,0 +1,5 @@
+# videx extension
+comment = 'videx'
+default_version = '1.0'
+module_pathname = '$libdir/videx'
+relocatable = true

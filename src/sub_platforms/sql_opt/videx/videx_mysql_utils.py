@@ -9,12 +9,16 @@ import traceback
 import urllib.parse
 from enum import Enum
 from typing import Optional
+import subprocess
+import os
 
 import pandas as pd
 from dbutils.persistent_db import PersistentDB
 from dbutils.pooled_db import PooledDB
 from pydantic import BaseModel
 from sqlalchemy import create_engine
+import psycopg2
+import psycopg2.extras
 
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 
@@ -22,13 +26,29 @@ from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMix
 class DBTYPE(Enum):
     OPEN_MYSQL = "OPEN_MYSQL"
     SQLITE = "SQLITE"
+    POSTGRESQL = "POSTGRESQL"
 
 
-class MySQLConnectionConfig(BaseModel, PydanticDataClassJsonMixin):
+# class MySQLConnectionConfig(BaseModel, PydanticDataClassJsonMixin):
+#     dbtype: DBTYPE
+#     host: Optional[str] = "127.0.0.1"
+#     port: Optional[int] = 3306
+#     schema: Optional[str] = None
+#     user: Optional[str] = None
+#     pwd: Optional[str] = None
+#     consul: Optional[str] = None
+#     charset: Optional[str] = "utf8"
+#     initial_pool_size: Optional[int] = 5
+#     max_pool_size: Optional[int] = 10
+#     read_timeout: Optional[int] = 30
+#     write_timeout: Optional[int] = 30
+#     connect_timeout: Optional[int] = 10
+
+class BaseDBConnectionConfig(BaseModel, PydanticDataClassJsonMixin):
     dbtype: DBTYPE
     host: Optional[str] = "127.0.0.1"
-    port: Optional[int] = 3306
-    database_name: Optional[str] = None
+    port: Optional[int] 
+    schema: Optional[str] = None
     user: Optional[str] = None
     pwd: Optional[str] = None
     consul: Optional[str] = None
@@ -39,10 +59,22 @@ class MySQLConnectionConfig(BaseModel, PydanticDataClassJsonMixin):
     write_timeout: Optional[int] = 30
     connect_timeout: Optional[int] = 10
 
+class MySQLConnectionConfig(BaseDBConnectionConfig):
+    port: Optional[int] = 3306
+
+class PGConnectionConfig(BaseDBConnectionConfig):
+    port: Optional[int] = 5432
+    
 
 def get_mysql_utils(config: MySQLConnectionConfig):
     if config.dbtype == DBTYPE.OPEN_MYSQL:
         return OpenMySQLUtils(config)
+    else:
+        raise Exception('not support datasource')
+
+def get_pg_utils(config: PGConnectionConfig):
+    if config.dbtype == DBTYPE.POSTGRESQL:
+        return OpenPGUtils(config)
     else:
         raise Exception('not support datasource')
 
@@ -192,7 +224,7 @@ class OpenMySQLUtils(AbstractMySQLUtils):
     """
 
     def __init__(self, config: MySQLConnectionConfig):
-        super().__init__('open_mysql', config.database_name, config.charset,
+        super().__init__('open_mysql', config.schema, config.charset,
                          config.read_timeout, config.write_timeout, config.connect_timeout)
         self.host = config.host
         self.port = config.port
@@ -225,6 +257,90 @@ class OpenMySQLUtils(AbstractMySQLUtils):
     def __str__(self):
         return self.__repr__()
 
+class OpenPGUtils(AbstractMySQLUtils):
+    """
+    Open-source PostgreSQL connection class, used to connect with host, port, user and password.
+    """
+
+    def __init__(self, config: PGConnectionConfig):
+        super().__init__('open_pg', config.schema, config.charset,
+                         config.read_timeout, config.write_timeout, config.connect_timeout)
+        self.host = config.host
+        self.port = config.port
+        self.user = config.user
+        self.password = config.pwd
+        
+
+    def get_connection(self):
+        conn = psycopg2.connect(
+            user=self.user,
+            password=self.password,
+            dbname=self.database,
+            host=self.host,
+            port=self.port,
+            connect_timeout=self.connect_timeout,
+            options=f'-c client_encoding={self.charset or "utf8"}'
+        )
+        conn.autocommit = True
+        return conn
+
+    def get_sqlalchemy_engine(self, dbname: str = None):
+        dbname = dbname if dbname is not None else self.database
+        return create_engine(
+            "postgresql+psycopg2://{user}:{pw}@{host}:{port}/{db}".format(
+                host=self.host,
+                port=self.port,
+                db=dbname,
+                user=self.user,
+                pw=urllib.parse.quote_plus(self.password)
+            )
+        )
+
+    def __repr__(self):
+        return f"OpenPG:{self.host}:{self.port}/{self.database}"
+
+    def __str__(self):
+        return self.__repr__()
+    
+    def execute_query(self, sql: str, params: list = None):
+        if self.pool is None:
+            self.pool = self.get_shared_pool()
+        with self.pool.connection() as c:
+            with c.cursor() as cursor:
+                cursor.execute(sql, params)
+                if cursor.rowcount > 0:
+                    return cursor.fetchall()
+                else:
+                    return None
+    def get_user(self):
+        return self.user
+    
+    def pg_dump(self, db_name, schema_name, table_name) -> str:
+        env = os.environ.copy()
+        env["PGPASSWORD"] = self.password
+
+        cmd = [
+            "pg_dump",
+            "-U", self.user,
+            "--schema-only",
+            "--no-owner",
+            "--no-privileges",
+            "--no-comments",
+            "-d", db_name,
+            "-n", schema_name,
+            "-t", table_name,
+            "-p", str(self.port),
+            "-h", self.host,
+        ]
+        try:
+            result = subprocess.run(cmd, env=env, stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE, text=True)
+            sql_text = result.stdout  
+            return sql_text
+        except subprocess.CalledProcessError as e:
+                logging.error(f"pg_dump error:, {e.stderr}")
+                raise e
+        
 
 def _parse_col_names(cursor):
     col_names = []
