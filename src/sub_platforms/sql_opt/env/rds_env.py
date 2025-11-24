@@ -19,8 +19,8 @@ from sub_platforms.sql_opt.common.sample_info import SampleColumnInfo
 from sub_platforms.sql_opt.meta import Table, Column, Index, IndexColumn, IndexType
 from sub_platforms.sql_opt.databases.mysql.mysql_command import MySQLCommand, get_mysql_version, MySQLVersion
 from sub_platforms.sql_opt.meta import Table, Column, IndexColumn, IndexType
-from sub_platforms.sql_opt.videx.videx_mysql_utils import get_mysql_utils, MySQLConnectionConfig, DBTYPE
-
+from sub_platforms.sql_opt.videx.videx_mysql_utils import get_mysql_utils, MySQLConnectionConfig, DBTYPE,PGConnectionConfig,get_pg_utils
+from sub_platforms.sql_opt.databases.pg.pg_command import PGCommand, get_pg_version, PGVersion 
 
 def add_backquote(name):
     """
@@ -374,7 +374,7 @@ class OpenMySQLEnv(DirectConnectMySQLEnv):
             port=config.port,
             usr=config.user,
             pwd=config.pwd,
-            db_name=config.database_name,
+            db_name=config.schema,
             read_timeout=config.read_timeout,
             write_timeout=config.write_timeout,
             connect_timeout=config.connect_timeout,
@@ -389,3 +389,81 @@ class OpenMySQLEnv(DirectConnectMySQLEnv):
     def _get_instance(self):
         return f'{self.mysql_util.host}:{self.mysql_util.port}'
 
+class DirectConnectPGEnv(Env, ABC):
+    def __init__(self,default_db, pg_util):
+        super(DirectConnectPGEnv, self).__init__(default_db=default_db)
+        self.pg_util = pg_util
+        self.pg_command = PGCommand(pg_util=self.pg_util, version=get_pg_version(self.pg_util))
+
+    def _switch_db(self,db_name):
+        self.pg_util.switch_db(db_name=db_name)
+    
+    def _request_meta_info(self, db_name, table_name, logic_db) -> Table:
+        return self.pg_command.get_table_meta(db_name, table_name)
+    
+    def get_sample_data(self, db_name: str, table_name: str, table_meta: Table, sample_cols: Set[SampleColumnInfo], pk_names: List[str],
+                        min_id: List[Dict], max_id: List[Dict], limit: int = 10, random=False,
+                        orderby='desc', shard_no: int = 0):
+        return NotImplementedError("get_sample_data is not implemented for DirectConnectPGEnv")
+    
+    def get_pk_id_range(self, db_name: str, table_name: str, shard_no: str):
+        return NotImplementedError("get_pk_id_range is not implemented for DirectConnectPGEnv")
+    
+    def execute(self, sql, params=None):
+        return self.pg_util.execute_query(sql, params=params)
+    
+    def execute_rollback(self, sql, params=None):
+        return self.pg_util.execute_with_rollback(sql, params=params)
+    
+    def execute_manyquery(self, sql, params=None):
+        return self.pg_util.execute_manyquery(sql, params=params)
+    
+    def query_for_dataframe(self, sql, params=None):
+        return self.pg_util.query_for_dataframe(sql, params)
+    
+    def change_index(self, ddl):
+        return self.pg_util.execute_query(ddl)
+    
+    def explain(self, sql, format=None):
+        return self.pg_command.explain(sql, format=format)
+    
+    def get_sqlalchemy_engine(self, dbname: str = None):
+        return self.pg_util.get_sqlalchemy_engine(dbname=dbname)
+    
+    def get_variables(self, variables: List[str]) -> dict:
+        return NotImplementedError("get_variables is not implemented for DirectConnectPGEnv")
+    
+    def reconstruct_connections(self):
+        logging.info("reconstruct connection pool for OpenPGEnv")
+        self.pg_util.reconstruct_pool()
+
+class OpenPGEnv(DirectConnectPGEnv):
+    def __init__(self, ip, port, usr, pwd, db_name, read_timeout=30, write_timeout=30, connect_timeout=10,
+                 max_connections=None,
+                 ):
+        self.config = PGConnectionConfig(
+            dbtype=DBTYPE.POSTGRESQL,
+            host=ip, port=int(port),
+            user=usr, pwd=pwd,
+            schema=db_name,
+            read_timeout=read_timeout,
+            write_timeout=write_timeout,
+            connect_timeout=connect_timeout,
+            max_connections=max_connections,
+        )
+        self.pg_util = get_pg_utils(self.config)
+        super(OpenPGEnv, self).__init__(default_db=db_name, pg_util=self.pg_util)
+        self.pg_command = PGCommand(pg_util=self.pg_util, version=get_pg_version(self.pg_util))
+    
+    @staticmethod
+    def from_pg_connection_config(config: PGConnectionConfig) -> "OpenPGEnv":
+        return NotImplementedError("from_pg_connection_config is not implemented for OpenPGEnv")
+    
+    def __repr__(self):
+        return str(self.pg_util)
+
+    def __str__(self):
+        return self.__repr__()
+
+    def _get_instance(self):
+        return f'{self.pg_util.host}:{self.pg_util.port}'

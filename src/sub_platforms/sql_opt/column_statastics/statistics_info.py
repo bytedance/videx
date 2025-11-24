@@ -3,13 +3,12 @@ Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
 from typing import Dict, List, Any, Optional
-import pandas as pd
-from pydantic import BaseModel, Field, PrivateAttr, PlainSerializer, BeforeValidator
+from pydantic import Field, PrivateAttr, PlainSerializer, BeforeValidator
 from typing_extensions import Annotated
+from pandas import pd
 
-from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 from sub_platforms.sql_opt.videx.videx_histogram import HistogramStats
-
+from sub_platforms.sql_opt.column_statastics.statistics_info_base import BaseTableStatisticsInfo
 
 def large_number_decoder(y):
     if isinstance(y, list):
@@ -22,10 +21,7 @@ def large_number_decoder(y):
         return res
 
 
-class TableStatisticsInfo(BaseModel, PydanticDataClassJsonMixin):
-
-    model_config = {"arbitrary_types_allowed": True}
-    
+class TableStatisticsInfo(BaseTableStatisticsInfo):
     db_name: str
     table_name: str
     # {col_name: col ndv}
