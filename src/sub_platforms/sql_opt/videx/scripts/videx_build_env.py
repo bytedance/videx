@@ -21,8 +21,6 @@ from sub_platforms.sql_opt.videx.videx_utils import VIDEX_IP_WHITE_LIST
 from sub_platforms.sql_opt.videx.videx_pg_metadata import fetch_all_meta_with_one_file_for_pg, \
     construct_videx_task_meta_from_local_files_for_pg
 
-
-
 def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port,db_type):
     base_msg = f"Build env finished. Your VIDEX server is {videx_server_ip_port}."
 
@@ -115,7 +113,7 @@ if __name__ == "__main__":
     parser.add_argument('--task_id', type=str, default=None,
                         help='task id is to distinguish different videx tasks, if they have same database names.')
     parser.add_argument('--db_type',type=str, default='mysql',
-                        help='database type, currently only support mysql, pg.')
+                        help='database type, currently support mysql, pg.')
 
     """
     videx_server_ip_port: IP and port information, Videx MySQL will inform Videx Python about this address and send Videx queries to it.
@@ -151,7 +149,7 @@ if __name__ == "__main__":
     elif db_type == "pg":
         target_env = OpenPGEnv(ip=target_ip, port=target_port, usr=target_user, pwd=target_pwd, db_name=target_db,
                               read_timeout=300, write_timeout=300, connect_timeout=10)
-    
+
     try:
         if db_type == "mysql":
             videx_env = OpenMySQLEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=videx_db,
@@ -227,7 +225,7 @@ if __name__ == "__main__":
         raise NotImplementedError(f"Fetching method `{args.fetch_method}` not implemented, "
                                   f"only support `analyze`, `sampling`.")
 
-    # step 3: create tables into VIDEX-MySQL, post metadata and statistics to VIDEX-Server
+    # step 3: create tables into VIDEX-MySQL/PG, post metadata and statistics to VIDEX-Server
     if db_type == "mysql":
         # 向 VIDEX-MySQL 中建表
         create_videx_env_multi_db(videx_env, meta_dict=meta_request.meta_dict, )
@@ -236,7 +234,7 @@ if __name__ == "__main__":
     elif db_type == "pg":
         create_videx_env_multi_db_for_pg(videx_env, meta_dict=meta_request.meta_dict, )
         response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
-    #assert response.status_code == 200
+    assert response.status_code == 200
 
     logging.info(f"metadata file is {meta_path}")
     logging.info(get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port,db_type))

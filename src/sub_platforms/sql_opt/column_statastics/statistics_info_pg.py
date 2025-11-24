@@ -1,9 +1,9 @@
-from typing import Dict, List, Any, Optional
-from pydantic import BaseModel, Field, PrivateAttr, PlainSerializer, BeforeValidator
-from typing_extensions import Annotated
+from typing import Dict, Optional
+from pydantic import Field
 from sub_platforms.sql_opt.pg_meta import PGStatistic,PGStatisticExt
 from sub_platforms.sql_opt.column_statastics.statistics_info_base import BaseTableStatisticsInfo
 class PGTableStatisticsInfo(BaseTableStatisticsInfo):
+    """ PostgreSQL Table Statistics Information """
     db_name: str
     schema_name: str
     table_name: str

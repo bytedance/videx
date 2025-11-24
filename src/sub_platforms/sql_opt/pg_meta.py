@@ -7,9 +7,9 @@ from sub_platforms.sql_opt.meta import IndexType
 from sub_platforms.sql_opt.meta_base import BaseTableId,BaseColumn,BaseIndexColumn,BaseIndex,BaseTable
 
 class PGTableId(BaseTableId):
-    table_catalog: str       #db name               
-    table_schema: str        #schema name       
-    table_name: str          #table name   
+    table_catalog: str       #db/catalog name         
+    table_schema: str        #schema name
+    table_name: str          #table name
 
     def __hash__(self):
         return f'{self.table_catalog}.{self.table_schema}.{self.table_name}'.__hash__()
@@ -30,9 +30,9 @@ class PGTableId(BaseTableId):
             return True
         else:
             return False
-        
+
 class PGColumn(BaseColumn):
-    table_catalog: str       #db name               
+    table_catalog: str       #db/catalog name          
     table_schema: str        #schema name       
     table_name: str          #table name   
     column_name: str                        
@@ -89,9 +89,9 @@ class PGColumn(BaseColumn):
             self.table_name == other.table_name and
             self.column_name == other.column_name
         )
-    
+
 class PGIndexColumn(BaseIndexColumn):
-    name: Optional[str] = None  # 可能是表达式，所以可以为空
+    name: Optional[str] = None
     #cardinality: Optional[int] = None
     #sub_part: Optional[int] = 0
     expression: Optional[str] = None
@@ -185,6 +185,14 @@ class PGTable(BaseTable):
         return NotImplementedError("This method is not implemented in this context.")
 
 class PGStatisticSlot(BaseModel,PydanticDataClassJsonMixin):
+    """ Represents a single slot of statistics for a PostgreSQL column.
+    Attributes:
+        kind: int. The type of statistics (e.g., histogram, most common values).
+        op: Optional[int]. The operator OID associated with the statistics.
+        coll: Optional[int]. The collation OID associated with the statistics.
+        numbers: Optional[List[float]]. A list of numeric statistics values.
+        values: Optional[List[Any]]. A list of general statistics values.
+    """
     kind: int
     op: Optional[int] = None
     coll: Optional[int] = None
@@ -192,6 +200,7 @@ class PGStatisticSlot(BaseModel,PydanticDataClassJsonMixin):
     values: Optional[List[Any]] = None
 
 class PGStatistic(BaseModel,PydanticDataClassJsonMixin):
+    """ Represents statistics for a PostgreSQL column."""
     dbname: str
     table_schema: str
     table_name: str
@@ -208,6 +217,7 @@ class PGStatistic(BaseModel,PydanticDataClassJsonMixin):
         return PGTableId(table_catalog=self.dbname, table_schema=self.table_schema, table_name=self.table_name)
 
 class PGStatisticExt(BaseModel,PydanticDataClassJsonMixin):
+    """ Represents extended statistics for a PostgreSQL table."""
     dbname: str
     table_schema: str
     table_name: str

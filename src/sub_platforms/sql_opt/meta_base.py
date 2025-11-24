@@ -13,7 +13,7 @@ class BaseColumn(BaseModel,PydanticDataClassJsonMixin):
     pass
 
 class BaseIndexColumn(BaseModel, PydanticDataClassJsonMixin):
-    pass 
+    pass
 
 class IndexBasicInfo(BaseModel, PydanticDataClassJsonMixin):
     db_name: Optional[str] = Field(default=None)
@@ -24,7 +24,7 @@ class IndexBasicInfo(BaseModel, PydanticDataClassJsonMixin):
         return [column.name for column in self.columns]
 
 class BaseIndex(IndexBasicInfo, BaseModel, PydanticDataClassJsonMixin):
-    pass 
+    pass
 
 class BaseTable(BaseModel, PydanticDataClassJsonMixin):
-    pass 
+    pass

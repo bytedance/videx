@@ -619,7 +619,8 @@ def create_videx_env_multi_db_for_pg(videx_env: Env,
                               new_engine: str = 'VIDEX',
                               ):
     for target_db, table_dict in meta_dict.items():
-        #TODO: In Postgresql, you cannot drop a database if you are connected to it.
+        #TODO: In Postgresql, you cannot drop a database if you are connecting on it. 
+        # so we need to switch to another database first (Here we switch to 'postgres').
         videx_env._switch_db("postgres")
         videx_env.execute(f"DROP DATABASE IF EXISTS {target_db}")
         videx_env.execute(f"CREATE DATABASE {target_db}")
@@ -631,6 +632,7 @@ def create_videx_env_multi_db_for_pg(videx_env: Env,
             print(f"taget_database: {target_db}, table_size: {len(table_dict)}")
             for table in table_dict.values():
                 dump_text = table.ddl
+                # replace engine from heap to videx before executing
                 pattern = r'(CREATE TABLE\s+[\w\.]+\s*\(\s*.*?\s*\))\s*;'
                 replacement = rf'\1 USING {new_engine};'
                 videx_dump_text = re.sub(pattern, replacement, dump_text, flags=re.DOTALL)

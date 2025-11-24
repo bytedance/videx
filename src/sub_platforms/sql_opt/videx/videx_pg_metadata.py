@@ -24,7 +24,6 @@ from sub_platforms.sql_opt.videx.videx_utils import pg_deserialize_schema_table
 def fetch_all_meta_with_one_file_for_pg(meta_path: Union[str, dict],
                                  env: Env, target_db: str, all_table_names: List[str] = None
                                  ) -> Tuple[dict, dict, dict, dict]:
-    
     temp_dir = f"temp_meta_{int(time.time())}"
     os.makedirs(temp_dir, exist_ok=True)
 
@@ -79,19 +78,30 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
     Args:
         env:
         target_dbname:
-
     Returns:
-        lower table -> rows (to construct VidexTableStats), 不包含 db 层
+        Dict[str, dict]
     """
     # part 1: fetch all table from information_schema.TABLES (view)
     sql = f"""
-        SELECT table_catalog,table_schema,table_name,table_type,
-        self_referencing_column_name,reference_generation,user_defined_type_catalog,
-        user_defined_type_schema,user_defined_type_name,is_insertable_into,is_typed,
-        commit_action FROM information_schema.TABLES WHERE table_catalog = '{target_dbname}'
-        AND table_schema NOT IN ('pg_catalog', 'information_schema')
+        SELECT
+            table_catalog,
+            table_schema,
+            table_name,
+            table_type,
+            self_referencing_column_name,
+            reference_generation,
+            user_defined_type_catalog,
+            user_defined_type_schema,
+            user_defined_type_name,
+            is_insertable_into,
+            is_typed,
+            commit_action
+        FROM 
+            information_schema.TABLES 
+        WHERE 
+            table_catalog = '{target_dbname}'
+            AND table_schema NOT IN ('pg_catalog', 'information_schema')
     """
-
     basic_list: pd.DataFrame = env.query_for_dataframe(sql).to_dict(orient='records')
     res_dict = {}
     for row in basic_list:
@@ -99,7 +109,7 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
         schema_name = row['table_schema'].lower()
         schema_table_name = pg_serialize_schema_table(schema_name, table_name)
         res_dict[schema_table_name] = row
-
+        # part 2: fetch table stats from pg_class
         table_obj: PGTable = env.get_table_meta(target_dbname,schema_table_name)
         res_dict[schema_table_name]['reltuples'] = table_obj.reltuples
         res_dict[schema_table_name]['relpages'] = table_obj.relpages
@@ -124,25 +134,36 @@ def fetch_pg_statistics(env: Env, target_dbname: str,all_table_names: List[str],
     return res_tables
 
 def fetch_col_statistic(env, dbname: str, schema: str, table_name: str, col_name: str) -> Optional[PGStatistic]:
-
     sql = f"""
-        SELECT s.*, a.attname
-        FROM pg_statistic s
-        JOIN pg_class c ON s.starelid = c.oid
-        JOIN pg_namespace n ON c.relnamespace = n.oid
-        JOIN pg_attribute a ON c.oid = a.attrelid AND s.staattnum = a.attnum
-        WHERE n.nspname = '{schema}'
-          AND c.relname = '{table_name}'
-          AND a.attname = '{col_name}';
+        SELECT 
+            s.*,
+            a.attname
+        FROM 
+            pg_statistic s
+        JOIN 
+            pg_class c 
+        ON 
+            s.starelid = c.oid
+        JOIN 
+            pg_namespace n 
+        ON 
+            c.relnamespace = n.oid
+        JOIN 
+            pg_attribute a 
+        ON 
+            c.oid = a.attrelid 
+            AND s.staattnum = a.attnum
+        WHERE 
+            n.nspname = '{schema}'
+            AND c.relname = '{table_name}'
+            AND a.attname = '{col_name}';
     """
-
     res: pd.DataFrame = env.query_for_dataframe(sql)
-    print(f'schema: {schema},relname: {table_name},col_name: {col_name}, col statistic: {res}\n')
+    print(f'schema: {schema}, relname: {table_name}, col_name: {col_name}, col statistic: {res}\n')
     if len(res) == 0:
         return None
 
     row = res.iloc[0].to_dict()
-
     slots: List[PGStatisticSlot] = []
     for i in range(1, 6):
         kind = row.get(f"stakind{i}")
@@ -151,14 +172,12 @@ def fetch_col_statistic(env, dbname: str, schema: str, table_name: str, col_name
         numbers = row.get(f"stanumbers{i}")
         values = row.get(f"stavalues{i}")
 
-        # stanumbers/stavalues 可能是 None 或 PostgreSQL array，需要转 python list
         if isinstance(numbers, str):
-            # PG array 格式转 list
             numbers = json.loads(numbers.replace("{", "[").replace("}", "]"))
         if isinstance(values, str):
             values = json.loads(values.replace("{", "[").replace("}", "]"))
-
-        if kind != 0:  # 0 表示未使用的 slot
+        # if kind is 0, it means this slot is not used
+        if kind != 0:
             slots.append(PGStatisticSlot(
                 kind=kind,
                 op=op,
@@ -237,7 +256,6 @@ def meta_dict_to_sample_file(
         stats_dict,
         statistic_dict,
     ) -> Tuple[Dict[str, Dict[str, PGTableStatisticsInfo]], None]:
-    
     """
     TODO: constuct PGTableStatisticsInfo form a list of metadata
     """

@@ -37,13 +37,13 @@ class PGCommand:
 
     def get_table_columns(self, db_name, table_name, schema_name = 'public') -> List[PGColumn]:
         sql = f"""
-            select 
-                * 
-            from 
-                information_schema.columns 
-            where 
+            SELECT
+                *
+            FROM
+                information_schema.columns
+            WHERE
                 table_catalog = '{db_name}' 
-                and table_name = '{table_name}'
+                AND table_name = '{table_name}'
         """
         df = self.pg_util.query_for_dataframe(sql)
         columns = []
@@ -69,8 +69,8 @@ class PGCommand:
                 c.relname AS index_name,  -- index_name
                 i.indexrelid,             -- oid of index
                 i.indisunique,            -- wether unique
-                i.indisprimary,            -- wether primary key
-                a.amname AS index_type  -- index type
+                i.indisprimary,           -- wether primary key
+                a.amname AS index_type    -- index type
             FROM 
                 pg_index i
             JOIN 
@@ -117,6 +117,7 @@ class PGCommand:
             # set type of underlying data structures, e.g., btree, hash, gin, gist
             index_type = idx_info['index_type'].values[0]
             index.index_type = index_type
+
             # get index columns
             index.columns = []
             indexrelid = idx_info['indexrelid'].values[0]
@@ -130,7 +131,8 @@ class PGCommand:
                 JOIN 
                     pg_index i ON a.attnum = ANY(i.indkey)
                 WHERE
-                    c.relname = {table_name} and a.attnum > 0 and i.indexrelid = {indexrelid}
+                    c.relname = {table_name} and a.attnum > 0 
+                    AND i.indexrelid = {indexrelid}
                 ORDER BY 
                     a.attnum;
             """

@@ -3,9 +3,8 @@
 MODULE_big = videx
 OBJS = \
 	$(WIN32RES) \
-	pg/videx/stats.o \
-	pg/videx/videxam.o \
-	pg/videx/videx_json_item.o \
+	stats.o \
+	videxam.o \
 
 CURRENT_DIR := $(shell pwd)
 $(info CURRENT_DIR = $(CURRENT_DIR))
