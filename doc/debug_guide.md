@@ -6,7 +6,7 @@ This guide shows how to mount the `MySQL8` and `videx` projects into a container
 
 ## 1. Preparation
 
-Please following the instructions in **Section1 Preparation** in the [installation guide](https://github.com/bytedance/videx/blob/main/doc/installation.md).
+Please follow the instructions in **Section 1 Preparation** in the [installation guide](https://github.com/bytedance/videx/blob/main/doc/installation.md).
 
 ## 2. Build and Start the Debug Container
 
@@ -46,7 +46,7 @@ chmod +x *.sh
 
 Open the local `mysql_server` project.
 
-### 4. Configure Remote Development Environment
+## 4. Configure Remote Development Environment
 
 ### 4.1 Configure SSH Connection
 1. Go to `Settings` → `Tools` → `SSH Configurations`

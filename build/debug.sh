@@ -30,6 +30,3 @@ else
     echo "Warning: my.cnf not found!"
     exit 1
 fi
-
-[ ! -d "$MYSQL_BUILD_DIR" ] && echo "MySQL build directory not found!" && exit 1
-[ ! -f "$MYSQL_BUILD_DIR/etc/my.cnf" ] && echo "my.cnf not found!" && exit 1

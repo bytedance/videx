@@ -28,7 +28,7 @@ RUN wget https://mirrors.tuna.tsinghua.edu.cn/gnu/gcc/gcc-${GCC_VERSION}/gcc-${G
     && make install-strip DESTDIR=/gcc-install \
     && cd /build && rm -rf *
 
-# build Bison 
+# build Bison
 FROM debian:bullseye AS bison-builder
 ENV BISON_VERSION=3.4.2
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
@@ -108,9 +108,14 @@ RUN gcc --version | grep "9.3.0" \
 ENV PATH=/usr/local/gcc-9.3.0/bin:/opt/tiger/typhoon-blade:/opt/common_tools:$PATH
 ENV LD_LIBRARY_PATH=/usr/local/gcc-9.3.0/lib64
 
-# configure SSH
+# SECURITY WARNING:
+# The root password is set via the ROOT_PASSWORD build argument (default: 'root').
+# DO NOT use the default password in production or internet-accessible environments.
+# Always override ROOT_PASSWORD at build time for any non-debug use:
+#   docker build --build-arg ROOT_PASSWORD=your_strong_password -f Dockerfile.debug_env .
+ARG ROOT_PASSWORD=root
 RUN mkdir -p /var/run/sshd && \
-    echo 'root:root' | chpasswd && \
+    echo "root:${ROOT_PASSWORD}" | chpasswd && \
     sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
     sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
     echo 'ClientAliveInterval 60' >> /etc/ssh/sshd_config
