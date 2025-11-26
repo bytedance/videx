@@ -1,0 +1,130 @@
+# build GCC
+FROM debian:bullseye AS gcc-builder
+ENV GCC_VERSION=9.3.0
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential wget \
+    libgmp-dev libmpfr-dev libmpc-dev \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+RUN wget https://mirrors.tuna.tsinghua.edu.cn/gnu/gcc/gcc-${GCC_VERSION}/gcc-${GCC_VERSION}.tar.gz \
+    && tar -xf gcc-${GCC_VERSION}.tar.gz \
+    && cd gcc-${GCC_VERSION} \
+    && mkdir build && cd build \
+    && ../configure \
+        --prefix=/usr/local/gcc-${GCC_VERSION} \
+        --disable-multilib \
+        --enable-languages=c,c++ \
+        --disable-bootstrap \
+        --disable-nls \
+        --disable-libsanitizer \
+        --disable-libvtv \
+        --disable-libssp \
+        --disable-libquadmath \
+        --disable-libgomp \
+        --disable-libada \
+        --disable-libstdcxx-pch \
+    && make -j $(nproc) \
+    && make install-strip DESTDIR=/gcc-install \
+    && cd /build && rm -rf *
+
+# build Bison
+FROM debian:bullseye AS bison-builder
+ENV BISON_VERSION=3.4.2
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential wget \
+    flex \
+    m4 \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+RUN wget --no-check-certificate https://ftp.gnu.org/gnu/bison/bison-${BISON_VERSION}.tar.gz \
+    && tar -xf bison-${BISON_VERSION}.tar.gz \
+    && cd bison-${BISON_VERSION} \
+    && ./configure --prefix=/usr/local \
+    && make -j $(nproc) \
+    && make install DESTDIR=/bison-install \
+    && cd /build && rm -rf *
+
+# final stage
+FROM debian:bullseye
+COPY --from=gcc-builder /gcc-install/usr/local/gcc-9.3.0 /usr/local/gcc-9.3.0
+COPY --from=bison-builder /bison-install/usr/local/bin/bison /usr/local/bin/bison
+COPY --from=bison-builder /bison-install/usr/local/lib/liby.* /usr/local/lib/
+COPY --from=bison-builder /bison-install/usr/local/share/bison /usr/local/share/bison
+
+# online required part
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    cmake \
+    curl \
+    python3.9 \
+    python3.9-dev \
+    python3.9-venv \
+    libgmp10 \
+    libmpfr6 \
+    libmpc3 \
+    m4 \
+    pkg-config \
+    git \
+    git-lfs \
+    libssl-dev \
+    libreadline-dev \
+    zlib1g-dev \
+    libcurl4-openssl-dev \
+    libldap2-dev \
+    libsasl2-dev \
+    libsasl2-modules-gssapi-mit \
+    libkrb5-dev \
+    libnuma-dev \
+    libmecab-dev \
+    libaio-dev \
+    libncurses-dev \
+    libtirpc-dev \
+    gdb \
+    gdbserver \
+    openssh-server \
+    net-tools \
+    rsync \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# configure Python and other tools
+RUN ln -sf /usr/local/gcc-9.3.0/bin/gcc /usr/local/bin/gcc \
+    && ln -sf /usr/bin/python3.9 /usr/bin/python3 \
+    && ln -sf /usr/bin/python3.9 /usr/bin/python \
+    && curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+    && python3.9 get-pip.py \
+    && rm get-pip.py
+
+# validation
+RUN gcc --version | grep "9.3.0" \
+    && bison --version \
+    && curl --version | grep "curl" \
+    && python3.9 --version | grep "3.9" \
+    && cmake --version | grep "cmake version" \
+    && gdb --version | grep "GNU gdb" \
+    && rsync --version | grep "rsync" \
+    && echo "All version checks passed!"
+
+ENV PATH=/usr/local/gcc-9.3.0/bin:/opt/tiger/typhoon-blade:/opt/common_tools:$PATH
+ENV LD_LIBRARY_PATH=/usr/local/gcc-9.3.0/lib64
+
+# SECURITY WARNING:
+# The root password is set via the ROOT_PASSWORD build argument (default: 'root').
+# DO NOT use the default password in production or internet-accessible environments.
+# Always override ROOT_PASSWORD at build time for any non-debug use:
+#   docker build --build-arg ROOT_PASSWORD=your_strong_password -f Dockerfile.debug_env .
+ARG ROOT_PASSWORD=root
+RUN mkdir -p /var/run/sshd && \
+    echo "root:${ROOT_PASSWORD}" | chpasswd && \
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    echo 'ClientAliveInterval 60' >> /etc/ssh/sshd_config
+
+# Application ports:
+# 13308 - MySQL service
+# 5001  - Videx service  
+# 1234  - GDB debug server
+# 22    - SSH service
+EXPOSE 13308 5001 1234 22
+
+CMD ["/etc/init.d/ssh", "start"]
