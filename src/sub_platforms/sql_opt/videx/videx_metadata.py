@@ -76,12 +76,12 @@ class VidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
         self.meta_dict = {k.lower(): {k1.lower(): v1 for k1, v1 in v.items()} for k, v in self.meta_dict.items()}
         self.stats_dict = {k.lower(): {k1.lower(): v1 for k1, v1 in v.items()} for k, v in self.stats_dict.items()}
 
-    def get_table_stats_info(self, db_name: str, table_name: str) -> Optional[TableStatisticsInfo]:
+    def get_table_stats_info(self, db_name: str, table_name: str) -> Optional[BaseTableStatisticsInfo]:
         db_name = db_name.lower()
         table_name = table_name.lower()
         return self.stats_dict.get(db_name, {}).get(table_name)
 
-    def get_table_meta(self, db_name: str, table_name: str) -> Optional[Table]:
+    def get_table_meta(self, db_name: str, table_name: str) -> Optional[BaseTable]:
         db_name = db_name.lower()
         table_name = table_name.lower()
         return self.meta_dict.get(db_name, {}).get(table_name)

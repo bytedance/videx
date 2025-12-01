@@ -1,46 +1,51 @@
-#include "postgres.h"
-#include "access/bufmask.h"
-#include "access/heapam_xlog.h"
-#include "access/heaptoast.h"
-#include "access/hio.h"
-#include "access/multixact.h"
-#include "access/parallel.h"
-#include "access/relscan.h"
-#include "access/subtrans.h"
-#include "access/syncscan.h"
-#include "access/sysattr.h"
-#include "access/tableam.h"
-#include "access/transam.h"
-#include "access/valid.h"
-#include "access/visibilitymap.h"
-#include "access/xact.h"
-#include "access/xlog.h"
-#include "access/xloginsert.h"
-#include "access/xlogutils.h"
-#include "catalog/catalog.h"
-#include "catalog/pg_database.h"
-#include "catalog/pg_database_d.h"
-#include "commands/vacuum.h"
-#include "miscadmin.h"
-#include "pgstat.h"
-#include "port/atomics.h"
-#include "port/pg_bitutils.h"
-#include "storage/bufmgr.h"
-#include "storage/freespace.h"
-#include "storage/lmgr.h"
-#include "storage/predicate.h"
-#include "storage/procarray.h"
-#include "storage/standby.h"
-#include "utils/datum.h"
-#include "utils/injection_point.h"
-#include "utils/inval.h"
-#include "utils/relcache.h"
-#include "utils/snapmgr.h"
-#include "utils/spccache.h"
-#include "utils/syscache.h"
-#include "optimizer/optimizer.h"
-#include "optimizer/plancat.h"
-#include "videxam.h"
+extern "C" {
+	#include "postgres.h"
+	#include "access/bufmask.h"
+	#include "access/heapam_xlog.h"
+	#include "access/heaptoast.h"
+	#include "access/hio.h"
+	#include "access/multixact.h"
+	#include "access/parallel.h"
+	#include "access/relscan.h"
+	#include "access/subtrans.h"
+	#include "access/syncscan.h"
+	#include "access/sysattr.h"
+	#include "access/tableam.h"
+	#include "access/transam.h"
+	#include "access/valid.h"
+	#include "access/visibilitymap.h"
+	#include "access/xact.h"
+	#include "access/xlog.h"
+	#include "access/xloginsert.h"
+	#include "access/xlogutils.h"
+	#include "catalog/catalog.h"
+	#include "catalog/pg_database.h"
+	#include "catalog/pg_database_d.h"
+	#include "commands/vacuum.h"
+	#include "commands/dbcommands.h"
+	#include "miscadmin.h"
+	#include "pgstat.h"
+	#include "port/atomics.h"
+	#include "port/pg_bitutils.h"
+	#include "storage/bufmgr.h"
+	#include "storage/freespace.h"
+	#include "storage/lmgr.h"
+	#include "storage/predicate.h"
+	#include "storage/procarray.h"
+	#include "storage/standby.h"
+	#include "utils/lsyscache.h"
+	#include "utils/datum.h"
+	#include "utils/injection_point.h"
+	#include "utils/inval.h"
+	#include "utils/relcache.h"
+	#include "utils/snapmgr.h"
+	#include "utils/spccache.h"
+	#include "utils/syscache.h"
+	#include "optimizer/optimizer.h"
+	#include "optimizer/plancat.h"
+	#include "videxam.h"
+}
+#include "videx_json_item.h"
 #include <math.h>
 
 #define HEAP_OVERHEAD_BYTES_PER_TUPLE \
@@ -95,6 +100,19 @@ bool videx_getnextslot (TableScanDesc scan, ScanDirection direction,
 	return false;
 }
 
+// HeapTuple
+// BuildPGClassTuple(VidexStringMap &res_json, Relation rel) {
+// 	Datum values[Natts_pg_class];
+// 	bool nulls[Natts_pg_class];
+// 	MemSet(nulls, 0, sizeof(nulls));
+// 	values[Anum_pg_class_relpages - 1] =
+// 		Int32GetDatum(std::stoi(res_json["relpages"]));
+// 	values[Anum_pg_class_reltuples - 1] =
+// 		Float4GetDatum(std::stof(res_json["reltuples"]));
+// 	values[Anum_pg_class_relallvisible - 1] =
+// 		Int32GetDatum(std::stoi(res_json["relallvisible"]));
+// }
+
 void
 videx_table_block_relation_estimate_size(Relation rel, int32 *attr_widths,
 								   BlockNumber *pages, double *tuples,
@@ -107,6 +125,26 @@ videx_table_block_relation_estimate_size(Relation rel, int32 *attr_widths,
 	double		reltuples;
 	BlockNumber relallvisible;
 	double		density;
+
+	/** try to fetch relation infos (pg_class) from videx-statistic-server, else use local pg_class instead*/
+	char *dbname = get_database_name(MyDatabaseId);
+	char *nspname   = get_namespace_name(rel->rd_rel->relnamespace);
+	VidexStringMap res_json;
+    VidexJsonItem request_item = construct_request(
+		dbname, rel->rd_rel->relname.data, nspname, __PRETTY_FUNCTION__);
+	if (!ask_from_videx_http(request_item, res_json)) {
+        /**fetch from videx-statistic-sever success, update local cache*/
+		vac_update_relstats(rel,
+                        std::stoi(res_json["relpages"]),
+                        std::stof(res_json["reltuples"]),
+                        std::stoi(res_json["relallvisible"]),
+                        std::stoi(res_json["relhasindex"]),
+                        InvalidTransactionId,
+                        InvalidMultiXactId,
+                        NULL,
+                        NULL,
+                        false);
+    }
 
 	/* it should have storage, so we can call the smgr */
 	curpages = (BlockNumber) rel->rd_rel->relpages;

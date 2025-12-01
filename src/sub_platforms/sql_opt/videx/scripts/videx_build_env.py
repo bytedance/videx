@@ -266,10 +266,13 @@ if __name__ == "__main__":
 
     # step 3: create tables into VIDEX-MySQL, post metadata and statistics to VIDEX-Server
     # 向 VIDEX-MySQL 中建表
-    create_videx_env_multi_db(videx_env, meta_dict=meta_request.meta_dict, )
+    if db_type == "mysql":
+        create_videx_env_multi_db(videx_env, meta_dict=meta_request.meta_dict, )
+    elif db_type == "pg":
+        create_videx_env_multi_db_for_pg(videx_env, meta_dict=meta_request.meta_dict, )
     # 向 VIDEX-Server 中导入数据
     response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
     assert response.status_code == 200
 
     logging.info(f"metadata file is {meta_path}")
-    logging.info(get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port))
+    logging.info(get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port, db_type))

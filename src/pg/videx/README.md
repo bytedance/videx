@@ -7,7 +7,7 @@ Videx-for-pg is developing in the form of a PostgreSQL plugin...
 ### Qucik Start Without Videx-Statistic-Server
 ##### step1: compile videx
 1. Copy the pg/videx folder to the contrib folder in your pg directory (such as postgresql17.5)
-2. go into postgresql17.5/contirb/videx: 
+2. go into postgresql17.5/contrib/videx: 
 `make && make install`
 
 ##### step2：register videx in pg
@@ -15,6 +15,15 @@ Videx-for-pg is developing in the form of a PostgreSQL plugin...
 `shared_preload_libraries = 'videx'		# (change requires restart)`
 2. start your pg service and psql:
 `create extension videx;`
+
+	```sql
+		/*Verify if the registration was successful*/
+		test=# SELECT * FROM pg_extension WHERE extname = 'videx';
+		  oid   | extname | extowner | extnamespace | extrelocatable | extversion | extconfig | extcondition 
+		--------+---------+----------+--------------+----------------+------------+-----------+--------------
+		 368789 | videx   |       10 |         2200 | t              | 1.0        |           | 
+		(1 row)
+	```
 
 #### step3: use videx
 1. create videx table using videx storage

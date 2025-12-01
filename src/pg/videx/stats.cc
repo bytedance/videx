@@ -26,6 +26,8 @@ extern "C" {
     #include "miscadmin.h"
     #include "utils/guc.h"
     #include "optimizer/pathnode.h"
+    #include "parser/parsetree.h"
+    #include "parser/parse_clause.h"
 }
 #include "videx_json_item.h"
 #include <curl/curl.h>
@@ -329,6 +331,19 @@ _PG_init(void)
     get_index_stats_hook = videx_get_index_stats;
 }
 
+static Index
+find_rti_by_rte(PlannerInfo *root, RangeTblEntry *rte)
+{
+    if (!root || !root->simple_rte_array || !rte)
+        return 0;
+    for (Index i = 1; i <= (Index) root->simple_rel_array_size; i++)
+    {
+        if (root->simple_rte_array[i] == rte)
+            return i;
+    }
+    return 0;
+}
+
 HeapTuple
 BuildPGStatisticTuple(VidexStringMap &res_json, Oid relid, int attnum)
 {
@@ -405,9 +420,9 @@ static bool videx_get_relation_stats(PlannerInfo *root,
     if (rte->rtekind == RTE_RELATION){
         /*fetch HeapTuple of pg_statistic from videx_statistic_server*/
         char *dbname = get_database_name(MyDatabaseId);
-        char *relname   = get_rel_name(rte->relid); 
+        char *relname   = get_rel_name(rte->relid);
         Oid   nspoid    = get_rel_namespace(rte->relid);
-        char *nspname   = get_namespace_name(nspoid);  
+        char *nspname   = get_namespace_name(nspoid);
         char *colname = get_attname(rte->relid, attnum, false);
 
         VidexStringMap res_json;
@@ -422,13 +437,95 @@ static bool videx_get_relation_stats(PlannerInfo *root,
         }
         vardata->statsTuple = BuildPGStatisticTuple(res_json,rte->relid,attnum);
         vardata->freefunc = ReleaseSysCache;
-        if (HeapTupleIsValid(vardata->statsTuple))
-			vardata->acl_ok = true;
-        
-
+        /** may be we can also update local cache of pg_statistic here */
+        if (HeapTupleIsValid(vardata->statsTuple)) {
+            vardata->acl_ok = true;
+        }
     }else if ((rte->rtekind == RTE_SUBQUERY && !rte->inh) ||
 			 (rte->rtekind == RTE_CTE && !rte->self_reference)){
-        
+        PlannerInfo *subroot;
+		Query	   *subquery;
+		List	   *subtlist;
+		TargetEntry *ste;
+
+        if (rte->rtekind == RTE_SUBQUERY) {
+            RelOptInfo *rel;
+            Index rti = find_rti_by_rte(root, rte);
+            rel = find_base_rel(root, rti);
+			subroot = rel->subroot;
+        } else {
+            PlannerInfo *cteroot;
+			Index		levelsup;
+			int			ndx;
+			int			plan_id;
+			ListCell   *lc;
+
+            levelsup = rte->ctelevelsup;
+			cteroot = root;
+			while (levelsup-- > 0)
+			{
+				cteroot = cteroot->parent_root;
+				if (!cteroot)	/* shouldn't happen */
+					elog(ERROR, "bad levelsup for CTE \"%s\"", rte->ctename);
+			}
+            ndx = 0;
+			foreach(lc, cteroot->parse->cteList)
+			{
+				CommonTableExpr *cte = (CommonTableExpr *) lfirst(lc);
+
+				if (strcmp(cte->ctename, rte->ctename) == 0)
+					break;
+				ndx++;
+			}
+			if (lc == NULL)		/* shouldn't happen */
+				elog(ERROR, "could not find CTE \"%s\"", rte->ctename);
+			if (ndx >= list_length(cteroot->cte_plan_ids))
+				elog(ERROR, "could not find plan for CTE \"%s\"", rte->ctename);
+			plan_id = list_nth_int(cteroot->cte_plan_ids, ndx);
+			if (plan_id <= 0)
+				elog(ERROR, "no plan was made for CTE \"%s\"", rte->ctename);
+			subroot = (PlannerInfo *) list_nth(root->glob->subroots, plan_id - 1);
+        }
+        /* If the subquery hasn't been planned yet, we have to punt */
+		if (subroot == NULL)
+			return true;
+		Assert(IsA(subroot, PlannerInfo));
+        subquery = subroot->parse;
+		Assert(IsA(subquery, Query));
+        if (subquery->setOperations ||
+			subquery->groupClause ||
+			subquery->groupingSets)
+			return true;
+        /* Get the subquery output expression referenced by the upper Var */
+		if (subquery->returningList)
+			subtlist = subquery->returningList;
+		else
+			subtlist = subquery->targetList;
+        Index rti = find_rti_by_rte(root, rte);
+		ste = get_tle_by_resno(subtlist, rti);
+		if (ste == NULL || ste->resjunk)
+			elog(ERROR, "subquery %s does not have attribute %d",
+				 rte->eref->aliasname, rti);
+		Var* var = (Var *) ste->expr;
+        if (subquery->distinctClause)
+		{
+			if (list_length(subquery->distinctClause) == 1 &&
+				targetIsInSortList(ste, InvalidOid, subquery->distinctClause))
+				vardata->isunique = true;
+			/* cannot go further */
+			return true;
+		}
+        if (rte->security_barrier)
+			return true;
+        /* Can only handle a simple Var of subquery's query level */
+		if (var && IsA(var, Var) &&
+			var->varlevelsup == 0)
+		{
+			RangeTblEntry *sub_rte = subroot->simple_rte_array[var->varno];
+            if (!sub_rte || sub_rte->rtekind != RTE_RELATION)
+                return true;
+            return videx_get_relation_stats(subroot, sub_rte, var->varattno, vardata);
+        }
     }
     return true;
 }

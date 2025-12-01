@@ -98,7 +98,8 @@ class VidexFunc(enum.Enum):
     get_memory_buffer_size = "get_memory_buffer_size"
     records_in_range = "records_in_range"
     info_low = "info_low"
-    videx_get_relation_stats = "videx_get_relation_stats"
+    get_relation_stats = "videx_get_relation_stats"
+    table_block_relation_estimate_size = "videx_table_block_relation_estimate_size"
     not_supported = "not_supported"
 
 
@@ -275,6 +276,10 @@ class VidexSingleton:
                 resp = single_resp(table_model.records_in_range(req_json_item))
             elif func == VidexFunc.info_low:
                 resp = table_model.info_low(req_json_item)
+            elif func == VidexFunc.get_relation_stats:
+                resp = table_model.get_relation_stats(req_json_item)
+            elif func == VidexFunc.table_block_relation_estimate_size:
+                resp = table_model.table_block_relation_estimate_size(req_json_item)
             else:
                 raise NotImplementedError(f"MEEEET func unsupported: {func}")
         except Exception as e:

@@ -5,7 +5,7 @@ SPDX-License-Identifier: MIT
 from typing import Dict, List, Any, Optional
 from pydantic import Field, PrivateAttr, PlainSerializer, BeforeValidator
 from typing_extensions import Annotated
-from pandas import pd
+import pandas as pd
 
 from sub_platforms.sql_opt.videx.videx_histogram import HistogramStats
 from sub_platforms.sql_opt.column_statastics.statistics_info_base import BaseTableStatisticsInfo
@@ -22,6 +22,7 @@ def large_number_decoder(y):
 
 
 class TableStatisticsInfo(BaseTableStatisticsInfo):
+    model_config = {"arbitrary_types_allowed": True}
     db_name: str
     table_name: str
     # {col_name: col ndv}
@@ -55,7 +56,6 @@ class TableStatisticsInfo(BaseTableStatisticsInfo):
     sample_data: Optional[pd.DataFrame] = Field(default=None, exclude=True)
 
     _version: Optional[str] = PrivateAttr(default='1.0.0')
-
 
 def trans_dict_to_statistics(numerical_info: Dict[str, Any]) -> TableStatisticsInfo:
     """a temp convert function，from numerical info to TableStatisticsInfo"""

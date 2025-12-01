@@ -11,11 +11,9 @@ from sub_platforms.sql_opt.videx.videx_mysql_utils import AbstractMySQLUtils
 from sub_platforms.sql_opt.pg_meta import PGTable, PGColumn, PGIndex, PGIndexColumn, IndexType
 from sub_platforms.sql_opt.databases.pg.explain_result import PGExplainResult, PGExplainItem
 from sub_platforms.sql_opt.databases.pg.common_operation import mapping_index_columns
-
 class PGVersion(Enum):
     PG_17 = 'pg_17'
     PG_ELSE = 'pg_else'
-    pass
 
 def get_pg_version(pg_util: AbstractMySQLUtils):
     sql = "SHOW server_version;"

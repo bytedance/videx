@@ -23,6 +23,8 @@ class VidexStrategy(enum.Enum):
     ideal = "ideal"
     # sqlbrain
     sqlbrain = "sqlbrain"
+    # postgresql
+    postgresql = "postgresql"
 
 
 class VidexModelBase(ABC):
@@ -117,7 +119,6 @@ class VidexModelBase(ABC):
         idx_range_cond = IndexRangeCond.from_dict(min_key, max_key,
                                                   index_meta=self.get_index_schema(index_name),
                                                   )
-
         """
         有 key 的格式如下：
         {
@@ -154,7 +155,12 @@ class VidexModelBase(ABC):
             }
         """
         return self.cardinality(idx_range_cond)
+    
+    def get_relation_stats(self, req_json_item: dict) -> dict:
+        pass
 
+    def table_block_relation_estimate_size(self, req_json_item: dict) -> dict:
+        pass
 
 def record_range_request_to_str(min_key: dict, max_key: dict) -> str:
     """

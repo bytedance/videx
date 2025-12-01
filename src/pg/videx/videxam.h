@@ -17,7 +17,6 @@
 #include "utils/relcache.h"
 #include "utils/snapshot.h"
 
-
 struct VidexScanDesc {
   /*Base class from access/relscan.h.*/
   TableScanDescData rs_base;
