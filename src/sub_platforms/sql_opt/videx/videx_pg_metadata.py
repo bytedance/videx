@@ -15,11 +15,27 @@ from pydantic import BaseModel, Field
 
 from sub_platforms.sql_opt.column_statastics.statistics_info_pg import PGTableStatisticsInfo
 from sub_platforms.sql_opt.env.rds_env import Env
-from sub_platforms.sql_opt.pg_meta import PGTable,PGColumn, PGIndex ,PGStatistic, PGStatisticExt,PGStatisticSlot
+from sub_platforms.sql_opt.pg_meta import PGTable, PGColumn, PGIndex, PGStatistic, PGStatisticSlot
 from sub_platforms.sql_opt.videx.videx_utils import load_json_from_file, dump_json_to_file, GT_Table_Return, \
     target_env_available_for_videx,pg_serialize_schema_table,pg_deserialize_schema_table
-from sub_platforms.sql_opt.videx.videx_metadata import VidexDBTaskStats
+from sub_platforms.sql_opt.videx.videx_metadata import VidexDBTaskStats, VidexTableStatsBase
 from sub_platforms.sql_opt.videx.videx_utils import pg_deserialize_schema_table
+
+class PGVidexTableStats(VidexTableStatsBase):
+    dbname: str
+    table_name: str
+    table_meta: Optional[PGTable] = None
+    # TODO: maybe we should divide table_statistic into ndv and histogram part later
+    table_statistic: Optional[PGTableStatisticsInfo] = None
+
+    @staticmethod
+    def from_json(dbname: str, table_name: str, raw_meta_dict: PGTable, table_statistic: PGTableStatisticsInfo):
+        return PGVidexTableStats(
+            dbname=dbname,
+            table_name=table_name,
+            table_meta=raw_meta_dict,
+            table_statistic=table_statistic
+        )
 
 def fetch_all_meta_with_one_file_for_pg(meta_path: Union[str, dict],
                                  env: Env, target_db: str, all_table_names: List[str] = None
@@ -125,12 +141,14 @@ def fetch_pg_statistics(env: Env, target_dbname: str,all_table_names: List[str],
     res_tables = defaultdict(dict)
     for table_name in all_table_names:
         table_meta: PGTable = env.get_table_meta(target_dbname, table_name)
+        schema_name, real_table_name = pg_deserialize_schema_table(table_name)
         for c_id, col in enumerate(table_meta.columns):
             col: PGColumn
-            hist = fetch_col_statistic(env, target_dbname, table_meta.table_schema,table_meta.table_name, col.column_name)
+            hist = fetch_col_statistic(env, target_dbname, table_meta.table_schema, real_table_name, col.column_name)
             if hist is not None and ret_json:
                 hist = hist.to_dict()
-            res_tables[str(table_name).lower()][col.column_name] = hist
+            if hist is not None:
+                res_tables[str(table_name).lower()][col.column_name] = hist
     return res_tables
 
 def fetch_col_statistic(env, dbname: str, schema: str, table_name: str, col_name: str) -> Optional[PGStatistic]:
@@ -244,6 +262,7 @@ def construct_videx_task_meta_from_local_files_for_pg(task_id, videx_db,
             indexes=[PGIndex.from_dict(index_meta_dict) for index_meta_dict in table_dict.get('indexes', [])],
             ddl = table_dict['ddl']
         )
+    logging.info(f"construct_videx_task_meta_from_local_files_for_pg meta_dict: {meta_dict.keys()}, db_stat_dict: {db_stat_dict}")
     req_obj = VidexDBTaskStats(
         task_id=task_id,
         meta_dict=meta_dict,
@@ -268,13 +287,13 @@ def meta_dict_to_sample_file(
         for table_name, table_raw_stat_dict in db_stats_dict.items():
             s_name,t_name = pg_deserialize_schema_table(table_name)
             table_stat_info = PGTableStatisticsInfo(db_name=db_name, schema_name=s_name,table_name=t_name)
-            statistic_data = statistic_dict[db_name][table_name]
+            statistic_data = statistic_dict[db_name].get(table_name)
             if statistic_data and isinstance(list(statistic_data.values())[0], dict):
                 # if histogram_dict is a dict, convert it to HistogramStats object
                 statistic_data = {
                     col: PGStatistic.from_dict(hist_data) if hist_data else None
                     for col, hist_data in statistic_data.items()
                 }
-            table_stat_info.statistic_dict = statistic_data
-            numerical_info[db_name.lower()][table_name.lower()] = table_stat_info    
+                table_stat_info.statistic_dict = statistic_data
+                numerical_info[db_name.lower()][table_name.lower()] = table_stat_info    
     return numerical_info, None

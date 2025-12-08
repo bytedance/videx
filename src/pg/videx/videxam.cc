@@ -129,30 +129,36 @@ videx_table_block_relation_estimate_size(Relation rel, int32 *attr_widths,
 	/** try to fetch relation infos (pg_class) from videx-statistic-server, else use local pg_class instead*/
 	char *dbname = get_database_name(MyDatabaseId);
 	char *nspname   = get_namespace_name(rel->rd_rel->relnamespace);
+	char *relname = rel->rd_rel->relname.data;
+	std::string ns_relname = std::string(nspname) + "." + std::string(relname);
 	VidexStringMap res_json;
     VidexJsonItem request_item = construct_request(
-		dbname, rel->rd_rel->relname.data, nspname, __PRETTY_FUNCTION__);
+		dbname, nspname, ns_relname.c_str(), __PRETTY_FUNCTION__);
 	if (!ask_from_videx_http(request_item, res_json)) {
         /**fetch from videx-statistic-sever success, update local cache*/
+		curpages = (BlockNumber) std::stoi(res_json["relpages"]);
+		relpages = (BlockNumber) std::stoi(res_json["relpages"]);
+		reltuples = (double) std::stof(res_json["reltuples"]);
+		relallvisible = (BlockNumber) (res_json["relallvisible"] == "True" ? 1 : 0);
 		vac_update_relstats(rel,
-                        std::stoi(res_json["relpages"]),
-                        std::stof(res_json["reltuples"]),
-                        std::stoi(res_json["relallvisible"]),
-                        std::stoi(res_json["relhasindex"]),
+                        curpages,
+                        reltuples,
+                        relallvisible,
+                        res_json["relhasindex"] == "True" ? true : false,
                         InvalidTransactionId,
                         InvalidMultiXactId,
                         NULL,
                         NULL,
                         false);
-    }
+    } else {
+		/* it should have storage, so we can call the smgr */
+		curpages = (BlockNumber) rel->rd_rel->relpages;
 
-	/* it should have storage, so we can call the smgr */
-	curpages = (BlockNumber) rel->rd_rel->relpages;
-
-	/* coerce values in pg_class to more desirable types */
-	relpages = (BlockNumber) rel->rd_rel->relpages;
-	reltuples = (double) rel->rd_rel->reltuples;
-	relallvisible = (BlockNumber) rel->rd_rel->relallvisible;
+		/* coerce values in pg_class to more desirable types */
+		relpages = (BlockNumber) rel->rd_rel->relpages;
+		reltuples = (double) rel->rd_rel->reltuples;
+		relallvisible = (BlockNumber) rel->rd_rel->relallvisible;
+	}
 
 	/*
 	 * HACK: if the relation has never yet been vacuumed, use a minimum size
@@ -247,7 +253,7 @@ void videx_relation_set_new_filelocator (Relation rel,
 												 const RelFileLocator *newrlocator,
 												 char persistence,
 												 TransactionId *freezeXid,
-												 MultiXactId *minmulti){			
+												 MultiXactId *minmulti){		
 	return;									
 }
 

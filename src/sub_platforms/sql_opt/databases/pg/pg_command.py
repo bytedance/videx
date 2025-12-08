@@ -166,7 +166,7 @@ class PGCommand:
         table = PGTable(
             dbname = db_name,
             table_schema = schema_name,
-            table_name = table_name,
+            table_name = schema_table_name,
             relpages = df['relpages'].values[0],
             reltuples = df['reltuples'].values[0],
             relallvisible = df['relallvisible'].values[0],

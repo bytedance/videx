@@ -28,13 +28,14 @@ extern "C" {
     #include "optimizer/pathnode.h"
     #include "parser/parsetree.h"
     #include "parser/parse_clause.h"
+
+    PG_MODULE_MAGIC;
+    PG_FUNCTION_INFO_V1(videx_analyze);
+    PG_FUNCTION_INFO_V1(videx_tableam_handler);
 }
 #include "videx_json_item.h"
 #include <curl/curl.h>
-
-PG_MODULE_MAGIC;
-PG_FUNCTION_INFO_V1(videx_analyze);
-PG_FUNCTION_INFO_V1(videx_tableam_handler);
+#include <nlohmann/json.hpp>
 
 static const TableAmRoutine videxam_methods = {
         .type = T_TableAmRoutine,
@@ -344,72 +345,233 @@ find_rti_by_rte(PlannerInfo *root, RangeTblEntry *rte)
     return 0;
 }
 
+static const int PGSTAT_MAX_SLOTS = 5;
+
+static void
+pgstat_apply_slots(VidexStringMap &res_json, Datum *values, bool *nulls)
+{
+    nlohmann::json slots_json = nlohmann::json::array();
+
+    auto slots_iter = res_json.find("slots");
+    if (slots_iter != res_json.end())
+    {
+        const std::string &raw = slots_iter->second;
+        // elog(INFO, "slots: %s", raw.c_str());
+        if (!raw.empty())
+        {
+            nlohmann::json parsed = nlohmann::json::parse(raw, nullptr, false);
+            if (parsed.is_discarded() || !parsed.is_array())
+            {
+                std::string normalized = raw;
+                for (char &ch : normalized)
+                    if (ch == '\'')
+                        ch = '"';
+
+                auto replace_token = [&normalized](const std::string &from, const std::string &to)
+                {
+                    size_t pos = 0;
+                    while ((pos = normalized.find(from, pos)) != std::string::npos)
+                    {
+                        normalized.replace(pos, from.length(), to);
+                        pos += to.length();
+                    }
+                };
+
+                replace_token("True", "true");
+                replace_token("False", "false");
+                replace_token("None", "null");
+
+                parsed = nlohmann::json::parse(normalized, nullptr, false);
+            }
+
+            if (!parsed.is_discarded() && parsed.is_array())
+                slots_json = parsed;
+            else
+                elog(WARNING,
+                     "BuildPGStatisticTuple: invalid slots payload: %s",
+                     raw.c_str());
+        }
+    }
+
+    for (int i = 0; i < PGSTAT_MAX_SLOTS; ++i)
+    {
+        if (i < static_cast<int>(slots_json.size()) && slots_json[i].is_object())
+        {
+            const nlohmann::json &slot = slots_json[i];
+
+            bool isnull = false;
+            Datum datum = (Datum) 0;
+            if (slot.contains("kind") && !slot["kind"].is_null())
+            {
+                try {
+                    datum = Int16GetDatum(slot["kind"].is_string()
+                                              ? static_cast<int16>(std::stoi(slot["kind"].get<std::string>()))
+                                              : static_cast<int16>(slot["kind"].get<int>()));
+                } catch (...) {
+                    isnull = true;
+                }
+            }
+            else
+                isnull = true;
+            values[Anum_pg_statistic_stakind1 - 1 + i] = datum;
+            nulls[Anum_pg_statistic_stakind1 - 1 + i] = isnull;
+
+            isnull = false;
+            datum = (Datum) 0;
+            if (slot.contains("op") && !slot["op"].is_null())
+            {
+                try {
+                    datum = ObjectIdGetDatum(slot["op"].is_string()
+                                                 ? static_cast<Oid>(std::stoul(slot["op"].get<std::string>()))
+                                                 : static_cast<Oid>(slot["op"].get<long>()));
+                } catch (...) {
+                    isnull = true;
+                }
+            }
+            else
+                isnull = true;
+            values[Anum_pg_statistic_staop1 - 1 + i] = datum;
+            nulls[Anum_pg_statistic_staop1 - 1 + i] = isnull;
+
+            isnull = false;
+            datum = (Datum) 0;
+            if (slot.contains("coll") && !slot["coll"].is_null())
+            {
+                try {
+                    datum = ObjectIdGetDatum(slot["coll"].is_string()
+                                                 ? static_cast<Oid>(std::stoul(slot["coll"].get<std::string>()))
+                                                 : static_cast<Oid>(slot["coll"].get<long>()));
+                } catch (...) {
+                    isnull = true;
+                }
+            }
+            else
+                isnull = true;
+            values[Anum_pg_statistic_stacoll1 - 1 + i] = datum;
+            nulls[Anum_pg_statistic_stacoll1 - 1 + i] = isnull;
+
+            if (slot.contains("numbers") && slot["numbers"].is_array() && !slot["numbers"].empty())
+            {
+                std::vector<Datum> elems;
+                elems.reserve(slot["numbers"].size());
+                for (const auto &item : slot["numbers"])
+                {
+                    try {
+                        float4 val = item.is_string()
+                                         ? static_cast<float4>(std::stof(item.get<std::string>()))
+                                         : static_cast<float4>(item.get<double>());
+                        elems.push_back(Float4GetDatum(val));
+                    } catch (...) {
+                        /* ignore invalid entry */
+                    }
+                }
+
+                if (!elems.empty())
+                {
+                    ArrayType *arr = construct_array(elems.data(),
+                                                     elems.size(),
+                                                     FLOAT4OID,
+                                                     sizeof(float4),
+                                                     true,
+                                                     'i');
+                    values[Anum_pg_statistic_stanumbers1 - 1 + i] = PointerGetDatum(arr);
+                    nulls[Anum_pg_statistic_stanumbers1 - 1 + i] = false;
+                }
+                else
+                    nulls[Anum_pg_statistic_stanumbers1 - 1 + i] = true;
+            }
+            else
+                nulls[Anum_pg_statistic_stanumbers1 - 1 + i] = true;
+
+            if (slot.contains("values") && slot["values"].is_array() && !slot["values"].empty())
+            {
+                std::vector<Datum> elems;
+                elems.reserve(slot["values"].size());
+                for (const auto &item : slot["values"])
+                {
+                    std::string text;
+                    if (item.is_string())
+                        text = item.get<std::string>();
+                    else if (item.is_object() && item.contains("value") && item["value"].is_string())
+                        text = item["value"].get<std::string>();
+                    else
+                        text = item.dump();
+
+                    elems.push_back(CStringGetTextDatum(text.c_str()));
+                }
+
+                if (!elems.empty())
+                {
+                    ArrayType *arr = construct_array(elems.data(),
+                                                     elems.size(),
+                                                     TEXTOID,
+                                                     -1,
+                                                     false,
+                                                     'i');
+                    values[Anum_pg_statistic_stavalues1 - 1 + i] = PointerGetDatum(arr);
+                    nulls[Anum_pg_statistic_stavalues1 - 1 + i] = false;
+                }
+                else
+                    nulls[Anum_pg_statistic_stavalues1 - 1 + i] = true;
+            }
+            else
+                nulls[Anum_pg_statistic_stavalues1 - 1 + i] = true;
+        }
+        else
+        {
+            nulls[Anum_pg_statistic_stakind1 - 1 + i] = true;
+            nulls[Anum_pg_statistic_staop1 - 1 + i] = true;
+            nulls[Anum_pg_statistic_stacoll1 - 1 + i] = true;
+            nulls[Anum_pg_statistic_stanumbers1 - 1 + i] = true;
+            nulls[Anum_pg_statistic_stavalues1 - 1 + i] = true;
+        }
+    }
+}
+
 HeapTuple
 BuildPGStatisticTuple(VidexStringMap &res_json, Oid relid, int attnum)
 {
+     if (res_json.empty() ||
+        !res_json.count("stainherit") ||
+        !res_json.count("stanullfrac") ||
+        !res_json.count("stawidth") ||
+        !res_json.count("stadistinct"))
+    {
+        return NULL;
+    }
     Datum values[Natts_pg_statistic];
     bool nulls[Natts_pg_statistic];
     MemSet(nulls, 0, sizeof(nulls));
 
-    values[Anum_pg_statistic_starelid - 1] =
-        ObjectIdGetDatum(relid);
-    values[Anum_pg_statistic_staattnum - 1] =
-        Int16GetDatum(attnum);
-    values[Anum_pg_statistic_stainherit - 1] =
-        BoolGetDatum(res_json["stainherit"] == "true");
-    values[Anum_pg_statistic_stanullfrac - 1] =
-        Float4GetDatum(std::stof(res_json["stanullfrac"]));
-    values[Anum_pg_statistic_stawidth - 1] =
-        Int32GetDatum(std::stoi(res_json["stawidth"]));
-    values[Anum_pg_statistic_stadistinct - 1] =
-        Float4GetDatum(std::stof(res_json["stadistinct"]));
+    values[Anum_pg_statistic_starelid - 1] = ObjectIdGetDatum(relid);
+    values[Anum_pg_statistic_staattnum - 1] = Int16GetDatum(attnum);
+        const std::string &stainherit_str = res_json.at("stainherit");
+    bool stainherit = (stainherit_str == "true" || stainherit_str == "True" || stainherit_str == "1");
+    values[Anum_pg_statistic_stainherit - 1] = BoolGetDatum(stainherit);
 
-    /* ---- slot 信息 ---- */
-    //auto slots = res_json["slots"];
-    // if (!slots.empty())
-    // {
-    //     auto slot = slots[0];
+    float4 stanullfrac = 0.0f;
+    try { stanullfrac = static_cast<float4>(std::stof(res_json.at("stanullfrac"))); }
+    catch (...) { ereport(WARNING, (errmsg("invalid stanullfrac: %s", res_json.at("stanullfrac").c_str()))); }
+    values[Anum_pg_statistic_stanullfrac - 1] = Float4GetDatum(stanullfrac);
 
-    //     values[Anum_pg_statistic_stakind1 - 1] = Int16GetDatum(slot.kind);
-    //     values[Anum_pg_statistic_staop1 - 1] = ObjectIdGetDatum(slot.op ? slot.op : InvalidOid);
-    //     values[Anum_pg_statistic_stacoll1 - 1] = ObjectIdGetDatum(slot.coll ? slot.coll : InvalidOid);
+    int32 stawidth = 0;
+    try { stawidth = static_cast<int32>(std::stol(res_json.at("stawidth"))); }
+    catch (...) { ereport(WARNING, (errmsg("invalid stawidth: %s", res_json.at("stawidth").c_str()))); }
+    values[Anum_pg_statistic_stawidth - 1] = Int32GetDatum(stawidth);
 
-    //     /* numbers[] 转成 PG 数组 */
-    //     if (!slot.numbers.empty())
-    //     {
-    //         Datum *elems = (Datum *) palloc(slot.numbers.size() * sizeof(Datum));
-    //         for (size_t i = 0; i < slot.numbers.size(); i++)
-    //             elems[i] = Float4GetDatum(slot.numbers[i]);
+    float4 stadistinct = -1.0f;
+    try { stadistinct = static_cast<float4>(std::stof(res_json.at("stadistinct"))); }
+    catch (...) { ereport(WARNING, (errmsg("invalid stadistinct: %s", res_json.at("stadistinct").c_str()))); }
+    values[Anum_pg_statistic_stadistinct - 1] = Float4GetDatum(stadistinct);
 
-    //         ArrayType *arr = construct_array(elems,
-    //                                          slot.numbers.size(),
-    //                                          FLOAT4OID,
-    //                                          sizeof(float4),
-    //                                          true, 'i');
-    //         values[Anum_pg_statistic_stanumbers1 - 1] = PointerGetDatum(arr);
-    //     }
-    //     else
-    //         nulls[Anum_pg_statistic_stanumbers1 - 1] = true;
+    // elog(INFO, "stainherit=%s stanullfrac=%f stawidth=%d stadistinct=%f",
+    //      stainherit ? "true" : "false", stanullfrac, stawidth, stadistinct);
+    pgstat_apply_slots(res_json, values, nulls);
 
-    //     /* values[] 转成 TEXT[] */
-    //     if (!slot.values.empty())
-    //     {
-    //         Datum *elems = (Datum *) palloc(slot.values.size() * sizeof(Datum));
-    //         for (size_t i = 0; i < slot.values.size(); i++)
-    //             elems[i] = CStringGetTextDatum(slot.values[i].c_str());
+    Relation stat_rel = table_open(StatisticRelationId, AccessShareLock);
+    HeapTuple tuple = heap_form_tuple(RelationGetDescr(stat_rel), values, nulls);
+    table_close(stat_rel, AccessShareLock);
 
-    //         ArrayType *arr = construct_array(elems,
-    //                                          slot.values.size(),
-    //                                          TEXTOID,
-    //                                          -1,
-    //                                          false, 'i');
-    //         values[Anum_pg_statistic_stavalues1 - 1] = PointerGetDatum(arr);
-    //     }
-    //     else
-    //         nulls[Anum_pg_statistic_stavalues1 - 1] = true;
-    // }
-    TupleDesc tupDesc = lookup_rowtype_tupdesc(relid, -1);
-    HeapTuple tuple = heap_form_tuple(tupDesc, values, nulls);
     return tuple;
 }
 
@@ -417,31 +579,45 @@ static bool videx_get_relation_stats(PlannerInfo *root,
                                               RangeTblEntry *rte,
                                               AttrNumber attnum,
                                               VariableStatData *vardata){
+    Oid nspoid = get_rel_namespace(rte->relid);
+    if (IsCatalogNamespace(nspoid) || IsToastNamespace(nspoid)) {
+        if (prev_get_relation_stats_hook)
+            return prev_get_relation_stats_hook(root, rte, attnum, vardata);
+        else
+            return false;
+    }
     if (rte->rtekind == RTE_RELATION){
         /*fetch HeapTuple of pg_statistic from videx_statistic_server*/
         char *dbname = get_database_name(MyDatabaseId);
         char *relname   = get_rel_name(rte->relid);
-        Oid   nspoid    = get_rel_namespace(rte->relid);
-        char *nspname   = get_namespace_name(nspoid);
+        char *nspname   = get_namespace_name(get_rel_namespace(rte->relid));
         char *colname = get_attname(rte->relid, attnum, false);
+        /*To adapt with videx-statistic-server, we use schema_name.table_name to instead of table_name*/
+        std::string ns_relname = std::string(nspname) + "." + std::string(relname);
 
         VidexStringMap res_json;
-        VidexJsonItem request_item = construct_request(dbname,nspname,relname,__PRETTY_FUNCTION__);
+        VidexJsonItem request_item = construct_request(dbname,nspname,ns_relname.c_str(),__PRETTY_FUNCTION__);
         VidexJsonItem * keyItem = request_item.create("colname");
         keyItem->add_property("name", colname);
 
         int error = ask_from_videx_http(request_item, res_json);
         if (error) {
             std::cout << "ask_from_videx_http error. videx_get_realtion_stats" << std::endl;
-            return 0;
+            return prev_get_relation_stats_hook ?
+                   prev_get_relation_stats_hook(root, rte, attnum, vardata) :
+                   false;
         }
         vardata->statsTuple = BuildPGStatisticTuple(res_json,rte->relid,attnum);
-        vardata->freefunc = ReleaseSysCache;
-        /** may be we can also update local cache of pg_statistic here */
+        vardata->freefunc = heap_freetuple;
+        /**
+         * TODO: 
+         * 1. may be we can also update local cache of pg_statistic here 
+         * 2. we need more stawidth in pg_statistic for select list to calucate width in query plan
+         * */
         if (HeapTupleIsValid(vardata->statsTuple)) {
             vardata->acl_ok = true;
         }
-    }else if ((rte->rtekind == RTE_SUBQUERY && !rte->inh) ||
+    } else if ((rte->rtekind == RTE_SUBQUERY && !rte->inh) ||
 			 (rte->rtekind == RTE_CTE && !rte->self_reference)){
         PlannerInfo *subroot;
 		Query	   *subquery;
@@ -534,6 +710,8 @@ static bool videx_get_index_stats(PlannerInfo *root,
                                            Oid indexOid,
                                            AttrNumber indexattnum,
                                            VariableStatData *vardata){
-    return true;
+    return prev_get_index_stats_hook ?
+           prev_get_index_stats_hook(root, indexOid, indexattnum, vardata) :
+           false;
 }
 

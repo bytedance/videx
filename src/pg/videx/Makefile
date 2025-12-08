@@ -5,6 +5,7 @@ OBJS = \
 	$(WIN32RES) \
 	stats.o \
 	videxam.o \
+	videx_json_item.o \
 
 CURRENT_DIR := $(shell pwd)
 $(info CURRENT_DIR = $(CURRENT_DIR))
@@ -22,6 +23,12 @@ REGRESS = videx
 
 CXX = g++
 CC = gcc
+
+ifdef DEBUG
+CFLAGS += -O0 -g3
+CXXFLAGS += -O0 -g3
+PG_CPPFLAGS += -O0 -g3
+endif
 
 TAP_TESTS = 1
 

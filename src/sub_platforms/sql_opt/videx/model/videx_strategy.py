@@ -155,12 +155,7 @@ class VidexModelBase(ABC):
             }
         """
         return self.cardinality(idx_range_cond)
-    
-    def get_relation_stats(self, req_json_item: dict) -> dict:
-        pass
 
-    def table_block_relation_estimate_size(self, req_json_item: dict) -> dict:
-        pass
 
 def record_range_request_to_str(min_key: dict, max_key: dict) -> str:
     """
