@@ -139,7 +139,7 @@ videx_table_block_relation_estimate_size(Relation rel, int32 *attr_widths,
 		curpages = (BlockNumber) std::stoi(res_json["relpages"]);
 		relpages = (BlockNumber) std::stoi(res_json["relpages"]);
 		reltuples = (double) std::stof(res_json["reltuples"]);
-		relallvisible = (BlockNumber) (res_json["relallvisible"] == "True" ? 1 : 0);
+		relallvisible = (BlockNumber) std::stoi(res_json["relallvisible"]);
 		vac_update_relstats(rel,
                         curpages,
                         reltuples,
@@ -151,6 +151,7 @@ videx_table_block_relation_estimate_size(Relation rel, int32 *attr_widths,
                         NULL,
                         false);
     } else {
+		elog(WARNING, "videx_table_block_relation_estimate_size ask_from_videx_http error");
 		/* it should have storage, so we can call the smgr */
 		curpages = (BlockNumber) rel->rd_rel->relpages;
 

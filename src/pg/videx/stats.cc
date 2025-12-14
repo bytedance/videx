@@ -347,6 +347,7 @@ find_rti_by_rte(PlannerInfo *root, RangeTblEntry *rte)
 
 static const int PGSTAT_MAX_SLOTS = 5;
 
+
 static void
 pgstat_apply_slots(VidexStringMap &res_json, Datum *values, bool *nulls)
 {
@@ -356,7 +357,6 @@ pgstat_apply_slots(VidexStringMap &res_json, Datum *values, bool *nulls)
     if (slots_iter != res_json.end())
     {
         const std::string &raw = slots_iter->second;
-        // elog(INFO, "slots: %s", raw.c_str());
         if (!raw.empty())
         {
             nlohmann::json parsed = nlohmann::json::parse(raw, nullptr, false);
@@ -364,32 +364,23 @@ pgstat_apply_slots(VidexStringMap &res_json, Datum *values, bool *nulls)
             {
                 std::string normalized = raw;
                 for (char &ch : normalized)
-                    if (ch == '\'')
-                        ch = '"';
-
-                auto replace_token = [&normalized](const std::string &from, const std::string &to)
-                {
+                    if (ch == '\'') ch = '"';
+                auto replace_token = [&normalized](const std::string &from, const std::string &to) {
                     size_t pos = 0;
-                    while ((pos = normalized.find(from, pos)) != std::string::npos)
-                    {
+                    while ((pos = normalized.find(from, pos)) != std::string::npos) {
                         normalized.replace(pos, from.length(), to);
                         pos += to.length();
                     }
                 };
-
                 replace_token("True", "true");
                 replace_token("False", "false");
                 replace_token("None", "null");
-
                 parsed = nlohmann::json::parse(normalized, nullptr, false);
             }
-
             if (!parsed.is_discarded() && parsed.is_array())
                 slots_json = parsed;
             else
-                elog(WARNING,
-                     "BuildPGStatisticTuple: invalid slots payload: %s",
-                     raw.c_str());
+                elog(WARNING, "BuildPGStatisticTuple: invalid slots payload: %s", raw.c_str());
         }
     }
 
@@ -399,57 +390,52 @@ pgstat_apply_slots(VidexStringMap &res_json, Datum *values, bool *nulls)
         {
             const nlohmann::json &slot = slots_json[i];
 
-            bool isnull = false;
-            Datum datum = (Datum) 0;
-            if (slot.contains("kind") && !slot["kind"].is_null())
-            {
-                try {
-                    datum = Int16GetDatum(slot["kind"].is_string()
-                                              ? static_cast<int16>(std::stoi(slot["kind"].get<std::string>()))
-                                              : static_cast<int16>(slot["kind"].get<int>()));
-                } catch (...) {
-                    isnull = true;
+            // stakindN (int16), default 0
+            bool kind_err = false;
+            Datum kind_datum = (Datum) 0;
+            try {
+                if (slot.contains("kind") && !slot["kind"].is_null()) {
+                    kind_datum = Int16GetDatum(slot["kind"].is_string()
+                        ? static_cast<int16>(std::stoi(slot["kind"].get<std::string>()))
+                        : static_cast<int16>(slot["kind"].get<int>()));
+                } else {
+                    kind_datum = Int16GetDatum(0);
                 }
-            }
-            else
-                isnull = true;
-            values[Anum_pg_statistic_stakind1 - 1 + i] = datum;
-            nulls[Anum_pg_statistic_stakind1 - 1 + i] = isnull;
+            } catch (...) { kind_err = true; }
+            values[Anum_pg_statistic_stakind1 - 1 + i] = kind_datum;
+            nulls[Anum_pg_statistic_stakind1 - 1 + i] = kind_err;
 
-            isnull = false;
-            datum = (Datum) 0;
-            if (slot.contains("op") && !slot["op"].is_null())
-            {
-                try {
-                    datum = ObjectIdGetDatum(slot["op"].is_string()
-                                                 ? static_cast<Oid>(std::stoul(slot["op"].get<std::string>()))
-                                                 : static_cast<Oid>(slot["op"].get<long>()));
-                } catch (...) {
-                    isnull = true;
+            // staopN (Oid), default 0
+            bool op_err = false;
+            Datum op_datum = (Datum) 0;
+            try {
+                if (slot.contains("op") && !slot["op"].is_null()) {
+                    op_datum = ObjectIdGetDatum(slot["op"].is_string()
+                        ? static_cast<Oid>(std::stoul(slot["op"].get<std::string>()))
+                        : static_cast<Oid>(slot["op"].get<long>()));
+                } else {
+                    op_datum = ObjectIdGetDatum((Oid)0);
                 }
-            }
-            else
-                isnull = true;
-            values[Anum_pg_statistic_staop1 - 1 + i] = datum;
-            nulls[Anum_pg_statistic_staop1 - 1 + i] = isnull;
+            } catch (...) { op_err = true; }
+            values[Anum_pg_statistic_staop1 - 1 + i] = op_datum;
+            nulls[Anum_pg_statistic_staop1 - 1 + i] = op_err;
 
-            isnull = false;
-            datum = (Datum) 0;
-            if (slot.contains("coll") && !slot["coll"].is_null())
-            {
-                try {
-                    datum = ObjectIdGetDatum(slot["coll"].is_string()
-                                                 ? static_cast<Oid>(std::stoul(slot["coll"].get<std::string>()))
-                                                 : static_cast<Oid>(slot["coll"].get<long>()));
-                } catch (...) {
-                    isnull = true;
+            // stacollN (Oid), default 0
+            bool coll_err = false;
+            Datum coll_datum = (Datum) 0;
+            try {
+                if (slot.contains("coll") && !slot["coll"].is_null()) {
+                    coll_datum = ObjectIdGetDatum(slot["coll"].is_string()
+                        ? static_cast<Oid>(std::stoul(slot["coll"].get<std::string>()))
+                        : static_cast<Oid>(slot["coll"].get<long>()));
+                } else {
+                    coll_datum = ObjectIdGetDatum((Oid)0);
                 }
-            }
-            else
-                isnull = true;
-            values[Anum_pg_statistic_stacoll1 - 1 + i] = datum;
-            nulls[Anum_pg_statistic_stacoll1 - 1 + i] = isnull;
+            } catch (...) { coll_err = true; }
+            values[Anum_pg_statistic_stacoll1 - 1 + i] = coll_datum;
+            nulls[Anum_pg_statistic_stacoll1 - 1 + i] = coll_err;
 
+            // stanumbersN (float4[]), default NULL if empty/missing
             if (slot.contains("numbers") && slot["numbers"].is_array() && !slot["numbers"].empty())
             {
                 std::vector<Datum> elems;
@@ -458,14 +444,11 @@ pgstat_apply_slots(VidexStringMap &res_json, Datum *values, bool *nulls)
                 {
                     try {
                         float4 val = item.is_string()
-                                         ? static_cast<float4>(std::stof(item.get<std::string>()))
-                                         : static_cast<float4>(item.get<double>());
+                            ? static_cast<float4>(std::stof(item.get<std::string>()))
+                            : static_cast<float4>(item.get<double>());
                         elems.push_back(Float4GetDatum(val));
-                    } catch (...) {
-                        /* ignore invalid entry */
-                    }
+                    } catch (...) { /* ignore invalid */ }
                 }
-
                 if (!elems.empty())
                 {
                     ArrayType *arr = construct_array(elems.data(),
@@ -481,8 +464,11 @@ pgstat_apply_slots(VidexStringMap &res_json, Datum *values, bool *nulls)
                     nulls[Anum_pg_statistic_stanumbers1 - 1 + i] = true;
             }
             else
+            {
                 nulls[Anum_pg_statistic_stanumbers1 - 1 + i] = true;
+            }
 
+            // stavaluesN (text[]), default NULL if empty/missing
             if (slot.contains("values") && slot["values"].is_array() && !slot["values"].empty())
             {
                 std::vector<Datum> elems;
@@ -496,10 +482,8 @@ pgstat_apply_slots(VidexStringMap &res_json, Datum *values, bool *nulls)
                         text = item["value"].get<std::string>();
                     else
                         text = item.dump();
-
                     elems.push_back(CStringGetTextDatum(text.c_str()));
                 }
-
                 if (!elems.empty())
                 {
                     ArrayType *arr = construct_array(elems.data(),
@@ -515,14 +499,20 @@ pgstat_apply_slots(VidexStringMap &res_json, Datum *values, bool *nulls)
                     nulls[Anum_pg_statistic_stavalues1 - 1 + i] = true;
             }
             else
+            {
                 nulls[Anum_pg_statistic_stavalues1 - 1 + i] = true;
+            }
         }
         else
         {
-            nulls[Anum_pg_statistic_stakind1 - 1 + i] = true;
-            nulls[Anum_pg_statistic_staop1 - 1 + i] = true;
-            nulls[Anum_pg_statistic_stacoll1 - 1 + i] = true;
-            nulls[Anum_pg_statistic_stanumbers1 - 1 + i] = true;
+            values[Anum_pg_statistic_stakind1   - 1 + i] = Int16GetDatum(0);
+            values[Anum_pg_statistic_staop1     - 1 + i] = ObjectIdGetDatum((Oid)0);
+            values[Anum_pg_statistic_stacoll1   - 1 + i] = ObjectIdGetDatum((Oid)0);
+            nulls[Anum_pg_statistic_stakind1   - 1 + i] = false;
+            nulls[Anum_pg_statistic_staop1     - 1 + i] = false;
+            nulls[Anum_pg_statistic_stacoll1   - 1 + i] = false;
+
+            nulls[Anum_pg_statistic_stanumbers1- 1 + i] = true;
             nulls[Anum_pg_statistic_stavalues1 - 1 + i] = true;
         }
     }
@@ -575,18 +565,69 @@ BuildPGStatisticTuple(VidexStringMap &res_json, Oid relid, int attnum)
     return tuple;
 }
 
+static void
+videx_upsert_pg_statistic(Oid relid, AttrNumber attnum, HeapTuple newtuple)
+{
+    if (!HeapTupleIsValid(newtuple))
+        return;
+
+    Relation stat_rel = table_open(StatisticRelationId, RowExclusiveLock);
+    if (!RelationIsValid(stat_rel))
+        elog(ERROR, "failed to open pg_statistic");
+
+    HeapTuple oldtup = SearchSysCache3(STATRELATTINH,
+                                       ObjectIdGetDatum(relid),
+                                       Int16GetDatum(attnum),
+                                       BoolGetDatum(false));
+
+    CatalogIndexState indstate = CatalogOpenIndexes(stat_rel);
+
+    if (HeapTupleIsValid(oldtup))
+    {
+        CatalogTupleUpdateWithInfo(stat_rel, &oldtup->t_self, newtuple, indstate);
+        ReleaseSysCache(oldtup);
+    }
+    else
+    {
+        CatalogTupleInsertWithInfo(stat_rel, newtuple, indstate);
+    }
+
+    CatalogCloseIndexes(indstate);
+    table_close(stat_rel, RowExclusiveLock);
+
+    CacheInvalidateRelcacheByRelid(relid);
+    CommandCounterIncrement();
+}
+
+static void
+set_vardata_stats_from_syscache(VariableStatData *vardata, Oid relid, AttrNumber attnum, bool stainherit)
+{
+    vardata->statsTuple = SearchSysCache3(STATRELATTINH,
+                                          ObjectIdGetDatum(relid),
+                                          Int16GetDatum(attnum),
+                                          BoolGetDatum(stainherit));
+    vardata->freefunc = ReleaseSysCache;
+}
+
 static bool videx_get_relation_stats(PlannerInfo *root,
                                               RangeTblEntry *rte,
                                               AttrNumber attnum,
                                               VariableStatData *vardata){
     Oid nspoid = get_rel_namespace(rte->relid);
     if (IsCatalogNamespace(nspoid) || IsToastNamespace(nspoid)) {
-        if (prev_get_relation_stats_hook)
-            return prev_get_relation_stats_hook(root, rte, attnum, vardata);
-        else
-            return false;
+        set_vardata_stats_from_syscache(vardata, rte->relid, attnum, rte->inh);
+        return true;
     }
+
     if (rte->rtekind == RTE_RELATION){
+        Relation rel = table_open(rte->relid, AccessShareLock);
+        const TableAmRoutine *am = rel->rd_tableam;
+        bool is_videx_am = (am == &videxam_methods);
+        table_close(rel, AccessShareLock);
+        if (!is_videx_am) {
+            set_vardata_stats_from_syscache(vardata, rte->relid, attnum, rte->inh);
+            return true;
+        }
         /*fetch HeapTuple of pg_statistic from videx_statistic_server*/
         char *dbname = get_database_name(MyDatabaseId);
         char *relname   = get_rel_name(rte->relid);
@@ -602,21 +643,17 @@ static bool videx_get_relation_stats(PlannerInfo *root,
 
         int error = ask_from_videx_http(request_item, res_json);
         if (error) {
-            std::cout << "ask_from_videx_http error. videx_get_realtion_stats" << std::endl;
-            return prev_get_relation_stats_hook ?
-                   prev_get_relation_stats_hook(root, rte, attnum, vardata) :
-                   false;
+            elog(WARNING, "videx_get_realtion_stats ask_from_videx_http error.");
+            set_vardata_stats_from_syscache(vardata, rte->relid, attnum, rte->inh);
+        } else {
+            vardata->statsTuple = BuildPGStatisticTuple(res_json,rte->relid,attnum);
+            vardata->freefunc = heap_freetuple;
         }
-        vardata->statsTuple = BuildPGStatisticTuple(res_json,rte->relid,attnum);
-        vardata->freefunc = heap_freetuple;
         /**
-         * TODO: 
-         * 1. may be we can also update local cache of pg_statistic here 
-         * 2. we need more stawidth in pg_statistic for select list to calucate width in query plan
+         * TODO:
+         * 1. we need more stawidth in pg_statistic for select list to calucate width in query plan
          * */
-        if (HeapTupleIsValid(vardata->statsTuple)) {
-            vardata->acl_ok = true;
-        }
+        videx_upsert_pg_statistic(rte->relid, attnum, vardata->statsTuple);
     } else if ((rte->rtekind == RTE_SUBQUERY && !rte->inh) ||
 			 (rte->rtekind == RTE_CTE && !rte->self_reference)){
         PlannerInfo *subroot;
@@ -710,8 +747,47 @@ static bool videx_get_index_stats(PlannerInfo *root,
                                            Oid indexOid,
                                            AttrNumber indexattnum,
                                            VariableStatData *vardata){
-    return prev_get_index_stats_hook ?
-           prev_get_index_stats_hook(root, indexOid, indexattnum, vardata) :
-           false;
-}
+    Oid nspoid = get_rel_namespace(indexOid);
+    if (IsCatalogNamespace(nspoid) || IsToastNamespace(nspoid))
+    {
+        set_vardata_stats_from_syscache(vardata, indexOid, indexattnum, false);
+        return true;
+    }
 
+    Relation rel = table_open(indexOid, AccessShareLock);
+    const TableAmRoutine *am = rel->rd_tableam;
+    bool is_videx_am = (am == &videxam_methods);
+    table_close(rel, AccessShareLock);
+    if (!is_videx_am) {
+        set_vardata_stats_from_syscache(vardata, indexOid, indexattnum, false);
+        return true;
+    }
+    
+    char *dbname = get_database_name(MyDatabaseId);
+    char *relname   = get_rel_name(indexOid);
+    char *nspname   = get_namespace_name(get_rel_namespace(indexOid));
+    char *colname = get_attname(indexOid, indexattnum, false);
+    /*To adapt with videx-statistic-server, we use schema_name.table_name to instead of table_name*/
+    std::string ns_relname = std::string(nspname) + "." + std::string(relname);
+
+    VidexStringMap res_json;
+    VidexJsonItem request_item = construct_request(dbname,nspname,ns_relname.c_str(),__PRETTY_FUNCTION__);
+    VidexJsonItem * keyItem = request_item.create("colname");
+    keyItem->add_property("name", colname);
+
+    int error = ask_from_videx_http(request_item, res_json);
+    if (error) {
+        std::cout << "ask_from_videx_http error. videx_get_index_stats" << std::endl;
+        if (prev_get_index_stats_hook)
+            return prev_get_index_stats_hook(root, indexOid, indexattnum, vardata);
+        return false;
+    }
+    vardata->statsTuple = BuildPGStatisticTuple(res_json, indexOid,indexattnum);
+    vardata->freefunc = heap_freetuple;
+
+    if (HeapTupleIsValid(vardata->statsTuple)) {
+        vardata->acl_ok = true;
+    }
+    videx_upsert_pg_statistic(indexOid, indexattnum, vardata->statsTuple);
+    return true;
+}

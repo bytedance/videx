@@ -6,6 +6,7 @@ from enum import Enum
 from typing import List
 
 import numpy as np
+import pandas as pd
 
 from sub_platforms.sql_opt.videx.videx_mysql_utils import AbstractMySQLUtils
 from sub_platforms.sql_opt.pg_meta import PGTable, PGColumn, PGIndex, PGIndexColumn, IndexType
@@ -60,89 +61,106 @@ class PGCommand:
             columns.append(column)
         return columns
     
-    def get_table_indexes(self, db_name, table_name,schema_name = 'public') -> List[PGIndex]:
-        # we should gurantee that we are in the correct database
+    def get_table_indexes(self, db_name, table_name, schema_name='public') -> List[PGIndex]:
         sql = f"""
             SELECT
-                c.relname AS index_name,  -- index_name
-                i.indexrelid,             -- oid of index
-                i.indisunique,            -- wether unique
-                i.indisprimary,           -- wether primary key
-                a.amname AS index_type    -- index type
+                c.relname AS index_name,
+                i.indexrelid,
+                i.indisunique,
+                i.indisprimary,
+                a.amname AS index_type
             FROM 
                 pg_index i
             JOIN 
-                pg_class c ON i.indexrelid = c.oid
+                pg_class c 
+            ON 
+                i.indexrelid = c.oid
             JOIN 
-                pg_namespace n ON c.relnamespace = n.oid  
+                pg_namespace n 
+            ON 
+                c.relnamespace = n.oid
             JOIN 
-                pg_am a ON c.relam = a.oid
-            WHERE 
-                i.indrelid = (
-                    SELECT 
-                        oid as tbname 
-                    FROM 
-                        pg_class 
-                    WHERE 
-                        relname = '{table_name}' 
-                        AND relkind = 'r'
-                        AND n.nspname = '{schema_name}'
-                )
+                pg_am a 
+            ON 
+                c.relam = a.oid
+            WHERE i.indrelid = (
+                SELECT 
+                    pc.oid
+                FROM 
+                    pg_class pc
+                JOIN 
+                    pg_namespace pn 
+                ON 
+                    pc.relnamespace = pn.oid
+                WHERE pc.relname = '{table_name}'
+                  AND pn.nspname = '{schema_name}'
+                  AND pc.relkind = 'r'
+            )
         """
         df = self.pg_util.query_for_dataframe(sql)
         if len(df) == 0:
             return []
-        indexs = []
-        for idx_info in df:
-            # determine index type
-            is_unique = idx_info['indisunique'].values[0] != 'f'
-            is_primary = idx_info['indisprimary'].values[0] != 'f'
-            if is_unique and is_primary:
-                type = IndexType.PRIMARY
+
+        indexes: List[PGIndex] = []
+        for _, idx_info in df.iterrows():
+            is_unique = idx_info['indisunique'] not in ('f', False, 0)
+            is_primary = idx_info['indisprimary'] not in ('f', False, 0)
+
+            if is_primary:
+                type_ = IndexType.PRIMARY
             elif is_unique:
-                type = IndexType.UNIQUE
+                type_ = IndexType.UNIQUE
             else:
-                type = IndexType.NORMAL
-            
+                type_ = IndexType.NORMAL
+
             index = PGIndex(
-                type = type,
-                db_name = db_name,
-                table_name = table_name,
-                is_unique = is_unique,
-                is_visible = True,
+                type=type_,
+                db_name=db_name,
+                table_name=table_name,
+                is_unique=is_unique,
+                is_visible=True,
             )
+            index.index_type = idx_info['index_type']
 
-            # set type of underlying data structures, e.g., btree, hash, gin, gist
-            index_type = idx_info['index_type'].values[0]
-            index.index_type = index_type
-
-            # get index columns
             index.columns = []
-            indexrelid = idx_info['indexrelid'].values[0]
-            sql = f"""
-                SELECT 
-                    a.attname as column_name,
+            indexrelid = idx_info['indexrelid']
+
+            cols_sql = f"""
+                SELECT
+                    a.attname AS column_name,
+                    pg_get_expr(i.indexprs, i.indexrelid) AS expr,
+                    pg_get_indexdef(i.indexrelid) AS indexdef
                 FROM 
-                    pg_attribute a
-                JOIN
-                    pg_class  c ON a.attrelid = c.oid
+                    pg_index i
                 JOIN 
-                    pg_index i ON a.attnum = ANY(i.indkey)
-                WHERE
-                    c.relname = {table_name} and a.attnum > 0 
-                    AND i.indexrelid = {indexrelid}
+                    pg_class ic 
+                ON 
+                    i.indexrelid = ic.oid
+                LEFT JOIN 
+                    pg_attribute a 
+                ON 
+                    a.attrelid = i.indrelid
+                                        AND a.attnum = ANY(i.indkey)
+                WHERE 
+                    i.indexrelid = {indexrelid}
                 ORDER BY 
-                    a.attnum;
+                    a.attnum NULLS LAST;
             """
-            cols_df = self.pg_util.query_for_dataframe(sql)
-            for idx,row in cols_df.iterrows():
-                column = PGIndexColumn(row['column_name'],db_name, table_name,schema_name)
-                #TODO: parse expression from tree_expr format to string
-                column.expression = None
+            cols_df = self.pg_util.query_for_dataframe(cols_sql)
+            for _, row in cols_df.iterrows():
+                colname = row.get('column_name')
+                expr = row.get('expr')
+                column = PGIndexColumn(
+                    column_name=colname if pd.notna(colname) else None,
+                    db_name=db_name,
+                    table_name=table_name,
+                    schema_name=schema_name
+                )
+                column.expression = expr if pd.notna(expr) and expr != '' else None
                 column.collation = 'asc'
                 index.columns.append(column)
-            indexs.append(index)    
-        return indexs
+            indexes.append(index)
+        return indexes
     
     def get_table_meta(self, db_name, schema_table_name):
         from sub_platforms.sql_opt.videx.videx_utils import pg_deserialize_schema_table

@@ -190,19 +190,23 @@ def fetch_col_statistic(env, dbname: str, schema: str, table_name: str, col_name
         numbers = row.get(f"stanumbers{i}")
         values = row.get(f"stavalues{i}")
 
+        kind = 0 if kind in (None, "") or (isinstance(kind, float) and np.isnan(kind)) else int(kind)
+        op = 0 if op in (None, "") or (isinstance(op, float) and np.isnan(op)) else int(op)
+        coll = 0 if coll in (None, "") or (isinstance(coll, float) and np.isnan(coll)) else int(coll)
+
         if isinstance(numbers, str):
             numbers = json.loads(numbers.replace("{", "[").replace("}", "]"))
         if isinstance(values, str):
             values = json.loads(values.replace("{", "[").replace("}", "]"))
         # if kind is 0, it means this slot is not used
-        if kind != 0:
-            slots.append(PGStatisticSlot(
+    
+        slots.append(PGStatisticSlot(
                 kind=kind,
                 op=op,
                 coll=coll,
                 numbers=numbers,
                 values=values
-            ))
+        ))
 
     return PGStatistic(
         dbname=dbname,
