@@ -24,6 +24,7 @@ cache
 *.out
 videx.egg-info
 tpch_tiny.sql
+!example/tpch_tiny.sql.gz
 videx_metadata_tpch_tiny.json
 dist
 data
