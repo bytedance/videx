@@ -1,0 +1,66 @@
+
+services:
+  mariadb:
+    image: mariadb:11.8
+    environment:
+      MARIADB_DATABASE:      ${MARIADB_DATABASE}
+      MARIADB_USER:          ${MARIADB_USER}
+      MARIADB_PASSWORD:      ${MARIADB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ../data/tpch_tiny/:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  videx_server:
+    image:  ghcr.io/bytedance/videx-server:0.2.0-preview-test2
+    container_name: videx
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys,requests; sys.exit(0 if requests.get('http://localhost:5001/videx/visualization/status', timeout=2).ok else 1)"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  mariadb_videx:
+    build:
+      dockerfile_inline: |
+        FROM mariadb:12.3.1
+        RUN apt-get update && \
+          apt-get install mariadb-plugin-videx -y && \
+          rm -rf /var/lib/apt/lists/*
+
+    command: --videx-server-ip=videx:5001 --plugin-maturity=experimental
+    environment:
+      MARIADB_DATABASE:      ${VIDEX_MARIADB_DATABASE}
+      MARIADB_USER:          ${VIDEX_MARIADB_USER}
+      MARIADB_PASSWORD:      ${VIDEX_MARIADB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${VIDEX_MARIADB_ROOT_PASSWORD}
+    volumes:
+      - videx_mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  videx_sync:
+    image:  ghcr.io/bytedance/videx-server:0.2.0-preview-test2
+    command: sync --target mariadb:3306:${MARIADB_DATABASE}:${MARIADB_ROOT_USER}:${MARIADB_ROOT_PASSWORD}  --videx mariadb_videx:3306:${VIDEX_MARIADB_DATABASE}:${VIDEX_MARIADB_USER}:${VIDEX_MARIADB_PASSWORD} --videx_server videx:5001
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      mariadb_videx:
+        condition: service_healthy
+      videx_server:
+        condition: service_healthy
+
+volumes:
+  mariadb_data:
+  videx_mariadb_data:
