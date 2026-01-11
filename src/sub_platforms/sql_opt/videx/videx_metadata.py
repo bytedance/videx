@@ -446,6 +446,24 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
         tmp_ = env.execute(sql, params=None)
         global_var_dict[key] = int(tmp_[0][1])
 
+    # part 0: analyze all base tables before fetching statistic data.
+    failed = 0
+    all_tables = env.execute(
+        "SELECT table_name "
+        "FROM information_schema.tables "
+        f"WHERE table_schema = '{target_dbname}' AND table_type = 'BASE TABLE';"
+    )
+    for (table_name,) in all_tables:
+        logging.info(f"analyze table `{target_dbname}`.`{table_name}`")
+        try:
+            env.execute(f"ANALYZE TABLE `{target_dbname}`.`{table_name}`;")
+        except Exception as e:
+            failed += 1
+            logging.warning(f"analyze table `{target_dbname}`.`{table_name}` failed: {e}")
+
+    if failed:
+        logging.warning(f"ANALYZE TABLE completed with {failed} failures; stats may be inaccurate.")
+
     # part 1: basic
     sql = """
         SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, TABLE_TYPE, ENGINE, 
@@ -490,6 +508,9 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
             print(table_name, 'not found in res_dict')
         else:
             res_dict[table_name].update(row)
+            logging.debug(f"- stats {table_name=} {row} "
+                          f"N_ROWS={res_dict[table_name].get('N_ROWS')}"
+                          f"TABLE_ROWS={res_dict[table_name].get('TABLE_ROWS')}")
 
     # part 3: table_in_mem_estimate
     sql = """
