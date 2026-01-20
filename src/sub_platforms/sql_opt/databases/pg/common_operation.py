@@ -1,11 +1,3 @@
-import logging
-
-import numpy as np
-import pandas as pd
-from typing import List, Dict
-
-import sqlglot.expressions
-
 def mapping_index_columns(table):
     column_dict = {}
     for column in table.columns:
@@ -14,4 +6,5 @@ def mapping_index_columns(table):
         for index_column in index.columns:
             #TODO paser expr mapping to cols
             continue
+    pass
            

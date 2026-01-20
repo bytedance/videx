@@ -6,6 +6,7 @@ OBJS = \
 	stats.o \
 	videxam.o \
 	videx_json_item.o \
+	local_stats_copy.o \
 
 CURRENT_DIR := $(shell pwd)
 $(info CURRENT_DIR = $(CURRENT_DIR))

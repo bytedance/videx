@@ -96,8 +96,6 @@ size_t write_callback(void *contents, size_t size, size_t nmemb, std::string *ou
 
 int ask_from_videx_http(VidexJsonItem &request, VidexStringMap &res_json){
     const char *host_ip = "127.0.0.1:5001";
-    
-    //VIDEX_SERVER
     if(videx_server)
         host_ip = videx_server;
     std::string url = std::string("http://") + host_ip + "/ask_videx";

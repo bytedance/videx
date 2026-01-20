@@ -1,23 +1,20 @@
-import copy
+import csv
 import json
 import logging
-import math
 import os
+import re
 import shutil
 import time
-from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import List, Dict, Tuple, Optional, Union, Any
+from typing import List, Dict, Tuple, Optional, Union
 
 import numpy as np
 import pandas as pd
-from pydantic import BaseModel, Field
 
 from sub_platforms.sql_opt.column_statastics.statistics_info_pg import PGTableStatisticsInfo
 from sub_platforms.sql_opt.env.rds_env import Env
 from sub_platforms.sql_opt.pg_meta import PGTable, PGColumn, PGIndex, PGStatistic, PGStatisticSlot
-from sub_platforms.sql_opt.videx.videx_utils import load_json_from_file, dump_json_to_file, GT_Table_Return, \
-    target_env_available_for_videx,pg_serialize_schema_table,pg_deserialize_schema_table
+from sub_platforms.sql_opt.videx.videx_utils import load_json_from_file, dump_json_to_file, pg_serialize_schema_table,pg_deserialize_schema_table
 from sub_platforms.sql_opt.videx.videx_metadata import VidexDBTaskStats, VidexTableStatsBase
 from sub_platforms.sql_opt.videx.videx_utils import pg_deserialize_schema_table
 
@@ -66,7 +63,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
 
     # fetch meta data
     if result_dir is not None and os.path.exists(os.path.join(result_dir, stats_file)):
-        return NotImplementedError("Fetching from existing file is not supported in this context.")
+        raise NotImplementedError("Fetching from existing file is not supported in this context.")
     else: 
         stats_dict = fetch_information_schema(env, target_db)
 
@@ -77,7 +74,7 @@ def fetch_all_meta_for_videx(env: Env, target_db: str, all_table_names: List[str
     
     #TODO: pg_statistic_ext
     if result_dir is not None and os.path.exists(os.path.join(result_dir, statistic_file)): 
-       return NotImplementedError("Fetching from existing file is not supported in this context.")
+       raise NotImplementedError("Fetching from existing file is not supported in this context.")
     else:
        statistic_dict = fetch_pg_statistics(env,target_db,all_table_names,True)
 
@@ -133,8 +130,25 @@ def fetch_information_schema(env: Env, target_dbname: str) -> Dict[str, dict]:
         res_dict[schema_table_name]['columns'] = [json.loads(c.to_json()) for c in table_obj.columns]
         res_dict[schema_table_name]['indexes'] = [json.loads(i.to_json()) for i in table_obj.indexes]
         res_dict[schema_table_name]['ddl'] = table_obj.ddl
+        res_dict[schema_table_name]['oid'] = table_obj.oid
     res_dict = {k.lower(): v for k, v in res_dict.items()}
     return res_dict
+
+def fetch_pg_table_oid(env: Env, schema_name: str, table_name: str):
+    sql = f"""
+            SELECT 
+                c.oid
+            FROM 
+                pg_class c
+            JOIN 
+                pg_namespace n ON n.oid = c.relnamespace
+            WHERE 
+                c.relname = '{table_name}' AND n.nspname = '{schema_name}'
+        """
+    res: pd.DataFrame = env.query_for_dataframe(sql)
+    if res.empty:
+        return None
+    return res.iloc[0]['oid']
 
 def fetch_pg_statistics(env: Env, target_dbname: str,all_table_names: List[str],ret_json: bool = False,
                         ) -> Dict[str, Dict[str, Union[PGStatistic, dict]]]:
@@ -150,6 +164,41 @@ def fetch_pg_statistics(env: Env, target_dbname: str,all_table_names: List[str],
             if hist is not None:
                 res_tables[str(table_name).lower()][col.column_name] = hist
     return res_tables
+
+
+def _parse_pg_array_text(value: str):
+    if value is None:
+        return None
+    text = value.strip()
+    if text == "{}":
+        return []
+    if text.startswith("{") and text.endswith("}"):
+        inner = text[1:-1]
+        if inner == "":
+            return []
+        reader = csv.reader([inner], delimiter=",", quotechar='"', escapechar='\\')
+        items = next(reader)
+        parsed = []
+        for item in items:
+            if item == "NULL":
+                parsed.append(None)
+            else:
+                parsed.append(item)
+        return parsed
+    return value
+
+
+def _parse_pg_array(value):
+    if value is None or isinstance(value, (list, tuple)):
+        return value
+    if isinstance(value, str):
+        try:
+            json_text = value.replace("{", "[").replace("}", "]")
+            json_text = re.sub(r'(?<!")\bNULL\b(?!")', "null", json_text)
+            return json.loads(json_text)
+        except Exception:
+            return _parse_pg_array_text(value)
+    return value
 
 def fetch_col_statistic(env, dbname: str, schema: str, table_name: str, col_name: str) -> Optional[PGStatistic]:
     sql = f"""
@@ -194,10 +243,8 @@ def fetch_col_statistic(env, dbname: str, schema: str, table_name: str, col_name
         op = 0 if op in (None, "") or (isinstance(op, float) and np.isnan(op)) else int(op)
         coll = 0 if coll in (None, "") or (isinstance(coll, float) and np.isnan(coll)) else int(coll)
 
-        if isinstance(numbers, str):
-            numbers = json.loads(numbers.replace("{", "[").replace("}", "]"))
-        if isinstance(values, str):
-            values = json.loads(values.replace("{", "[").replace("}", "]"))
+        numbers = _parse_pg_array(numbers)
+        values = _parse_pg_array(values)
         # if kind is 0, it means this slot is not used
     
         slots.append(PGStatisticSlot(
@@ -252,20 +299,8 @@ def construct_videx_task_meta_from_local_files_for_pg(task_id, videx_db,
         statistic_dict={videx_db: statistic_dict}
     )
 
-    meta_dict = {videx_db:{}}
-    for table_name,table_dict in stats_dict.items():
-        #table_name <- format: [schema.table]
-        meta_dict[videx_db.lower()][table_name.lower()] = PGTable(
-            dbname = table_dict['table_catalog'],
-            table_schema = table_dict['table_schema'],
-            table_name = table_dict['table_name'],
-            relpages = table_dict['relpages'],
-            reltuples = table_dict['reltuples'],
-            relallvisible = table_dict['relallvisible'],
-            columns=[PGColumn.from_dict(col_meta_dict) for col_meta_dict in table_dict.get('columns', [])],
-            indexes=[PGIndex.from_dict(index_meta_dict) for index_meta_dict in table_dict.get('indexes', [])],
-            ddl = table_dict['ddl']
-        )
+    meta_dict = construct_videx_meta_dict_for_pg(videx_db, stats_dict)
+
     logging.info(f"construct_videx_task_meta_from_local_files_for_pg meta_dict: {meta_dict.keys()}, db_stat_dict: {db_stat_dict}")
     req_obj = VidexDBTaskStats(
         task_id=task_id,
@@ -274,6 +309,25 @@ def construct_videx_task_meta_from_local_files_for_pg(task_id, videx_db,
         db_config = {}
     )
     return req_obj
+
+def construct_videx_meta_dict_for_pg(videx_db: str, stats_dict: dict):
+    meta_dict = {videx_db:{}}
+    for table_name,table_dict in stats_dict.items():
+        #table_name <- format: [schema.table]
+        meta_dict[videx_db.lower()][table_name.lower()] = PGTable(
+            dbname = table_dict['table_catalog'],
+            table_schema = table_dict['table_schema'],
+            table_name = table_dict['table_name'],
+            oid = table_dict['oid'],
+            relpages = table_dict['relpages'],
+            reltuples = table_dict['reltuples'],
+            relallvisible = table_dict['relallvisible'],
+            ddl = table_dict['ddl'],
+            columns=[PGColumn.from_dict(col_meta_dict) for col_meta_dict in table_dict.get('columns', [])],
+            indexes=[PGIndex.from_dict(index_meta_dict) for index_meta_dict in table_dict.get('indexes', [])],
+        )
+    return meta_dict
+
 
 def meta_dict_to_sample_file(
         stats_dict,

@@ -1,7 +1,4 @@
 import datetime
-import logging
-import re
-import math
 from enum import Enum
 from typing import List
 
@@ -169,7 +166,7 @@ class PGCommand:
         dump_text = self.pg_util.pg_dump(db_name,schema_name,table_name)
         sql = f"""
             SELECT 
-                relpages, reltuples, relallvisible
+                c.oid, relpages, reltuples, relallvisible
             FROM 
                 pg_class c
             JOIN 
@@ -185,18 +182,19 @@ class PGCommand:
             dbname = db_name,
             table_schema = schema_name,
             table_name = schema_table_name,
+            oid = df['oid'].values[0],
             relpages = df['relpages'].values[0],
             reltuples = df['reltuples'].values[0],
             relallvisible = df['relallvisible'].values[0],
+            ddl = dump_text,
             columns = self.get_table_columns(db_name, table_name,schema_name),
-            indexes = self.get_table_indexes(db_name, table_name,schema_name),
-            ddl = dump_text
+            indexes = self.get_table_indexes(db_name, table_name,schema_name)
         )
         mapping_index_columns(table)
         return table
     
     def explain(self, sql: str, format: str = None) -> PGExplainResult:
-        return NotImplementedError("This method is not implemented in this context.")
+        raise NotImplementedError("This method is not implemented in this context.")
     
     def explain_for_table(self, sql: str) -> List[PGExplainItem]:
-        return NotImplementedError("This method is not implemented in this context.")
+        raise NotImplementedError("This method is not implemented in this context.")

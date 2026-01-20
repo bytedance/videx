@@ -11,18 +11,17 @@ import os
 from pymysql import InternalError
 import sys 
 
-from sub_platforms.sql_opt.env.rds_env import OpenMySQLEnv, OpenPGEnv
+from sub_platforms.sql_opt.env.rds_env import OpenMySQLEnv
 from sub_platforms.sql_opt.videx import videx_logging
 from sub_platforms.sql_opt.videx.videx_metadata import fetch_all_meta_for_videx, \
     construct_videx_task_meta_from_local_files, fetch_all_meta_with_one_file, \
     collect_sample_data_for_tables, save_sample_data_to_files, construct_meta_request_with_samples
 from sub_platforms.sql_opt.videx.videx_service import create_videx_env_multi_db, \
-    post_add_videx_meta, create_videx_env_multi_db_for_pg
+    post_add_videx_meta
 from sub_platforms.sql_opt.videx.videx_utils import VIDEX_IP_WHITE_LIST
-from sub_platforms.sql_opt.videx.videx_pg_metadata import fetch_all_meta_with_one_file_for_pg, \
-    construct_videx_task_meta_from_local_files_for_pg
 
-def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port,db_type):
+
+def get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port):
     base_msg = f"Build env finished. Your VIDEX server is {videx_server_ip_port}."
 
     mysql57_msg = ("-- Note, if your MySQL version is 5.x, please setup/clear the environment "
@@ -103,8 +102,7 @@ if __name__ == "__main__":
                         help='task id is to distinguish different videx tasks, if they have same database names.')
     parser.add_argument('--hist_algo', type=str, default=None, 
                    help='Histogram algorithm: None (default), block_2phase')
-    parser.add_argument('--db_type',type=str, default='mysql',
-                        help='database type, currently support mysql, pg.')
+
 
     """
     videx_server_ip_port: IP and port information, Videx MySQL will inform Videx Python about this address and send Videx queries to it.
@@ -132,20 +130,10 @@ if __name__ == "__main__":
     else:
         videx_server_ip_port = f"{videx_ip}:{args.videx_server}"
 
-    db_type = args.db_type.lower()
-    if db_type == "mysql":
-        target_env = OpenMySQLEnv(ip=target_ip, port=target_port, usr=target_user, pwd=target_pwd, db_name=target_db,
+    target_env = OpenMySQLEnv(ip=target_ip, port=target_port, usr=target_user, pwd=target_pwd, db_name=target_db,
                               read_timeout=300, write_timeout=300, connect_timeout=10)
-    elif db_type == "pg":
-        target_env = OpenPGEnv(ip=target_ip, port=target_port, usr=target_user, pwd=target_pwd, db_name=target_db,
-                              read_timeout=300, write_timeout=300, connect_timeout=10)
-
     try:
-        if db_type == "mysql":
-            videx_env = OpenMySQLEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=videx_db,
-                                 read_timeout=300, write_timeout=300, connect_timeout=10)
-        elif db_type == "pg":
-            videx_env = OpenPGEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=videx_db,
+        videx_env = OpenMySQLEnv(ip=videx_ip, port=videx_port, usr=videx_user, pwd=videx_pwd, db_name=videx_db,
                                  read_timeout=300, write_timeout=300, connect_timeout=10)
     except Exception as e:
         if f"Unknown database '{videx_db}'" in str(e):
@@ -178,13 +166,13 @@ if __name__ == "__main__":
         # TODO fetch ndv and histogram may be costly, if partial_fetch, we skip fetching ndv and histogram
         if args.fetch_method == 'partial_fetch':
             pass  # more tests are required before supporting it
-        if db_type == "mysql":
-            files = fetch_all_meta_with_one_file(meta_path=meta_path,
+        files = fetch_all_meta_with_one_file(meta_path=meta_path,
                                              env=target_env, target_db=target_db, all_table_names=all_table_names,
                                              n_buckets=16, hist_force=True,
-                                             hist_mem_size=200000000, drop_hist_after_fetch=True)
-            stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
-            meta_request = construct_videx_task_meta_from_local_files(task_id=args.task_id,
+                                             hist_mem_size=200000000, drop_hist_after_fetch=True,
+                                             hist_algo=args.hist_algo)
+        stats_file_dict, hist_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
+        meta_request = construct_videx_task_meta_from_local_files(task_id=args.task_id,
                                                                   videx_db=videx_db,
                                                                   stats_file=stats_file_dict,
                                                                   hist_file=hist_file_dict,
@@ -194,16 +182,6 @@ if __name__ == "__main__":
                                                                   gt_req_resp_file=None,
                                                                   raise_error=True,
                                                                   )
-        elif db_type == "pg":
-            files = fetch_all_meta_with_one_file_for_pg(meta_path=meta_path, 
-                                                        env=target_env, target_db=target_db, all_table_names=all_table_names)
-            stats_file_dict, statistic_file_dict, ndv_single_file_dict, ndv_mulcol_file_dict = files
-            meta_request = construct_videx_task_meta_from_local_files_for_pg(task_id=args.task_id,
-                                                                             videx_db=videx_db,
-                                                                             stats_file=stats_file_dict,
-                                                                             statistic_file=statistic_file_dict,
-                                                                             raise_error=True
-                                                                             )
     elif args.fetch_method == 'sampling':
         # This method will generate metadata from the sample data.
         # Additionally, the sample data will be employed to estimate the ndv (the number of distinct values) and cardinality.
@@ -260,19 +238,17 @@ if __name__ == "__main__":
             sample_file_dict=sample_file_dict,
             sample_file_info_dict=sample_file_info_dict
         )
+
     else:
         raise NotImplementedError(f"Fetching method `{args.fetch_method}` not implemented, "
                                   f"only support `analyze`, `sampling`.")
 
     # step 3: create tables into VIDEX-MySQL, post metadata and statistics to VIDEX-Server
     # 向 VIDEX-MySQL 中建表
-    if db_type == "mysql":
-        create_videx_env_multi_db(videx_env, meta_dict=meta_request.meta_dict, )
-    elif db_type == "pg":
-        create_videx_env_multi_db_for_pg(videx_env, meta_dict=meta_request.meta_dict, )
+    create_videx_env_multi_db(videx_env, meta_dict=meta_request.meta_dict, )
     # 向 VIDEX-Server 中导入数据
     response = post_add_videx_meta(meta_request, videx_server_ip_port=videx_server_ip_port, use_gzip=True)
     assert response.status_code == 200
 
     logging.info(f"metadata file is {meta_path}")
-    logging.info(get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port, db_type))
+    logging.info(get_usage_message(args, videx_ip, videx_port, videx_db, videx_user, videx_pwd, videx_server_ip_port))

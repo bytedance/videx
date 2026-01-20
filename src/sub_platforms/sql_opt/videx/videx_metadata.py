@@ -33,8 +33,6 @@ from sub_platforms.sql_opt.videx.videx_histogram import HistogramStats, generate
 from sub_platforms.sql_opt.videx.videx_mysql_utils import _parse_col_names
 from sub_platforms.sql_opt.videx.videx_utils import load_json_from_file, dump_json_to_file, GT_Table_Return, \
     target_env_available_for_videx
-from sub_platforms.sql_opt.column_statastics.statistics_info_base import BaseTableStatisticsInfo
-from sub_platforms.sql_opt.meta_base import BaseTable
 
 # VIDEX Statistic attribute keys
 EXTRA_INFO_KEY_pct_cached = 'pct_cached'
@@ -251,7 +249,7 @@ class VidexTableStats(VidexTableStatsBase):
 
     # records metadata about table schema
     sample_data: Optional[pd.DataFrame] = Field(default=None)
-    table_meta: Optional[BaseTable] = None
+    table_meta: Optional[Table] = None
 
     def get_col_hist(self, col: str) -> Optional[HistogramStats]:
         return self.hist_columns.get(col)

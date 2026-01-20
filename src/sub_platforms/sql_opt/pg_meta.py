@@ -4,9 +4,9 @@ from typing import List, Optional, Any, Union
 
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 from sub_platforms.sql_opt.meta import IndexType
-from sub_platforms.sql_opt.meta_base import BaseTableId,BaseColumn,BaseIndexColumn,BaseIndex,BaseTable
 
-class PGTableId(BaseTableId):
+
+class PGTableId(BaseModel, PydanticDataClassJsonMixin):
     table_catalog: str       #db/catalog name         
     table_schema: str        #schema name
     table_name: str          #table name
@@ -31,7 +31,8 @@ class PGTableId(BaseTableId):
         else:
             return False
 
-class PGColumn(BaseColumn):
+
+class PGColumn(BaseModel, PydanticDataClassJsonMixin):
     table_catalog: str       #db/catalog name          
     table_schema: str        #schema name       
     table_name: str          #table name   
@@ -90,7 +91,8 @@ class PGColumn(BaseColumn):
             self.column_name == other.column_name
         )
 
-class PGIndexColumn(BaseIndexColumn):
+
+class PGIndexColumn(BaseModel, PydanticDataClassJsonMixin):
     name: Optional[str] = None
     #cardinality: Optional[int] = None
     #sub_part: Optional[int] = 0
@@ -105,7 +107,7 @@ class PGIndexColumn(BaseIndexColumn):
     
     @classmethod
     def from_column(cls, column: PGColumn,  collation: str = 'asc',expression: Optional[str] = None):
-        return NotImplementedError("This method is not implemented in this context.")
+        raise NotImplementedError("This method is not implemented in this context.")
     
     @classmethod
     def simple_column(cls,column_name: str, db_name: str, table_name: str, table_schema: str = 'public',
@@ -148,7 +150,11 @@ class PGIndexColumn(BaseIndexColumn):
             and self.name == other.name and self.expression == other.expression \
             and self.collation == other.collation    
 
-class PGIndex(BaseIndex):
+
+class PGIndex(BaseModel, PydanticDataClassJsonMixin):
+    db_name: Optional[str] = Field(default=None)
+    table_name: Optional[str] = Field(default=None)
+    columns: Optional[List[PGIndexColumn]] = Field(default_factory=list)
     type: Optional[IndexType] = Field(default=None)
     name: Optional[str] = Field(default=None)
     is_unique: Optional[bool] = Field(default=None)
@@ -162,11 +168,12 @@ class PGIndex(BaseIndex):
     @property
     def table(self):
         return self.table_name
-    
-class PGTable(BaseTable):
+
+class PGTable(BaseModel, PydanticDataClassJsonMixin):
     dbname: str
     table_schema: str
     table_name: str
+    oid: Optional[int] = None
     #TODO: more infos ...
     relpages: Optional[int] = None
     reltuples: Optional[int] = None
@@ -174,15 +181,13 @@ class PGTable(BaseTable):
     ddl: str
     columns: Optional[List[PGColumn]] = Field(default_factory=list)
     indexes: Optional[List[PGIndex]] = Field(default_factory=list)
-    def model_post_init(self,__context: Any) -> None:
-        return NotImplementedError("This method is not implemented in this context.")
     
     @property
     def table_id(self) -> PGTableId:
         return PGTableId(table_catalog=self.dbname, table_schema=self.table_schema, table_name=self.table_name)
 
     def support_optimize(self):
-        return NotImplementedError("This method is not implemented in this context.")
+        raise NotImplementedError("This method is not implemented in this context.")
 
 class PGStatisticSlot(BaseModel,PydanticDataClassJsonMixin):
     """ Represents a single slot of statistics for a PostgreSQL column.

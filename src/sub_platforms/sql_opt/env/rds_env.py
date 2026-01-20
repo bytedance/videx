@@ -2,25 +2,19 @@
 Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
-
-import json
 import logging
-import re
-import os
-import traceback
 from abc import ABC, abstractmethod
 import pandas as pd
 from typing import Dict, List, Optional, Set
-from pymysql import InternalError
 
-from sub_platforms.sql_opt.common.db_variable import VariablesAboutIndex, MysqlVariable
-from sub_platforms.sql_opt.common.exceptions import UnsupportedSamplingException
+from sub_platforms.sql_opt.common.db_variable import VariablesAboutIndex
 from sub_platforms.sql_opt.common.sample_info import SampleColumnInfo
-from sub_platforms.sql_opt.meta import Table, Column, Index, IndexColumn, IndexType
+from sub_platforms.sql_opt.meta import Table, Column, IndexColumn, IndexType
 from sub_platforms.sql_opt.databases.mysql.mysql_command import MySQLCommand, get_mysql_version, MySQLVersion
 from sub_platforms.sql_opt.meta import Table, Column, IndexColumn, IndexType
-from sub_platforms.sql_opt.videx.videx_mysql_utils import get_mysql_utils, MySQLConnectionConfig, DBTYPE,PGConnectionConfig,get_pg_utils
-from sub_platforms.sql_opt.databases.pg.pg_command import PGCommand, get_pg_version, PGVersion 
+from sub_platforms.sql_opt.videx.videx_mysql_utils import get_mysql_utils, MySQLConnectionConfig, DBTYPE
+from sub_platforms.sql_opt.videx.videx_pg_utils import PGConnectionConfig, get_pg_utils
+from sub_platforms.sql_opt.databases.pg.pg_command import PGCommand, get_pg_version
 
 def add_backquote(name):
     """

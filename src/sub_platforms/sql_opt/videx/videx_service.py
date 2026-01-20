@@ -24,7 +24,7 @@ from sub_platforms.sql_opt.env.rds_env import Env
 from sub_platforms.sql_opt.videx import videx_logging
 from sub_platforms.sql_opt.videx.videx_metadata import VidexTableStats, VidexDBTaskStats, EXTRA_INFO_KEY_pct_cached, \
     EXTRA_INFO_KEY_mulcol, EXTRA_INFO_KEY_gt_rec_in_ranges, construct_videx_task_meta_from_local_files
-from sub_platforms.sql_opt.videx.videx_pg_metadata import PGVidexTableStats
+from sub_platforms.sql_opt.videx.videx_pg_metadata import PGVidexTableStats, fetch_pg_table_oid
 from sub_platforms.sql_opt.videx.model.videx_strategy import VidexModelBase
 from sub_platforms.sql_opt.videx.model.videx_model_innodb import VidexModelInnoDB
 from sub_platforms.sql_opt.videx.model.videx_model_pg import VidexModelPG
@@ -33,6 +33,7 @@ from sub_platforms.sql_opt.column_statastics.statistics_info_pg import PGTableSt
 from sub_platforms.sql_opt.meta import Table
 from sub_platforms.sql_opt.pg_meta import PGTable
 from sub_platforms.sql_opt.videx.videx_utils import GT_Table_Return, get_local_ip, get_func_with_parent
+from sub_platforms.sql_opt.videx.videx_utils import pg_deserialize_schema_table
 
 app = Flask(__name__)
 ENV_KEY_POST_VIDEX_META = 'POST_VIDEX_META'
@@ -671,7 +672,7 @@ def create_videx_env_multi_db_for_pg(videx_env: Env,
                               new_engine: str = 'VIDEX',
                               ):
     for target_db, table_dict in meta_dict.items():
-        #TODO: In Postgresql, you cannot drop a database if you are connecting on it. 
+        # TODO: In Postgresql, you cannot drop a database if you are connecting on it.
         # so we need to switch to another database first (Here we switch to 'postgres').
         videx_env._switch_db("postgres")
         videx_env.execute(f"DROP DATABASE IF EXISTS {target_db}")
@@ -681,7 +682,7 @@ def create_videx_env_multi_db_for_pg(videx_env: Env,
         videx_default_db = videx_env.default_db
         try:
             videx_env.set_default_db(target_db)
-            print(f"taget_database: {target_db}, table_size: {len(table_dict)}")
+            print(f"target_database: {target_db}, table_size: {len(table_dict)}")
             for table in table_dict.values():
                 dump_text = table.ddl
                 # replace engine from heap to videx before executing

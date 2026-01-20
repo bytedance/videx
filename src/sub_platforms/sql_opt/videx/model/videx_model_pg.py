@@ -109,4 +109,4 @@ class VidexModelPG(VidexModelBase):
                      f"table_name: {table.table_name}: {res}")
         return res
     def get_index_stats(self, req_json_item: dict) -> dict:
-        return NotImplementedError("get_index_stats is not implemented yet.")
+        raise NotImplementedError("get_index_stats is not implemented yet.")

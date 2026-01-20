@@ -6,7 +6,6 @@ import math
 from enum import Enum
 from pydantic import BaseModel, Field, BeforeValidator, ConfigDict
 from typing import List, Optional, Any, Union, Annotated
-from sub_platforms.sql_opt.meta_base import BaseTableId,BaseColumn,BaseIndexColumn,BaseIndex,BaseTable
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 
 def clean_int(value) -> Optional[int]:
@@ -23,7 +22,8 @@ def clean_int(value) -> Optional[int]:
 
 CleanInt = Annotated[Optional[int], BeforeValidator(clean_int)]
 
-class TableId(BaseTableId):
+
+class TableId(BaseModel, PydanticDataClassJsonMixin):
     db_name: Optional[str]
     table_name: Optional[str]
 
@@ -44,7 +44,7 @@ class TableId(BaseTableId):
             return False
 
 
-class Column(BaseColumn):
+class Column(BaseModel, PydanticDataClassJsonMixin):
     name: Optional[str] = None  # it may be None when column is an expression
     table: str = None
     db: Optional[str] = None
@@ -107,7 +107,7 @@ class IndexType(Enum):
     FOREIGN_KEY = 'FOREIGN_KEY'
 
 
-class IndexColumn(BaseIndexColumn):
+class IndexColumn(BaseModel, PydanticDataClassJsonMixin):
     """
         It's the column class in index. We distinct it from Column class because:
         1. The information obtained from Index Column is limited, we will complement more information later.
@@ -172,7 +172,17 @@ class IndexColumn(BaseIndexColumn):
             and self.name == other.name and self.expression == other.expression \
             and self.sub_part == other.sub_part and self.collation == other.collation
 
-class Index(BaseIndex):
+
+class IndexBasicInfo(BaseModel, PydanticDataClassJsonMixin):
+    db_name: Optional[str] = Field(default=None)
+    table_name: Optional[str] = Field(default=None)
+    columns: Optional[List[IndexColumn]] = Field(default_factory=list)
+
+    def get_column_names(self):
+        return [column.name for column in self.columns]
+
+
+class Index(IndexBasicInfo):
     type: Optional[IndexType] = Field(default=None)
     name: Optional[str] = Field(default=None)
     is_unique: Optional[bool] = Field(default=False)
@@ -187,7 +197,8 @@ class Index(BaseIndex):
     def table(self):
         return self.table_name
 
-class Table(BaseTable):
+
+class Table(BaseModel, PydanticDataClassJsonMixin):
     name: str = None
     db: str = None
     engine: Optional[str] = None
