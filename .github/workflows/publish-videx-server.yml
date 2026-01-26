@@ -1,0 +1,166 @@
+name: Build/Test and Publish videx-server (GHCR)
+
+on:
+  # Auto publish on version tags
+  push:
+    tags:
+      - "v[0-9]*.[0-9]*.[0-9]*"          # v0.2.0
+      - "v[0-9]*.[0-9]*.[0-9]*-preview"  # v0.2.0-preview
+
+  # Manual run for any ref (branch/tag/SHA)
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to build (branch/tag/SHA). Leave empty = default branch HEAD."
+        required: false
+        default: ""
+      push_to_ghcr:
+        description: "Push image to GHCR? (true/false)"
+        required: true
+        default: "false"
+      version:
+        description: "When manual pushing, image tag version (e.g., 0.2.0-preview-test1). Required if push_to_ghcr=true."
+        required: false
+        default: ""
+      platforms:
+        description: "Platforms for push build (comma-separated). Default: linux/amd64,linux/arm64"
+        required: false
+        default: "linux/amd64,linux/arm64"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: videx-server-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: bytedance
+  IMAGE: videx-server
+  DOCKERFILE: build/Dockerfile.videxserver
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # For manual runs: use inputs.ref if provided; otherwise use the event ref.
+          ref: ${{ inputs.ref != '' && inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Decide publish mode + version
+        id: cfg
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EVENT="${{ github.event_name }}"
+          PUBLISH="false"
+          VERSION=""
+          IS_STABLE="false"
+
+          if [[ "$EVENT" == "push" ]]; then
+            # Tag-triggered publish
+            PUBLISH="true"
+            TAG="${GITHUB_REF_NAME}"      # e.g. v0.2.0 or v0.2.0-preview
+            VERSION="${TAG#v}"
+
+            if [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              IS_STABLE="true"
+            fi
+          else
+            # workflow_dispatch
+            if [[ "${{ inputs.push_to_ghcr }}" == "true" ]]; then
+              PUBLISH="true"
+              if [[ -z "${{ inputs.version }}" ]]; then
+                echo "ERROR: inputs.version is required when push_to_ghcr=true"
+                exit 1
+              fi
+              VERSION="${{ inputs.version }}"
+            else
+              # local-only version (not pushed)
+              SHORT_SHA="$(git rev-parse --short HEAD)"
+              VERSION="manual-${SHORT_SHA}"
+            fi
+          fi
+
+          echo "publish=$PUBLISH" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "is_stable=$IS_STABLE" >> "$GITHUB_OUTPUT"
+
+          echo "EVENT=$EVENT"
+          echo "PUBLISH=$PUBLISH"
+          echo "VERSION=$VERSION"
+          echo "IS_STABLE=$IS_STABLE"
+
+      - name: Set up QEMU (for multi-arch)
+        if: ${{ steps.cfg.outputs.publish == 'true' }}
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        if: ${{ steps.cfg.outputs.publish == 'true' }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ----------------------------
+      # Always run: amd64 build + import test
+      # ----------------------------
+      - name: Build (amd64) locally for import test
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.DOCKERFILE }}
+          platforms: linux/amd64
+          load: true
+          tags: ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.IMAGE }}:${{ steps.cfg.outputs.version }}-test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Import test (amd64)
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE="${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.IMAGE }}:${{ steps.cfg.outputs.version }}-test"
+          docker run --rm --entrypoint python "$IMAGE" -c \
+            "import numpy, pandas, pyarrow, scipy, flask, gunicorn, sqlglot, pydantic; print('imports-ok')"
+
+      # ----------------------------
+      # Publish: multi-arch build & push
+      # ----------------------------
+      - name: Docker metadata (tags/labels)
+        if: ${{ steps.cfg.outputs.publish == 'true' }}
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/${{ env.IMAGE }}
+          tags: |
+            type=raw,value=${{ steps.cfg.outputs.version }}
+            type=raw,value=latest,enable=${{ steps.cfg.outputs.is_stable }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+      - name: Build and push (multi-arch)
+        if: ${{ steps.cfg.outputs.publish == 'true' }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ env.DOCKERFILE }}
+          push: true
+          platforms: ${{ inputs.platforms != '' && inputs.platforms || 'linux/amd64,linux/arm64' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
