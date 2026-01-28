@@ -28,6 +28,9 @@ IF(NOT CURL_FOUND)
 ENDIF()
 
 SET_PACKAGE_PROPERTIES(CURL PROPERTIES TYPE REQUIRED)
+SET(CPACK_RPM_videx-engine_PACKAGE_SUMMARY "VIDEX AI-enhanced virtual index engine for MariaDB" PARENT_SCOPE)
+SET(CPACK_RPM_videx-engine_PACKAGE_DESCRIPTION "VIDEX enables What-If Analysis via virtual indexes to simulate
+query plans, forwarding requests via HTTP to external AI servers for enhanced cost estimation." PARENT_SCOPE)
 
 INCLUDE_DIRECTORIES(
         ${CMAKE_SOURCE_DIR}/sql
@@ -45,4 +48,5 @@ MYSQL_ADD_PLUGIN(videx
         ${VIDEX_SOURCES}
         STORAGE_ENGINE
         LINK_LIBRARIES ${ZLIB_LIBRARIES} ${CURL_LIBRARIES}
+        COMPONENT videx-engine
 )
