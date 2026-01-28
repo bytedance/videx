@@ -12,7 +12,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /opt/videx
 
 COPY requirements.txt /opt/videx/requirements.txt
-RUN pip install -r /opt/videx/requirements.txt
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        python3-dev \
+    && pip install -r /opt/videx/requirements.txt \
+    && apt-get purge -y --auto-remove gcc python3-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY src/ /opt/videx/src/
 COPY build/videx_container_entrypoint.py /opt/videx/videx_container_entrypoint.py
