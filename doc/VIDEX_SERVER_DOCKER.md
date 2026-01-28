@@ -2,11 +2,7 @@
 
 The latest public image is:
 
-- `kangrongme/videx-server:0.2.0` (Docker Hub)
-
-Make sure your environment can reach Docker Hub. If Docker Hub is not accessible but GHCR is, use:
-
-- `ghcr.io/kr11/videx-server:0.2.0`
+- `ghcr.io/bytedance/videx-server:0.2.0-preview-test1` (GHCR)
 
 This image supports two entrypoint modes:
 
@@ -42,7 +38,7 @@ Expose container port `5001` to a host port (choose any free host port, like 500
 ```bash
 docker run -d --name videx-server \
   -p 5001:5001 \
-  kangrongme/videx-server:0.2.0
+  ghcr.io/bytedance/videx-server:0.2.0-preview-test1
 ```
 
 Then open:
@@ -60,7 +56,7 @@ Then open:
 
 ```bash
 docker run --rm --name videx-sync \
-  kangrongme/videx-server:0.2.0 sync \
+  ghcr.io/bytedance/videx-server:0.2.0-preview-test1 sync \
   --target <TARGET_HOST>:<TARGET_PORT>:<TARGET_DB>:<TARGET_USER>:<TARGET_PASS> \
   [--videx <VIDEX_HOST>:<VIDEX_PORT>:<VIDEX_DB>:<VIDEX_USER>:<VIDEX_PASS>] \
   [--videx_server <VIDEX_SERVER_HOST>:<VIDEX_SERVER_PORT>]
@@ -80,7 +76,7 @@ Run:
 
 ```bash
 docker run --rm --name videx-sync \
-  kangrongme/videx-server:0.2.0 sync \
+  ghcr.io/bytedance/videx-server:0.2.0-preview-test1 sync \
   --target 203.0.113.42:15508:tpch_tiny:videx:password \
   --videx 203.0.113.42:15508:videx_tpch_tiny:videx:password \
   --videx_server 203.0.113.42:5001
@@ -110,7 +106,7 @@ Inside a container, `localhost/127.0.0.1` refers to the container itself. If Mar
 ```bash
 docker run --rm --name videx-sync \
   --add-host=host.docker.internal:host-gateway \
-  kangrongme/videx-server:0.2.0 sync \
+  ghcr.io/bytedance/videx-server:0.2.0-preview-test1 sync \
   --target host.docker.internal:<PORT>:<DB>:<USER>:<PASS> \
   --videx host.docker.internal:<PORT>:<VIDEX_DB>:<VIDEX_USER>:<VIDEX_PASS> \
   --videx_server host.docker.internal:<VIDEX_SERVER_PORT>

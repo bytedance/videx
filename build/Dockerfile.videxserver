@@ -1,12 +1,10 @@
-# Thanks to Daniel Black for providing a great packaging example.
-
-
 FROM python:3.9-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
+    VIDEX_CONTAINER=1 \
     PYTHONPATH=/opt/videx/src
 
 WORKDIR /opt/videx

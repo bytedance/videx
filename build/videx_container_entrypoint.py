@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """
-VIDEX Docker entrypoint.
+VIDEX container entrypoint.
 
 This entrypoint provides two modes:
 - `server`: start the long-running VIDEX stats server (default)
@@ -28,6 +27,10 @@ def _in_container_best_effort() -> bool:
     Best-effort heuristics to detect container environment.
     Used only for warnings (never for rewriting args or failing).
     """
+    explicit = os.environ.get("VIDEX_CONTAINER")
+    if explicit and explicit.strip().lower() not in {"0", "false", "no"}:
+        return True
+
     if os.path.exists("/.dockerenv"):
         return True
 
@@ -124,8 +127,8 @@ def _maybe_warn_localhost_target(argv: List[str]) -> None:
 
     sys.stderr.write(
         "Warning: You may be running in a container, but the `--target` parameter is configured with 127.0.0.1/localhost.\n"
-        "         In Docker, localhost usually refers to the container itself.\n"
-        "         If your MariaDB/VIDEX runs on the Docker host, this may fail.\n\n"
+        "         In a container, localhost usually refers to the container itself.\n"
+        "         If your MariaDB/VIDEX runs on the host machine, this may fail.\n\n"
         "Suggestions:\n"
         "  - Docker Desktop (Mac/Windows): try host.docker.internal in --target.\n"
         "  - Linux Docker Engine: add this when running the container:\n"
