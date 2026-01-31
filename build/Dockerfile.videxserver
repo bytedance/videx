@@ -1,0 +1,28 @@
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    VIDEX_CONTAINER=1 \
+    PYTHONPATH=/opt/videx/src
+
+WORKDIR /opt/videx
+
+COPY requirements.txt /opt/videx/requirements.txt
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        python3-dev \
+    && pip install -r /opt/videx/requirements.txt \
+    && apt-get purge -y --auto-remove gcc python3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY src/ /opt/videx/src/
+COPY build/videx_container_entrypoint.py /opt/videx/videx_container_entrypoint.py
+
+# Default/documentation port. You can still map any host port to container 5001 via -p HOST:5001.
+EXPOSE 5001
+
+ENTRYPOINT ["python", "/opt/videx/videx_container_entrypoint.py"]
+CMD ["server"]
