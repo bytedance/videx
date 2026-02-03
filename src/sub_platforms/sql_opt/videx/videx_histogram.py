@@ -269,8 +269,10 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
                 monotonically_increasing = False
                 break
         if not monotonically_increasing:
-            # Currently, we can only handle the non-monotonically increasing issue for the singleton type.
-            if self.histogram_type == 'singleton':
+            # Handle non-monotonically increasing buckets by sorting them.
+            # This can happen due to collation differences between database and Python.
+            # For example, database may use case-insensitive collation while Python uses binary comparison.
+            if self.histogram_type in ('singleton', 'equi-height'):
                 # 1. Sort the buckets based on their min_value.
                 # This puts the buckets in the correct monotonic order.
                 self.buckets.sort(key=lambda b_: b_.min_value)
