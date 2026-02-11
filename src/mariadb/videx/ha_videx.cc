@@ -238,6 +238,11 @@ int ask_from_videx_http(VidexJsonItem &request, VidexStringMap &res_json,
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
     res_code= curl_easy_perform(curl);
+
+    // Free curl resources to avoid memory leak
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(curl);
+
     if (res_code != CURLE_OK)
     {
       sql_print_warning(

@@ -108,6 +108,11 @@ int ask_from_videx_http(VidexJsonItem &request, VidexStringMap &res_json, THD* t
 
       trace_http.add_utf8("request", request_str.c_str());
       res_code = curl_easy_perform(curl);
+
+      // Free curl resources to avoid memory leak
+      curl_slist_free_all(headers);
+      curl_easy_cleanup(curl);
+
       if (res_code != CURLE_OK) {
         trace_http.add("success", false)
             .add_utf8("reason", "res_code != CURLE_OK")
