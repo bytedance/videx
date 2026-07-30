@@ -184,11 +184,11 @@ cd $VIDEX_HOME
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
 
 # Import data
-tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
+gunzip  data/tpch_tiny/tpch_tiny.sql.gz
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```
 
-**For Windows Uesrs：**
+**For Windows Users：**
 ```cmd
 # Change to project directory (assuming VIDEX_HOME environment variable is set)
 cd %VIDEX_HOME%
@@ -198,7 +198,7 @@ cd %VIDEX_HOME%
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
 
 # Import data
-tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
+gunzip  data/tpch_tiny/tpch_tiny.sql.gz
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```
 

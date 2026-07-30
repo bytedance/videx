@@ -185,7 +185,7 @@ cd %VIDEX_HOME%
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
 
 # 导入数据
-tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
+gunzip  data/tpch_tiny/tpch_tiny.sql.gz
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```
 
@@ -199,7 +199,7 @@ cd %VIDEX_HOME%
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -e "create database tpch_tiny;"
 
 # 导入数据
-tar -zxf data/tpch_tiny/tpch_tiny.sql.tar.gz
+gunzip  data/tpch_tiny/tpch_tiny.sql.gz
 mysql -h127.0.0.1 -P13308 -uvidex -ppassword -Dtpch_tiny < tpch_tiny.sql
 ```
 
