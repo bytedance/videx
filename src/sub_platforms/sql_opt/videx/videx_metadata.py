@@ -19,6 +19,7 @@ import pandas as pd
 from pydantic import BaseModel, Field
 
 from sub_platforms.sql_opt.column_statastics.statistics_info import TableStatisticsInfo
+from sub_platforms.sql_opt.column_statastics.statistics_info_pg import PGTableStatisticsInfo
 from sub_platforms.sql_opt.common.db_variable import VariablesAboutIndex, DEFAULT_INNODB_PAGE_SIZE
 from sub_platforms.sql_opt.common.exceptions import TraceLoadException
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
@@ -26,6 +27,7 @@ from sub_platforms.sql_opt.common.sample_file_info import SampleFileInfo
 from sub_platforms.sql_opt.databases.mysql.mysql_command import MySQLVersion
 from sub_platforms.sql_opt.env.rds_env import Env
 from sub_platforms.sql_opt.meta import Table, Column, Index
+from sub_platforms.sql_opt.pg_meta import PGTable, PGColumn, PGIndex
 from sub_platforms.sql_opt.videx.common.estimate_stats_length import estimate_data_length
 from sub_platforms.sql_opt.videx.videx_histogram import HistogramStats, generate_fetch_histogram
 from sub_platforms.sql_opt.videx.videx_mysql_utils import _parse_col_names
@@ -62,8 +64,8 @@ INVALID_VALUE = -1234
 
 class VidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
     task_id: Optional[str]
-    meta_dict: Dict[str, Dict[str, Table]]
-    stats_dict: Dict[str, Dict[str, TableStatisticsInfo]]
+    meta_dict: Dict[str, Dict[str, Union[Table, PGTable]]]
+    stats_dict: Dict[str, Dict[str,  Union[TableStatisticsInfo, PGTableStatisticsInfo]]]
     db_config: VariablesAboutIndex
     # use_gt: Optional[bool] = field(default=True)
     # gt_rec_in_ranges: Optional[List[Any]] = field(default_factory=list)
@@ -74,12 +76,12 @@ class VidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
         self.meta_dict = {k.lower(): {k1.lower(): v1 for k1, v1 in v.items()} for k, v in self.meta_dict.items()}
         self.stats_dict = {k.lower(): {k1.lower(): v1 for k1, v1 in v.items()} for k, v in self.stats_dict.items()}
 
-    def get_table_stats_info(self, db_name: str, table_name: str) -> Optional[TableStatisticsInfo]:
+    def get_table_stats_info(self, db_name: str, table_name: str) -> Optional[Union[TableStatisticsInfo, PGTableStatisticsInfo]]:
         db_name = db_name.lower()
         table_name = table_name.lower()
         return self.stats_dict.get(db_name, {}).get(table_name)
 
-    def get_table_meta(self, db_name: str, table_name: str) -> Optional[Table]:
+    def get_table_meta(self, db_name: str, table_name: str) -> Optional[Union[Table, PGTable]]:
         db_name = db_name.lower()
         table_name = table_name.lower()
         return self.meta_dict.get(db_name, {}).get(table_name)
@@ -165,8 +167,10 @@ class VidexDBTaskStats(BaseModel, PydanticDataClassJsonMixin):
 
         return target
 
+class VidexTableStatsBase(BaseModel, PydanticDataClassJsonMixin):
+    pass
 
-class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
+class VidexTableStats(VidexTableStatsBase):
     """
     Represents the statistics of a HA table.
     """
@@ -244,9 +248,8 @@ class VidexTableStats(BaseModel, PydanticDataClassJsonMixin):
     gt_return: GT_Table_Return = None
 
     # records metadata about table schema
-    table_meta: Optional[Table] = None
-
     sample_data: Optional[pd.DataFrame] = Field(default=None)
+    table_meta: Optional[Table] = None
 
     def get_col_hist(self, col: str) -> Optional[HistogramStats]:
         return self.hist_columns.get(col)

@@ -23,6 +23,8 @@ class VidexStrategy(enum.Enum):
     ideal = "ideal"
     # sqlbrain
     sqlbrain = "sqlbrain"
+    # postgresql
+    postgresql = "postgresql"
 
 
 class VidexModelBase(ABC):
@@ -117,7 +119,6 @@ class VidexModelBase(ABC):
         idx_range_cond = IndexRangeCond.from_dict(min_key, max_key,
                                                   index_meta=self.get_index_schema(index_name),
                                                   )
-
         """
         有 key 的格式如下：
         {

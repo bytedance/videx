@@ -9,12 +9,16 @@ import traceback
 import urllib.parse
 from enum import Enum
 from typing import Optional
+import subprocess
+import os
 
 import pandas as pd
 from dbutils.persistent_db import PersistentDB
 from dbutils.pooled_db import PooledDB
 from pydantic import BaseModel
 from sqlalchemy import create_engine
+import psycopg2
+import psycopg2.extras
 
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 
@@ -22,13 +26,29 @@ from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMix
 class DBTYPE(Enum):
     OPEN_MYSQL = "OPEN_MYSQL"
     SQLITE = "SQLITE"
+    POSTGRESQL = "POSTGRESQL"
 
 
-class MySQLConnectionConfig(BaseModel, PydanticDataClassJsonMixin):
+# class MySQLConnectionConfig(BaseModel, PydanticDataClassJsonMixin):
+#     dbtype: DBTYPE
+#     host: Optional[str] = "127.0.0.1"
+#     port: Optional[int] = 3306
+#     schema: Optional[str] = None
+#     user: Optional[str] = None
+#     pwd: Optional[str] = None
+#     consul: Optional[str] = None
+#     charset: Optional[str] = "utf8"
+#     initial_pool_size: Optional[int] = 5
+#     max_pool_size: Optional[int] = 10
+#     read_timeout: Optional[int] = 30
+#     write_timeout: Optional[int] = 30
+#     connect_timeout: Optional[int] = 10
+
+class BaseDBConnectionConfig(BaseModel, PydanticDataClassJsonMixin):
     dbtype: DBTYPE
     host: Optional[str] = "127.0.0.1"
-    port: Optional[int] = 3306
-    database_name: Optional[str] = None
+    port: Optional[int] 
+    schema: Optional[str] = None
     user: Optional[str] = None
     pwd: Optional[str] = None
     consul: Optional[str] = None
@@ -39,6 +59,8 @@ class MySQLConnectionConfig(BaseModel, PydanticDataClassJsonMixin):
     write_timeout: Optional[int] = 30
     connect_timeout: Optional[int] = 10
 
+class MySQLConnectionConfig(BaseDBConnectionConfig):
+    port: Optional[int] = 3306
 
 def get_mysql_utils(config: MySQLConnectionConfig):
     if config.dbtype == DBTYPE.OPEN_MYSQL:
@@ -192,7 +214,7 @@ class OpenMySQLUtils(AbstractMySQLUtils):
     """
 
     def __init__(self, config: MySQLConnectionConfig):
-        super().__init__('open_mysql', config.database_name, config.charset,
+        super().__init__('open_mysql', config.schema, config.charset,
                          config.read_timeout, config.write_timeout, config.connect_timeout)
         self.host = config.host
         self.port = config.port
@@ -224,7 +246,6 @@ class OpenMySQLUtils(AbstractMySQLUtils):
 
     def __str__(self):
         return self.__repr__()
-
 
 def _parse_col_names(cursor):
     col_names = []

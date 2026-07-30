@@ -6,9 +6,7 @@ import math
 from enum import Enum
 from pydantic import BaseModel, Field, BeforeValidator, ConfigDict
 from typing import List, Optional, Any, Union, Annotated
-
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
-
 
 def clean_int(value) -> Optional[int]:
     """Convert various types of values to int or None"""
@@ -89,7 +87,6 @@ class Column(BaseModel, PydanticDataClassJsonMixin):
 
     def __str__(self):
         return f"{self.db}.{self.table}.{self.name}"
-
 
 class OrderColumn(Column, BaseModel, PydanticDataClassJsonMixin):
     asc: bool = True
@@ -185,7 +182,7 @@ class IndexBasicInfo(BaseModel, PydanticDataClassJsonMixin):
         return [column.name for column in self.columns]
 
 
-class Index(IndexBasicInfo, BaseModel, PydanticDataClassJsonMixin):
+class Index(IndexBasicInfo):
     type: Optional[IndexType] = Field(default=None)
     name: Optional[str] = Field(default=None)
     is_unique: Optional[bool] = Field(default=False)
@@ -298,6 +295,8 @@ class JoinItem(BaseModel, PydanticDataClassJsonMixin):
 
     def __str__(self):
         return f"{self.left} {self.operation} {self.right}"
+
+
 
 
 # json multi array is a special and more complex function index,

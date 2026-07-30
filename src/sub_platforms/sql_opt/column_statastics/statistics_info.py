@@ -3,13 +3,12 @@ Copyright (c) 2024 Bytedance Ltd. and/or its affiliates
 SPDX-License-Identifier: MIT
 """
 from typing import Dict, List, Any, Optional
-import pandas as pd
-from pydantic import BaseModel, Field, PrivateAttr, PlainSerializer, BeforeValidator
+from pydantic import BaseModel, Field, PrivateAttr, BeforeValidator
 from typing_extensions import Annotated
+import pandas as pd
 
 from sub_platforms.sql_opt.common.pydantic_utils import PydanticDataClassJsonMixin
 from sub_platforms.sql_opt.videx.videx_histogram import HistogramStats
-
 
 def large_number_decoder(y):
     if isinstance(y, list):
@@ -23,9 +22,7 @@ def large_number_decoder(y):
 
 
 class TableStatisticsInfo(BaseModel, PydanticDataClassJsonMixin):
-
     model_config = {"arbitrary_types_allowed": True}
-    
     db_name: str
     table_name: str
     # {col_name: col ndv}
@@ -59,7 +56,6 @@ class TableStatisticsInfo(BaseModel, PydanticDataClassJsonMixin):
     sample_data: Optional[pd.DataFrame] = Field(default=None, exclude=True)
 
     _version: Optional[str] = PrivateAttr(default='1.0.0')
-
 
 def trans_dict_to_statistics(numerical_info: Dict[str, Any]) -> TableStatisticsInfo:
     """a temp convert function，from numerical info to TableStatisticsInfo"""

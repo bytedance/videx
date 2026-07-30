@@ -24,9 +24,16 @@ from sub_platforms.sql_opt.env.rds_env import Env
 from sub_platforms.sql_opt.videx import videx_logging
 from sub_platforms.sql_opt.videx.videx_metadata import VidexTableStats, VidexDBTaskStats, EXTRA_INFO_KEY_pct_cached, \
     EXTRA_INFO_KEY_mulcol, EXTRA_INFO_KEY_gt_rec_in_ranges, construct_videx_task_meta_from_local_files
+from sub_platforms.sql_opt.videx.videx_pg_metadata import PGVidexTableStats, fetch_pg_table_oid
 from sub_platforms.sql_opt.videx.model.videx_strategy import VidexModelBase
 from sub_platforms.sql_opt.videx.model.videx_model_innodb import VidexModelInnoDB
+from sub_platforms.sql_opt.videx.model.videx_model_pg import VidexModelPG
+from sub_platforms.sql_opt.column_statastics.statistics_info import TableStatisticsInfo
+from sub_platforms.sql_opt.column_statastics.statistics_info_pg import PGTableStatisticsInfo
+from sub_platforms.sql_opt.meta import Table
+from sub_platforms.sql_opt.pg_meta import PGTable
 from sub_platforms.sql_opt.videx.videx_utils import GT_Table_Return, get_local_ip, get_func_with_parent
+from sub_platforms.sql_opt.videx.videx_utils import pg_deserialize_schema_table
 
 app = Flask(__name__)
 ENV_KEY_POST_VIDEX_META = 'POST_VIDEX_META'
@@ -98,6 +105,9 @@ class VidexFunc(enum.Enum):
     get_memory_buffer_size = "get_memory_buffer_size"
     records_in_range = "records_in_range"
     info_low = "info_low"
+    get_relation_stats = "videx_get_relation_stats"
+    get_index_stats = "videx_get_index_stats"
+    table_block_relation_estimate_size = "videx_table_block_relation_estimate_size"
     not_supported = "not_supported"
 
 
@@ -197,11 +207,10 @@ class VidexSingleton:
         if not {'dbname', 'table_name', 'function'}.issubset(properties.keys()):
             return 502, f"miss input: target_engine: " \
                         f"required dbname, table_name, function, but received properites: {properties}", {}
-        target_engine = properties.get('target_engine', "innodb")
+        target_engine = properties.get('target_storage_engine', "innodb").lower()
         videx_db = properties['dbname'].lower()
         table_name = properties['table_name'].lower()
         func_str = properties['function'].lower()
-
         # N.B. videx_options passing chain:
         # OPTIMIZE_TASK sets the user variable VIDEX_OPTIONS to the VIDEX_MYSQL instance.
         # VIDEX_MYSQL receives VIDEX_OPTIONS, renames it to videx_options, and forwards it to VIDEX_SERVER.
@@ -242,46 +251,62 @@ class VidexSingleton:
             logging.info(f"=== to find {task_id}, not find. {req_json_item=}")
             return 502, f"db task key not found: given task_key={task_id}, " \
                         f"videx_db={videx_db}, we have: {list(self.cache.keys())}", {}
-
         success_code, success_msg = 200, "OK"
-
         # If an expect request already exists, return immediately.
         # The new version has removed the use of `use_gt`. Control the usage of gt by passing {req_json_item: expect_resp}.
-        expect_resp = db_task_stats.get_expect_response(req_json_item, result2str)
-        if expect_resp is not None:
-            return success_code, success_msg, expect_resp
+        if target_engine == "innodb":
+            expect_resp = db_task_stats.get_expect_response(req_json_item, result2str)
+            if expect_resp is not None:
+                return success_code, success_msg, expect_resp
 
         if db_task_stats.get_table_meta(videx_db, table_name) is None:
             return 404, f"Not Found table_name: {videx_db}.{table_name}", {}
         func = str2VidexFunc(func_str)
         if func == VidexFunc.not_supported:
             return 400, f"Not Supported function: {func_str}", {}
-
-        # TODO  For ease of debugging, directly construct the InnoDB model.
-        table_model = self.get_videx_table_stats(task_cache, videx_db, table_name)
         resp = {}
         single_resp = lambda v: {"value": v}
         # #########################################################
         # ##################### key part ##########################
         # #########################################################
         # TODO Consider code optimization and encapsulation later.
-        try:
-            if func == VidexFunc.scan_time:
-                resp = single_resp(table_model.scan_time(req_json_item))
-            elif func == VidexFunc.get_memory_buffer_size:
-                resp = single_resp(table_model.get_memory_buffer_size(req_json_item))
-            elif func == VidexFunc.records_in_range:
-                resp = single_resp(table_model.records_in_range(req_json_item))
-            elif func == VidexFunc.info_low:
-                resp = table_model.info_low(req_json_item)
-            else:
-                raise NotImplementedError(f"MEEEET func unsupported: {func}")
-        except Exception as e:
-            if raise_out:
-                raise
-            logging.error(f"meet error in {target_engine}, {videx_db}, {table_name}, {func_str}: {e}, "
-                          f"{traceback.format_exc()}")
-            return 500, str(e), {}
+        if target_engine == "innodb":
+            # TODO  For ease of debugging, directly construct the InnoDB model.
+            table_model = self.get_videx_table_stats(task_cache, videx_db, table_name)
+            try:
+                if func == VidexFunc.scan_time:
+                    resp = single_resp(table_model.scan_time(req_json_item))
+                elif func == VidexFunc.get_memory_buffer_size:
+                    resp = single_resp(table_model.get_memory_buffer_size(req_json_item))
+                elif func == VidexFunc.records_in_range:
+                    resp = single_resp(table_model.records_in_range(req_json_item))
+                elif func == VidexFunc.info_low:
+                    resp = table_model.info_low(req_json_item)
+                else:
+                    raise NotImplementedError(f"MEEEET func unsupported: {func}")
+            except Exception as e:
+                if raise_out:
+                    raise
+                logging.error(f"meet error in {target_engine}, {videx_db}, {table_name}, {func_str}: {e}, "
+                            f"{traceback.format_exc()}")
+                return 500, str(e), {}
+        elif target_engine == "pg":
+            try:
+                table_model = self.get_videx_table_stats_for_pg(task_cache, videx_db, table_name)
+                if func == VidexFunc.get_relation_stats:
+                    resp = table_model.get_relation_stats(req_json_item)
+                elif func == VidexFunc.table_block_relation_estimate_size:
+                    resp = table_model.table_block_relation_estimate_size(req_json_item)
+                elif func == VidexFunc.get_index_stats:
+                    resp = table_model.get_index_stats(req_json_item)
+            except Exception as e:
+                if raise_out:
+                    raise
+                logging.error(f"meet error in {target_engine}, {videx_db}, {table_name}, {func_str}: {e}, "
+                            f"{traceback.format_exc()}")
+                return 500, str(e), {}
+        else:
+            return 400, f"Not Supported target_engine: {target_engine}", {}
         if result2str:
             final_resp = {k: str(v) for k, v in resp.items()}
         else:
@@ -294,9 +319,11 @@ class VidexSingleton:
         if (res := task_cache.get_table_model_cache(db_name, table_name)) is not None:
             return res
 
+        table_stats_info: TableStatisticsInfo = None
         if (table_stats_info := db_task_stats.get_table_stats_info(db_name, table_name)) is None:
             raise ValueError(f"given db_stats_info have not {db_name=} {table_name=}, only: {db_task_stats.get_stats_info_keys()}")
 
+        table_meta: Table = None
         if (table_meta := db_task_stats.get_table_meta(db_name, table_name)) is None:
             raise ValueError(f"given db_meta_info have not {db_name=} {table_name=}, only: {db_task_stats.get_meta_info_keys()}")
 
@@ -320,6 +347,32 @@ class VidexSingleton:
             sample_data=table_stats_info.sample_data
         )
         table_model = self.VidexModelClass(table_stats, **self.model_kwargs)
+        task_cache.add_table_model_cache(db_name, table_name, table_model)
+        return table_model
+    
+    def get_videx_table_stats_for_pg(self, task_cache: VidexTaskCache, db_name: str, table_name: str) -> VidexModelPG:
+        db_task_stats = task_cache.db_tasks_stats
+        if (res := task_cache.get_table_model_cache(db_name, table_name)) is not None:
+            logging.info(f"hit pg table model cache for {db_name}.{table_name}")
+            return res
+
+        table_stats_info: PGTableStatisticsInfo = db_task_stats.get_table_stats_info(db_name, table_name)
+        logging.info(f"table_stats_info for pg {db_name}.{table_name}: {db_task_stats.stats_dict.get(db_name, {})}")
+        if table_stats_info is None:
+            # it is allowed that no stats info for pg table (for exampel: the table is empty or never analyzed)
+            logging.warning(f"given db_stats_info have not {db_name=} {table_name=}, only: {db_task_stats.get_stats_info_keys()}")
+        
+        table_meta: PGTable = db_task_stats.get_table_meta(db_name, table_name)
+        if table_meta is None:
+            raise ValueError(f"given db_meta_info have not {db_name=} {table_name=}, only: {db_task_stats.get_meta_info_keys()}")
+
+        table_stats = PGVidexTableStats.from_json(
+            dbname=db_name,
+            table_name=table_name,
+            raw_meta_dict=table_meta,
+            table_statistic=table_stats_info
+        )
+        table_model = VidexModelPG(table_stats, **self.model_kwargs)
         task_cache.add_table_model_cache(db_name, table_name, table_model)
         return table_model
 
@@ -385,7 +438,7 @@ class VidexSingleton:
 
         """
         videx_request: VidexDBTaskStats = VidexDBTaskStats.from_dict(req_dict)
-
+        
         db_tables = {db: {tb for tb in v} for db, v in videx_request.stats_dict.items()}
 
         if videx_request.key_is_none():
@@ -614,6 +667,31 @@ def create_videx_env_multi_db(videx_env: Env,
         finally:
             videx_env.set_default_db(videx_default_db)
 
+def create_videx_env_multi_db_for_pg(videx_env: Env,
+                              meta_dict: dict,
+                              new_engine: str = 'VIDEX',
+                              ):
+    for target_db, table_dict in meta_dict.items():
+        # TODO: In Postgresql, you cannot drop a database if you are connecting on it.
+        # so we need to switch to another database first (Here we switch to 'postgres').
+        videx_env._switch_db("postgres")
+        videx_env.execute(f"DROP DATABASE IF EXISTS {target_db}")
+        videx_env.execute(f"CREATE DATABASE {target_db}")
+        videx_env._switch_db(target_db)
+        videx_env.execute(f"CREATE EXTENSION VIDEX")
+        videx_default_db = videx_env.default_db
+        try:
+            videx_env.set_default_db(target_db)
+            print(f"target_database: {target_db}, table_size: {len(table_dict)}")
+            for table in table_dict.values():
+                dump_text = table.ddl
+                # replace engine from heap to videx before executing
+                pattern = r'(CREATE TABLE\s+[\w\.]+\s*\(\s*.*?\s*\))\s*;'
+                replacement = rf'\1 USING {new_engine};'
+                videx_dump_text = re.sub(pattern, replacement, dump_text, flags=re.DOTALL)
+                videx_env.execute(videx_dump_text)
+        finally:
+            videx_env.set_default_db(videx_default_db)
 
 def post_to_clear_videx_server_cache(videx_server: str, task_ids: List[str]) -> Response:
     """Send a request to the specified server to clear the specified task IDs.
