@@ -24,12 +24,27 @@ DISABLE_MISSING_PROFILE_WARNING()
 ADD_DEFINITIONS(-DMYSQL_SERVER)
 ADD_DEFINITIONS(-DMUTEX_FUTEX)
 
+find_library(CURL_LIBRARY
+        NAMES curl
+        PATHS /usr/lib/x86_64-linux-gnu
+        NO_DEFAULT_PATH
+        )
+
+if (NOT TARGET CURL::libcurl)
+  add_library(CURL::libcurl UNKNOWN IMPORTED GLOBAL)
+  set_target_properties(CURL::libcurl PROPERTIES
+          IMPORTED_LOCATION "${CURL_LIBRARY}"
+          INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/extra/curl/${CURL_VERSION_DIR}/include"
+          )
+endif ()
+
 INCLUDE_DIRECTORIES(
         ${CMAKE_SOURCE_DIR}/sql
         ${CMAKE_SOURCE_DIR}/sql/auth
         ${CMAKE_SOURCE_DIR}/extra/rapidjson/include
-        ${CMAKE_SOURCE_DIR}/extra/curl/curl-8.1.2/include
+        ${CMAKE_SOURCE_DIR}/extra/curl/${CURL_VERSION_DIR}/include
 )
+
 
 IF (WITH_VIDEX_STORAGE_ENGINE AND NOT WITHOUT_VIDEX_STORAGE_ENGINE)
   # Check if the dynamic library is explicitly specified
