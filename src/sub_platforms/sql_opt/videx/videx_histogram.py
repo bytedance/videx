@@ -232,7 +232,7 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
         if len(self.buckets) > 0:
             # check: sum(freq(buckets[-1] + null ratio) should be almost 1. if not, scale it.
             if abs(self.null_values + self.buckets[-1].cum_freq - 1) > 0.01:
-                scale_factor = self.buckets[-1].cum_freq / (1 - self.null_values)
+                scale_factor = (1 - self.null_values) / self.buckets[-1].cum_freq
                 for bucket in self.buckets:
                     bucket.cum_freq = bucket.cum_freq * scale_factor
                 self.buckets[-1].cum_freq = 1
