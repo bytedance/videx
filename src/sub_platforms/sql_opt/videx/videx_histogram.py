@@ -302,7 +302,7 @@ class HistogramStats(BaseModel, PydanticDataClassJsonMixin):
         # Handle the universal case where the query boundary is NULL.
         # The position of NULLs is conceptually at the beginning of the sorted data.
         # This logic is independent of whether the histogram for non-null values exists.
-        if value is None:
+        if value is None or value == NULL_STR:
             if side == BTreeKeySide.left:
                 # Cumulative records *before* all NULLs is 0.
                 return 0
