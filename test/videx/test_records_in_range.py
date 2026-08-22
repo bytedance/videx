@@ -134,6 +134,13 @@ class TestHist_find_first_key_pos(unittest.TestCase):
         print(function3)  # 输出 HaRKeyFunction.HA_READ_KEY_EXACT
         self.assertEqual(function3, BTreeKeyOp.EQ)
 
+    def test_string_null_boundary(self):
+        self.int_histogram.null_values = 0.2
+
+        for value in (None, "NULL"):
+            self.assertEqual(self.int_histogram.find_nearest_key_pos(value, BTreeKeySide.left), 0)
+            self.assertEqual(self.int_histogram.find_nearest_key_pos(value, BTreeKeySide.right), 0.2)
+
     def test_gt_operator(self):
         """
         EXPLAIN select I_PRICE from ITEM where I_PRICE = 12
