@@ -732,12 +732,10 @@ class NDVEstimator:
                 logging.info(f"NDV estimation failed for column {col} with method {method}: {e}")
                 individual_ndvs.append(1.0)
         
-        # Independent assumption synthesis: rows / product(rows / ndv_i)
+        # Independent assumption synthesis: product of individual NDVs, capped by table rows
         rows = float(self.original_num)
         from math import prod
-        rec_per_keys = [max(1.0, rows / x) for x in individual_ndvs]
-        combined_rpk = min(rows, prod(rec_per_keys))
-        ndv_multi = max(1.0, min(rows, rows / combined_rpk))
+        ndv_multi = max(1.0, min(rows, prod(individual_ndvs)))
         
         logging.info(f"Independent assumption: {target_columns} -> {individual_ndvs} -> {ndv_multi}")
         return ndv_multi
