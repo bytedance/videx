@@ -675,7 +675,17 @@ ha_rows ha_videx::records_in_range(uint keynr, const key_range *min_key,
   }
   else
   {
-    n_rows= std::stoull(n_rows_str);
+    unsigned long long parsed= 0;
+    if (videx_try_parse_ull(n_rows_str, parsed))
+    {
+      n_rows= (ha_rows) parsed;
+    }
+    else
+    {
+      sql_print_warning("VIDEX: records_in_range got invalid value '%s'; "
+                        "using fallback.", n_rows_str.c_str());
+      n_rows= 10; // default number to force index
+    }
   }
 
   // Avoid returning 0 to the optimizer, similar to InnoDB's behavior
@@ -851,7 +861,22 @@ int ha_videx::info_low(uint flag, bool is_analyze)
 
   if (flag & HA_STATUS_VARIABLE)
   {
-    n_rows= std::stoull(res_json["stat_n_rows"]);
+    {
+      // Parse into a fixed-width local first: n_rows is uint64_t, whose
+      // underlying type differs between platforms (unsigned long on LP64,
+      // unsigned long long on macOS), so it cannot bind to the helper's
+      // reference parameter directly.
+      unsigned long long parsed_n_rows= 0;
+      if (!videx_try_parse_ull(res_json["stat_n_rows"], parsed_n_rows))
+      {
+        // Same contract as the missing-key check above: degrade to the
+        // server's default statistics rather than throwing out of info_low().
+        sql_print_warning("VIDEX: res_json has invalid stat_n_rows '%s'.",
+                          res_json["stat_n_rows"].c_str());
+        DBUG_RETURN(0);
+      }
+      n_rows= (uint64_t) parsed_n_rows;
+    }
     if (n_rows == 0 && !(flag & (HA_STATUS_TIME | HA_STATUS_OPEN)))
     {
       n_rows++;
@@ -860,11 +885,37 @@ int ha_videx::info_low(uint flag, bool is_analyze)
     stats.records= (ha_rows) n_rows;
     stats.deleted= 0;
 
-    stats.data_file_length= std::stoull(res_json["data_file_length"]);
-    stats.index_file_length= std::stoull(res_json["index_file_length"]);
+    {
+      unsigned long long data_file_length= 0;
+      unsigned long long index_file_length= 0;
+      if (!videx_try_parse_ull(res_json["data_file_length"],
+                               data_file_length) ||
+          !videx_try_parse_ull(res_json["index_file_length"],
+                               index_file_length))
+      {
+        sql_print_warning("VIDEX: res_json has invalid data_file_length or "
+                          "index_file_length.");
+        DBUG_RETURN(0);
+      }
+      stats.data_file_length= data_file_length;
+      stats.index_file_length= index_file_length;
+    }
     if (flag & HA_STATUS_VARIABLE_EXTRA)
     {
-      stats.delete_length= std::stoull(res_json["data_free_length"]);
+      unsigned long long data_free_length= 0;
+      if (videx_try_parse_ull(res_json["data_free_length"], data_free_length))
+      {
+        stats.delete_length= data_free_length;
+      }
+      else
+      {
+        // Non-critical statistic: keep the conservative default instead of
+        // aborting the whole info_low() call.
+        sql_print_warning("VIDEX: res_json has invalid data_free_length '%s'; "
+                          "using 0.",
+                          res_json["data_free_length"].c_str());
+        stats.delete_length= 0;
+      }
     }
     stats.check_time= 0;
     stats.mrr_length_per_rec=
@@ -905,7 +956,19 @@ int ha_videx::info_low(uint flag, bool is_analyze)
         ulong rec_per_key_int= 0;
         if (videx_contains_key(res_json, concat_key.c_str()))
         {
-          rec_per_key_int= std::stoul(res_json[concat_key.c_str()]);
+          unsigned long parsed= 0;
+          if (videx_try_parse_ul(res_json[concat_key.c_str()], parsed))
+          {
+            rec_per_key_int= parsed;
+          }
+          else
+          {
+            // Fall back to the same default used when the key is absent.
+            sql_print_warning("VIDEX: invalid %s '%s'; using stats.records.",
+                              concat_key.c_str(),
+                              res_json[concat_key.c_str()].c_str());
+            rec_per_key_int= (ulong) stats.records;
+          }
         }
         else
         {

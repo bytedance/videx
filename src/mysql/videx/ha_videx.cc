@@ -783,8 +783,12 @@ double ha_videx::scan_time() {
   if (error) {
     // The strategy below is from ha_example's strategy, kept as the default strategy when an error occurs.
     res_v = (double) (stats.records + stats.deleted) / 20.0 + 10;
-  }else{
-    res_v = std::stod(val_str);
+  }else if (!videx_try_parse_double(val_str, res_v)) {
+    // A malformed value is treated like a failed request: fall back instead of
+    // letting the conversion throw out of the storage engine callback.
+    std::cout << "ha_videx::scan_time: cannot parse '" << val_str
+              << "' as double, using fallback." << std::endl;
+    res_v = (double) (stats.records + stats.deleted) / 20.0 + 10;
   }
   videx_log_ins.markPassby_DBTB_otherType(
       FUNC_FILE_LINE,
@@ -813,7 +817,14 @@ longlong ha_videx::get_memory_buffer_size() const {
     // The strategy below is from ha_example's strategy, kept as the default strategy when an error occurs.
     res_v = handler::get_memory_buffer_size();
   }else{
-    res_v = std::stoll(val_str);
+    long long parsed = 0;
+    if (videx_try_parse_ll(val_str, parsed)) {
+      res_v = static_cast<longlong>(parsed);
+    } else {
+      std::cout << "ha_videx::get_memory_buffer_size: cannot parse '" << val_str
+                << "' as integer, using fallback." << std::endl;
+      res_v = handler::get_memory_buffer_size();
+    }
   }
   videx_log_ins.markPassby_otherType(FUNC_FILE_LINE, res_v);
   return res_v;
@@ -906,7 +917,21 @@ int ha_videx::info_low(uint flag, bool is_analyze) {
 //    unsigned long stat_clustered_index_size;
 //    unsigned long stat_sum_of_other_index_sizes;
 
-    n_rows = std::stoul(res_json["stat_n_rows"]);
+    {
+      // Parse into a fixed-width local first: n_rows is uint64_t, whose
+      // underlying type differs between platforms (unsigned long on LP64,
+      // unsigned long long on macOS), so it cannot bind to the helper's
+      // reference parameter directly.
+      unsigned long long parsed_n_rows = 0;
+      if (!videx_try_parse_ull(res_json["stat_n_rows"], parsed_n_rows)) {
+        // Same contract as the missing-key check above: degrade to the
+        // server's default statistics rather than throwing out of info_low().
+        std::cout << "res_json has invalid stat_n_rows '"
+                  << res_json["stat_n_rows"] << "'." << std::endl;
+        return 0;
+      }
+      n_rows = static_cast<uint64_t>(parsed_n_rows);
+    }
 
 //    stat_clustered_index_size = std::stoul(res_json["data"]["stat_clustered_index_size"].GetString());
 //    stat_sum_of_other_index_sizes = std::stoul(res_json["data"]["stat_sum_of_other_index_sizes"].GetString());
@@ -921,8 +946,18 @@ int ha_videx::info_low(uint flag, bool is_analyze) {
 
     // #### calculate_index_size_stats START
     stats.records = static_cast<ha_rows>(n_rows);
-    stats.data_file_length = std::stoull(res_json["data_file_length"]);
-    stats.index_file_length = std::stoull(res_json["index_file_length"]);
+    {
+      unsigned long long data_file_length = 0;
+      unsigned long long index_file_length = 0;
+      if (!videx_try_parse_ull(res_json["data_file_length"], data_file_length) ||
+          !videx_try_parse_ull(res_json["index_file_length"], index_file_length)) {
+        std::cout << "res_json has invalid data_file_length or index_file_length."
+                  << std::endl;
+        return 0;
+      }
+      stats.data_file_length = data_file_length;
+      stats.index_file_length = index_file_length;
+    }
 //      stats->data_file_length =
 //          static_cast<ulonglong>(stat_clustered_index_size) * page_size.physical();
 //      stats->index_file_length =
@@ -950,7 +985,16 @@ int ha_videx::info_low(uint flag, bool is_analyze) {
         else delete_length = DATA_FREE / 1024 * 1024 = DATA_FREE
         That is, delete_length = DATA_FREE
        */
-      stats.delete_length = std::stoull(res_json["data_free_length"]);
+      unsigned long long data_free_length = 0;
+      if (videx_try_parse_ull(res_json["data_free_length"], data_free_length)) {
+        stats.delete_length = data_free_length;
+      } else {
+        // Non-critical statistic: keep the conservative default instead of
+        // aborting the whole info_low() call.
+        std::cout << "res_json has invalid data_free_length '"
+                  << res_json["data_free_length"] << "', using 0." << std::endl;
+        stats.delete_length = 0;
+      }
     }
 
     stats.check_time = 0;
@@ -988,7 +1032,13 @@ int ha_videx::info_low(uint flag, bool is_analyze) {
 //      pct_cached = index_pct_cached(index);
       std::string pct_cached_key = "pct_cached #@# " + std::string(key->name);
       if (videx_contains_key(res_json, pct_cached_key.c_str())) {
-              pct_cached = std::stod(res_json[pct_cached_key.c_str()]);
+              if (!videx_try_parse_double(res_json[pct_cached_key.c_str()],
+                                          pct_cached)) {
+                std::cout << "invalid " << pct_cached_key << " '"
+                          << res_json[pct_cached_key.c_str()]
+                          << "', using 0." << std::endl;
+                pct_cached = 0;
+              }
       } else {
               pct_cached = 0;
       }
@@ -1035,7 +1085,17 @@ int ha_videx::info_low(uint flag, bool is_analyze) {
               // ib_table->rec_per_keys[key->name][j];
               rec_per_key_t rec_per_key_float = -1;
               if (videx_contains_key(res_json, concat_key.c_str())){
-                  rec_per_key_float = std::stof(res_json[concat_key.c_str()]);
+                  float parsed_rec_per_key = 0;
+                  if (videx_try_parse_float(res_json[concat_key.c_str()],
+                                            parsed_rec_per_key)) {
+                      rec_per_key_float = parsed_rec_per_key;
+                  } else {
+                      // Fall back to the same default used when the key is absent.
+                      std::cout << "invalid " << concat_key << " '"
+                                << res_json[concat_key.c_str()]
+                                << "', using stats.records." << std::endl;
+                      rec_per_key_float = stats.records;
+                  }
               }
               else {
                   rec_per_key_float = stats.records;
@@ -1359,7 +1419,14 @@ ha_rows ha_videx::records_in_range(
       // keep the same as ha_example when ocrurred error
       res_v = 10;  // low number to force index usage
   }else{
-      res_v = std::stoull(val_str);
+      unsigned long long parsed = 0;
+      if (videx_try_parse_ull(val_str, parsed)) {
+          res_v = static_cast<ha_rows>(parsed);
+      } else {
+          std::cout << "ha_videx::records_in_range: cannot parse '" << val_str
+                    << "', using fallback." << std::endl;
+          res_v = 10;  // low number to force index usage
+      }
   }
   videx_log_ins.markPassby_DBTB_otherType(
     FUNC_FILE_LINE,
