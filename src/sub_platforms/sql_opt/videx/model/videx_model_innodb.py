@@ -42,11 +42,10 @@ class VidexModelInnoDB(VidexModelBase):
         # if not PCT_CACHED_MODE_PREFER_META, pct_cached will be forcibly set to the given pct
         self.pct_cached: float = kwargs.get('pct_cached', PCT_CACHED_MODE_PREFER_META)
         # ndv is usually stable and calculation is costly, thus we cache it in task-level.
-        # key: table, fields list
+        # key: index name, fields list, ndv method
         self.ndv_cache = TTLCache(maxsize=1000, ttl=1200)
         self.ndv_model = None
         self.df_sample_raw = None
-        self.ndv_method = None  # The highest priority for this request, injected by @VIDEX_OPTIONS
         self.loading_ndv_model()
         self.inject_cardinality_dict = dict()
         # self.inject_cardinality_dict["C_NATIONKEY = 15"] = 58
@@ -136,7 +135,7 @@ class VidexModelInnoDB(VidexModelBase):
 
         return records_in_ranges
 
-    def ndv(self, index_name, field_list: List[str]) -> int:
+    def ndv(self, index_name, field_list: List[str], ndv_method: str = None) -> int:
         ndv = self.table_stats.get_ideal_ndv(index_name, field_list)
         print("----GET_IDEAL_NDV   NDV IS :", ndv, "----", flush=True)
         if ndv is None:
@@ -144,10 +143,11 @@ class VidexModelInnoDB(VidexModelBase):
                 print(f"------Using sampling data with {len(self.df_sample_raw)} rows", flush=True)
                 rows = float(self.table_stats.records)
                 st = time.perf_counter()
-                
-                # Use the method injected by @VIDEX_OPTIONS first, then the environment variable, finally default 'hybrid'
+
+                # Use the method passed in by the caller (from @VIDEX_OPTIONS) first,
+                # then the environment variable, finally default 'hybrid'.
                 import os
-                ndv_method = (self.ndv_method or os.getenv('VIDEX_NDV_METHOD') or 'hybrid')
+                ndv_method = (ndv_method or os.getenv('VIDEX_NDV_METHOD') or 'hybrid')
                 methods = ['PLM4NDV', 'Ada', 'GEE', 'scale'] if ndv_method == 'hybrid' else [ndv_method]
                 
                 ndv_candidates = []
@@ -226,8 +226,10 @@ class VidexModelInnoDB(VidexModelBase):
         except Exception:
             options = {}
         
-        # This is a per-query setting, reset at the start of each SQL execution.
-        self.ndv_method = options.get('ndv_method', None)
+        # This is a per-query setting. It is kept local to the request rather than
+        # stored on the model, because model instances are shared across requests
+        # (see VidexSingleton.model_cache_dict) and the server runs threaded.
+        ndv_method = options.get('ndv_method', None)
 
         CONCAT = " #@# "
         res = {
@@ -274,13 +276,13 @@ class VidexModelInnoDB(VidexModelBase):
                 field_name = field_json['properties']['name']
                 store_length = field_json['properties']['store_length']
                 first_fields.append(field_name)
-                ndv_key = (key_name, tuple(first_fields))
+                ndv_key = (key_name, tuple(first_fields), ndv_method or 'hybrid')
                 if ndv_key in self.ndv_cache:
                     ndv = self.ndv_cache[ndv_key]
                     logging.info(f"load existing ndv from cache: table={self.table_name} NDV({ndv_key}) = {ndv}")
                 else:
                     st = time.perf_counter()
-                    ndv = self.ndv(key_name, first_fields)
+                    ndv = self.ndv(key_name, first_fields, ndv_method=ndv_method)
                     self.ndv_cache[ndv_key] = ndv
                     logging.info(f"calculate ndv and save to cache: table={self.table_name}: NDV({ndv_key}) = {ndv} "
                                  f"use {time.perf_counter() - st:.2f}s")
