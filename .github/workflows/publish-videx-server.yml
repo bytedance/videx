@@ -93,10 +93,19 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "is_stable=$IS_STABLE" >> "$GITHUB_OUTPUT"
 
+          # Resolve the commit that was actually checked out. actions/checkout
+          # updates the worktree but does not rewrite github.sha, so on a manual
+          # run with inputs.ref these two differ and github.sha would label the
+          # image with a commit it was not built from. On the tag-push path the
+          # two are identical, so this is safe for both triggers.
+          REVISION="$(git rev-parse HEAD)"
+          echo "revision=$REVISION" >> "$GITHUB_OUTPUT"
+
           echo "EVENT=$EVENT"
           echo "PUBLISH=$PUBLISH"
           echo "VERSION=$VERSION"
           echo "IS_STABLE=$IS_STABLE"
+          echo "REVISION=$REVISION (github.sha=${{ github.sha }})"
 
       - name: Set up QEMU (for multi-arch)
         if: ${{ steps.cfg.outputs.publish == 'true' }}
@@ -150,7 +159,7 @@ jobs:
             type=raw,value=latest,enable=${{ steps.cfg.outputs.is_stable }}
           labels: |
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ steps.cfg.outputs.revision }}
 
       - name: Build and push (multi-arch)
         if: ${{ steps.cfg.outputs.publish == 'true' }}
