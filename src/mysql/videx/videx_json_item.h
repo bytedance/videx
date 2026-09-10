@@ -30,6 +30,8 @@
 #include <stdexcept>
 #include <stdio.h>
 #include <string.h>
+#include <climits>
+#include <cfloat>
 #include <unordered_map>
 #include <list>
 #include <algorithm>
@@ -45,6 +47,112 @@ typedef std::map<std::string, std::string> VidexStringMap;
 
 inline bool videx_contains_key(const VidexStringMap &myMap, const std::string &key) {
     return myMap.find(key) != myMap.end();
+}
+
+/*
+  Numeric conversion helpers for values coming from the statistic server.
+
+  The response values are plain strings, so a structurally valid response can
+  still carry a value that is empty, non-numeric, negative for an unsigned
+  field, or out of range. Calling std::sto* directly on those is unsafe in two
+  distinct ways:
+
+    - it throws std::invalid_argument / std::out_of_range, and a C++ exception
+      must not escape a storage engine callback;
+    - worse, some inputs do not throw at all and are silently accepted:
+      std::stoull("-1") wraps to 18446744073709551615, std::stoull("12abc")
+      returns 12, and std::stoull("0x10") returns 0.
+
+  The helpers below reject both cases. They return false and leave the output
+  parameter untouched, so every caller can keep using its existing fallback.
+*/
+
+inline bool videx_parse_find_first_char(const std::string &str, size_t &begin) {
+    begin = str.find_first_not_of(" \t\n\r\f\v");
+    return begin != std::string::npos;
+}
+
+/** Return true when str holds nothing but trailing whitespace from pos on. */
+inline bool videx_parse_only_trailing_space(const std::string &str, size_t pos) {
+    return str.find_first_not_of(" \t\n\r\f\v", pos) == std::string::npos;
+}
+
+/**
+ * Parse an unsigned 64-bit value. Rejects empty, non-numeric, negative,
+ * trailing-garbage and out-of-range input.
+ * @return true on success; on failure returns false and leaves `out` unchanged.
+ */
+inline bool videx_try_parse_ull(const std::string &str, unsigned long long &out) {
+    size_t begin = 0;
+    if (!videx_parse_find_first_char(str, begin)) return false;
+    // std::stoull accepts a leading '-' and wraps around; reject it explicitly.
+    if (str[begin] == '-') return false;
+    try {
+        size_t pos = 0;
+        unsigned long long value = std::stoull(str, &pos);
+        if (!videx_parse_only_trailing_space(str, pos)) return false;
+        out = value;
+        return true;
+    } catch (const std::invalid_argument &) {
+        return false;
+    } catch (const std::out_of_range &) {
+        return false;
+    }
+}
+
+/** Parse an unsigned long, additionally rejecting values that do not fit. */
+inline bool videx_try_parse_ul(const std::string &str, unsigned long &out) {
+    unsigned long long value = 0;
+    if (!videx_try_parse_ull(str, value)) return false;
+    if (value > static_cast<unsigned long long>(ULONG_MAX)) return false;
+    out = static_cast<unsigned long>(value);
+    return true;
+}
+
+/** Parse a signed 64-bit value. A leading '-' is valid here. */
+inline bool videx_try_parse_ll(const std::string &str, long long &out) {
+    size_t begin = 0;
+    if (!videx_parse_find_first_char(str, begin)) return false;
+    try {
+        size_t pos = 0;
+        long long value = std::stoll(str, &pos);
+        if (!videx_parse_only_trailing_space(str, pos)) return false;
+        out = value;
+        return true;
+    } catch (const std::invalid_argument &) {
+        return false;
+    } catch (const std::out_of_range &) {
+        return false;
+    }
+}
+
+/** Parse a double. Rejects trailing garbage, which std::stod would accept. */
+inline bool videx_try_parse_double(const std::string &str, double &out) {
+    size_t begin = 0;
+    if (!videx_parse_find_first_char(str, begin)) return false;
+    try {
+        size_t pos = 0;
+        double value = std::stod(str, &pos);
+        if (!videx_parse_only_trailing_space(str, pos)) return false;
+        out = value;
+        return true;
+    } catch (const std::invalid_argument &) {
+        return false;
+    } catch (const std::out_of_range &) {
+        return false;
+    }
+}
+
+/** Parse a float, reusing the double parser and rejecting overflow. */
+inline bool videx_try_parse_float(const std::string &str, float &out) {
+    double value = 0;
+    if (!videx_try_parse_double(str, value)) return false;
+    if (value > static_cast<double>(FLT_MAX) ||
+        value < -static_cast<double>(FLT_MAX)) {
+        return false;
+    }
+    out = static_cast<float>(value);
+    return true;
 }
 
 int videx_parse_simple_json(const std::string &json, int &code, std::string &message,
