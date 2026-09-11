@@ -25,6 +25,11 @@ if __name__ == '__main__':
                         help='Table loaded cache percentage can significantly impact table scan costs. '
                              'If set to -1, it prefers to use values calculated from the system table. '
                              'If set to a float between 0 and 1, it forces the use of the specified value.')
+    parser.add_argument('--workers', type=int, default=1,
+                        help='Number of Gunicorn worker processes. Defaults to 1 because the '
+                             'in-process metadata cache is not shared across processes.')
+    parser.add_argument('--threads', type=int, default=8,
+                        help='Number of threads per Gunicorn worker.')
 
     args = parser.parse_args()
 
@@ -42,4 +47,6 @@ if __name__ == '__main__':
     startup_videx_server(start_ip=args.server_ip, debug=args.debug, port=args.port,
                          VidexModelClass=MainVidexModelClass,
                          cache_pct=args.cache_pct,
+                         workers=args.workers,
+                         threads=args.threads,
                          )
