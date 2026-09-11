@@ -556,6 +556,33 @@ class Status(Resource):
         return jsonify(code=code, message=message, data=response_data)
 
 
+@ns.route('/health')
+class Health(Resource):
+    @ns.doc('health')
+    @ns.response(200, 'Success', response_model)
+    @ns.response(503, 'Service Unavailable', response_model)
+    def get(self):
+        """
+        Liveness/readiness probe for container orchestration.
+
+        Deliberately cheap and constant-size: it reports whether the server can
+        serve requests, and does not serialize cached metadata. That keeps it
+        safe to poll on a short interval, and keeps the answer independent of
+        how much data happens to be cached.
+        """
+        if videx_meta_singleton is None:
+            return jsonify(code=503, message="videx server is not initialized yet", data={})
+        return jsonify(
+            code=200,
+            message="OK",
+            data={
+                'status': 'healthy',
+                'model_class': videx_meta_singleton.VidexModelClass.__name__,
+                'cached_tasks': len(videx_meta_singleton.cache),
+            },
+        )
+
+
 def post_add_videx_meta(req: VidexDBTaskStats, videx_server_ip_port: str, use_gzip: bool):
     # 1. 将 src_meta 导入videx-py
     json_data = req.to_json().encode('utf-8')

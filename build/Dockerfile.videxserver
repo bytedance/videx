@@ -24,5 +24,11 @@ COPY build/videx_container_entrypoint.py /opt/videx/videx_container_entrypoint.p
 # Default/documentation port. You can still map any host port to container 5001 via -p HOST:5001.
 EXPOSE 5001
 
+# Report container health so orchestrators can gate dependents on readiness
+# (e.g. Compose `condition: service_healthy`). Uses the stdlib-only script
+# shipped with the server, since this image has no curl.
+HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["python", "-m", "sub_platforms.sql_opt.videx.scripts.videx_healthcheck"]
+
 ENTRYPOINT ["python", "/opt/videx/videx_container_entrypoint.py"]
 CMD ["server"]
