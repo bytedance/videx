@@ -631,12 +631,68 @@ def post_to_clear_videx_server_cache(videx_server: str, task_ids: List[str]) -> 
     return resp
 
 
+def _run_with_gunicorn(start_ip: str, port: int, workers: int, threads: int) -> bool:
+    """
+    Serve `app` with Gunicorn, a production WSGI server.
+
+    Gunicorn is already a declared dependency (requirements.txt / pyproject.toml)
+    but was previously unused, so the container fell back to Flask's development
+    server and emitted werkzeug's "This is a development server" warning.
+
+    Gunicorn has no Windows support, and an operator may deliberately strip it
+    from an image. Returning False lets the caller fall back to app.run()
+    instead of leaving the server unable to start at all.
+
+    :return: True if Gunicorn ran (and has now exited), False if unavailable.
+    """
+    try:
+        from gunicorn.app.base import BaseApplication
+    except ImportError:
+        logging.warning(
+            "gunicorn is not available; falling back to the Flask development "
+            "server. Install gunicorn for a production-ready server."
+        )
+        return False
+
+    class _VidexApplication(BaseApplication):
+        """Adapter that serves an existing WSGI app without a config file."""
+
+        def __init__(self, wsgi_app, options):
+            self.options = options
+            self.application = wsgi_app
+            super().__init__()
+
+        def load_config(self):
+            for key, value in self.options.items():
+                self.cfg.set(key, value)
+
+        def load(self):
+            return self.application
+
+    # A single worker process keeps VidexSingleton's in-process caches shared,
+    # which is what the current design assumes; concurrency comes from threads.
+    _VidexApplication(app, {
+        "bind": f"{start_ip}:{port}",
+        "workers": workers,
+        "threads": threads,
+        "worker_class": "gthread",
+        # Statistics requests can involve sampling-based estimation, which is
+        # slower than a typical web request.
+        "timeout": 120,
+        "accesslog": "-",
+        "errorlog": "-",
+    }).run()
+    return True
+
+
 def startup_videx_server(
         port=5001,
         VidexModelClass: Type[VidexModelBase] = VidexModelInnoDB,
         load_meta_by_task_id_func: Callable[[str], VidexDBTaskStats] = None,
         start_ip="0.0.0.0", debug=False,
         logging_package=videx_logging,
+        workers: int = 1,
+        threads: int = 8,
         **model_kwargs,
 ):
     """
@@ -687,5 +743,13 @@ def startup_videx_server(
                  f"{'- ' * 30}\n"
                  )
 
-    app.run(debug=debug, threaded=True, host=start_ip, port=port, use_reloader=False)
+    # Debug mode relies on werkzeug's reloader/debugger, which Gunicorn does not
+    # provide, so keep the development server for that case only.
+    if debug:
+        app.run(debug=True, threaded=True, host=start_ip, port=port, use_reloader=False)
+        return
+
+    if not _run_with_gunicorn(start_ip=start_ip, port=port,
+                              workers=workers, threads=threads):
+        app.run(debug=False, threaded=True, host=start_ip, port=port, use_reloader=False)
 
